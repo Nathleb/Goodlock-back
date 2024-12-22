@@ -35,7 +35,7 @@ export function gainHp(character: Character, amount: number) {
     character.currentHp = Math.min(character.currentHp + amount, character.maxHp);
 }
 
-export function takeDamage(character: Character, amount: number): boolean {
+export function dealDamage(character: Character, amount: number): boolean {
     const damagesLeftTotake = loseShield(character, amount);
     loseHp(character, damagesLeftTotake);
     return isDead(character);

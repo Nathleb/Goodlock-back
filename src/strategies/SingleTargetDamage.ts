@@ -1,4 +1,4 @@
-import { takeDamage } from "src/services/Character.service";
+import { dealDamage } from "src/services/Character.service";
 import Character from "src/types/Character.type";
 import Effect from "../types/Effect.type";
 import { SingleTarget } from "./TargetType.type";
@@ -15,6 +15,6 @@ export default class SingleTargetDamage implements Effect {
     }
 
     solve(targetedCharacter: Character): void {
-        takeDamage(targetedCharacter, this.amount);
+        dealDamage(targetedCharacter, this.amount);
     }
 }
