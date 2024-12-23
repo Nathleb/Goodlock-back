@@ -1,6 +1,7 @@
 
 export type SingleTarget = "SingleTarget";
 export type CleaveTarget = "CleaveTarget";
-export type AllTarget = "AllTarget";
+export type AllCharacterTarget = "AllCharacterTarget";
+export type TeamTarget = "TeamTarget";
 
-export type TargetType = SingleTarget | CleaveTarget | AllTarget; 
+export type TargetType = SingleTarget | CleaveTarget | AllCharacterTarget | TeamTarget; 
