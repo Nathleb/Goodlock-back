@@ -1,6 +1,6 @@
 {
     "name": "Jason",
-    "maxHp": 10,
+    "maxHp": 30,
     "baseDieInstructions": {
         "0": [
             {
@@ -26,19 +26,11 @@
             {
                 "effect": "SingleTargetDamage",
                 "magnitude": 3
-            },
-            {
-                "effect": "SingleTargetShield",
-                "magnitude": 3
             }
         ],
         "3": [
             {
                 "effect": "SingleTargetDamage",
-                "magnitude": 4
-            },
-            {
-                "effect": "SingleTargetShield",
                 "magnitude": 4
             }
         ],
@@ -46,19 +38,11 @@
             {
                 "effect": "SingleTargetDamage",
                 "magnitude": 5
-            },
-            {
-                "effect": "SingleTargetShield",
-                "magnitude": 5
             }
         ],
         "5": [
             {
                 "effect": "SingleTargetDamage",
-                "magnitude": 6
-            },
-            {
-                "effect": "SingleTargetShield",
                 "magnitude": 6
             }
         ]

@@ -1,8 +1,13 @@
-import PriorityQueue from "src/types/PriorityQueue.type";
 import GameState from "src/types/GameState.type";
 import Player from "src/types/Player.type";
+import { createPriorityQueue } from "./PriorityQueue.service";
 
 
-export const createGame = (player1: Player, player2: Player, priorityQueue: PriorityQueue): GameState => {
-    return { currentRound: 0, player1, player2, priorityQueue };
-};
+export function createGameState(player1: Player, player2: Player): GameState {
+    return {
+        currentRound: 0,
+        priorityQueue: createPriorityQueue(100),
+        player1: player1,
+        player2: player2
+    };
+}

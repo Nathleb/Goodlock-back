@@ -1,6 +1,6 @@
 import DieFace from "../types/DieFace.type";
 import Character from "src/types/Character.type";
-import Target from "src/types/Target.type";
+import Location from "src/types/Location.type";
 import { roll1D6 } from "src/utils/Random.utils";
 
 
@@ -53,6 +53,6 @@ export function toggleIsFaceLocked(character: Character) {
     character.isFaceLocked = !character.isFaceLocked;
 }
 
-export function setCurrentTarget(character: Character, target: Target) {
+export function setCurrentTarget(character: Character, target: Location) {
     character.currentTarget = target;
 }

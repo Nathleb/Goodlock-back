@@ -34,12 +34,12 @@ export function setDieFace(character: Character, face: Face, dieFace: DieFace): 
 }
 
 export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
-    const die = [];
+    const die: Die = [];
 
     Object.entries(baseDieInstructions).forEach(([face, effectEntries]) => {
         const faceIndex = Number(face);
         effectEntries = effectEntries as EffectEntry[];
-        die[faceIndex] = generateFaceFromEffectEntries(die[faceIndex], effectEntries);
+        die[faceIndex] = generateFaceFromEffectEntries([], effectEntries);
     });
 
     return die;
@@ -52,6 +52,6 @@ export function generateFaceFromEffectEntries(face: DieFace, effectEntries: Effe
     return face;
 }
 
-export function addEffectToFace(dieFace: DieFace, effect: EffectLabels, magnitude: number, priority: number): void {
+export function addEffectToFace(dieFace: DieFace, effect: EffectLabels, magnitude: number, priority: number = 1): void {
     dieFace.push(EffectFactory.createEffect(effect, magnitude, priority));
 }

@@ -1,7 +1,7 @@
 import Character from "src/types/Character.type";
 import Player from "src/types/Player.type";
 import Position from "src/types/Position.type";
-import Target from "src/types/Target.type";
+import Location from "src/types/Location.type";
 import { isDead, rollForTurn, setCurrentTarget, toggleIsFaceLocked, rollDie } from "./Character.service";
 
 export function createPlayer(team: Character[]): Player {
@@ -14,7 +14,7 @@ export function toggleDieLockForCharacter(player: Player, position: Position): v
     toggleIsFaceLocked(player.team[position]);
 }
 
-export function selectCurrentTargetOfCharacter(player: Player, position: Position, target: Target): void {
+export function selectCurrentTargetOfCharacter(player: Player, position: Position, target: Location): void {
     setCurrentTarget(player.team[position], target);
 }
 
