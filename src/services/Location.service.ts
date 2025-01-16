@@ -1,5 +1,7 @@
+import { TargetingFunction } from "src/strategies/TargetType.type";
+import Character from "./../types/Character.type";
 import GameState from "src/types/GameState.type";
-import Location from "src/types/Location.type";
+import Location from "src/types/Coordinate";
 import Player from "src/types/Player.type";
 
 export function getPlayer(gameState: GameState, player: 0 | 1): Player {
@@ -11,3 +13,5 @@ export function getPlayer(gameState: GameState, player: 0 | 1): Player {
 export function getCharacterAtTargetLocation(gameState: GameState, target: Location) {
     return getPlayer(gameState, target.player).team[target.position];
 }
+
+export const findSingleTarget: TargetingFunction = (gameState, target: Location) => [getCharacterAtTargetLocation(gameState, target)];

@@ -1,6 +1,6 @@
 import PriorityQueue from "src/types/PriorityQueue.type";
 import { getCharacterAtTargetLocation } from "./Location.service";
-import Location from "./../types/Location.type";
+import Location from "../types/Coordinate";
 import Character from "src/types/Character.type";
 import DieFace from "src/types/DieFace.type";
 import GameState from "src/types/GameState.type";
@@ -42,30 +42,10 @@ export function unstackPriorityQueue(gameState: GameState) {
             [queue[j], queue[k]] = [queue[k], queue[j]];
         }
 
-        for (const [effect, target] of queue) {
-            findTargetedCharacters(gameState, effect, target).forEach(([effect, character]) => {
-                effect.solve(character);
-            });
+        for (const [effect, targetedLocation] of queue) {
+            effect.solve(gameState, targetedLocation);
         }
     }
 
     resetPriorityQueue(gameState);
 }
-
-
-function findTargetedCharacters(gameState: GameState, effect: Effect, target: Location): [Effect, Character][] {
-    if (effect.type === "SingleTarget") {
-        return findTargetedCharactersForSingleTargetEffect(gameState, effect, target);
-    }
-    else if (effect.type === "CleaveTarget") { return []; }
-    else if (effect.type === "AllCharacterTarget") { return []; }
-    else if (effect.type === "TeamTarget") { return []; }
-    else {
-        const exhaustiveCheck: never = effect.type;
-        throw new Error(exhaustiveCheck);
-    }
-};
-
-function findTargetedCharactersForSingleTargetEffect(gameState: GameState, effect: Effect, target: Location): [Effect, Character][] {
-    return [[effect, getCharacterAtTargetLocation(gameState, target)]];
-};

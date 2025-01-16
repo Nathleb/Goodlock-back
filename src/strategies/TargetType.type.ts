@@ -1,7 +1,7 @@
 
-export type SingleTarget = "SingleTarget";
-export type CleaveTarget = "CleaveTarget";
-export type AllCharacterTarget = "AllCharacterTarget";
-export type TeamTarget = "TeamTarget";
+import Coordinate from "../types/Coordinate";
+import Character from "src/types/Character.type";
+import GameState from "src/types/GameState.type";
 
-export type TargetType = SingleTarget | CleaveTarget | AllCharacterTarget | TeamTarget; 
+
+export type TargetingFunction = (gameState: GameState, target: Coordinate) => Character[];

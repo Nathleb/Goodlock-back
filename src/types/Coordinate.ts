@@ -1,8 +1,8 @@
 import Position from "./Position.type";
 
-type Location = {
+type Coordinate = {
     player: 0 | 1;
     position: Position;
 };
 
-export default Location;
+export default Coordinate;

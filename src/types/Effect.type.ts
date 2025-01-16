@@ -1,11 +1,11 @@
-import { TargetType } from "src/strategies/TargetType.type";
-import Character from "./Character.type";
+import { TargetingFunction } from "src/strategies/TargetType.type";
+import GameState from "./GameState.type";
 
 type Effect = {
     priority: number;
-    type: TargetType;
+    findTargets: TargetingFunction;
 
-    solve(targetedCharacter?: Character | Character[]): void;
+    solve(gameState: GameState, target: Location): GameState;
 };
 
 export default Effect;
