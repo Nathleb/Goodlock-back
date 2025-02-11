@@ -3,7 +3,7 @@ export * from "./factories/EffectFactory";
 export * from "./services/Character.service";
 export * from "./services/CharacterGeneration.service";
 export * from "./services/GameInit.service";
-export * from "./services/Location.service";
+export * from "./services/Position.service";
 export * from "./services/Player.service";
 export * from "./services/PriorityQueue.service";
 
@@ -21,7 +21,7 @@ export * from "./types/GameState.type";
 export * from "./types/Position.type";
 export * from "./types/BaseDieInstructions.type";
 export * from "./types/Effect.type";
-export * from "./types/Coordinate";
+export * from "./types/Position.type";
 export * from "./types/PriorityQueue.type";
 export * from "./types/Character.type";
 export * from "./types/EffectLabels.type";

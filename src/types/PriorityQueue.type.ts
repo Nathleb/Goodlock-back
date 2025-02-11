@@ -1,6 +1,6 @@
 import Effect from "src/types/Effect.type";
-import Location from "./Coordinate";
+import Position from "./Position.type";
 
-type PriorityQueue = [Effect, Location][][];
+type PriorityQueue = [Effect, Position][][];
 
 export default PriorityQueue;

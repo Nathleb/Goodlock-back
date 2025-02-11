@@ -1,7 +1,7 @@
 import DieFace from "../types/DieFace.type";
 import Character from "src/types/Character.type";
-import Location from "src/types/Coordinate";
 import { roll1D6 } from "src/utils/Random.utils";
+import Position from "src/types/Position.type";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
     ...character,
@@ -71,6 +71,6 @@ export function toggleIsFaceLocked(character: Character): Character {
     return updateCharacter(character, { isFaceLocked: !character.isFaceLocked });
 }
 
-export function setCurrentTarget(character: Character, target: Location): Character {
-    return updateCharacter(character, { currentTarget: target });
+export function setCurrentTarget(character: Character, position: Position): Character {
+    return updateCharacter(character, { currentTarget: position });
 }
