@@ -1,9 +1,9 @@
 import { gainHp } from "src/services/Character.service";
 import { findSingleTarget } from "src/services/Position.service";
-import GameState from "src/types/GameState.type";
 import Position from "src/types/Position.type";
 import Effect from "../types/Effect.type";
-import { TargetingFunction } from "./TargetType.type";
+import TargetingFunction from "./TargetType.type";
+import { Player } from "src/types/Player.type";
 
 
 
@@ -17,9 +17,9 @@ export default class SingleTargetHeal implements Effect {
         this.amount = amount;
     }
 
-    solve(gameState: GameState, position: Position) {
-        const targetedCharacters = this.findTargets(gameState, position);
+    solve(players: [Player, Player], target: Position) {
+        const targetedCharacters = this.findTargets(players, target);
 
-        const updatedCharacters = targetedCharacters.map(chara => gainHp(chara, this.amount));
+        return targetedCharacters.map(chara => gainHp(chara, this.amount));
     }
 }

@@ -5,6 +5,7 @@ import Position from "./Position.type";
 
 
 type Character = {
+    id: string;
     name: string;
     maxHp: number;
     baseDie: Die;
@@ -12,7 +13,6 @@ type Character = {
     currentHp: number;
     currentShield: number;
     currentDie: Die;
-    playerId: 0 | 1;
     currentPosition: Position;
     modifiers: Modifier[];
 

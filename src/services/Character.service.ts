@@ -8,10 +8,10 @@ const updateCharacter = (character: Character, updates: Partial<Character>): Cha
     ...updates,
 });
 
-export function rollDie(character: Character): { character: Character; face: DieFace; } {
+export function rollDie(character: Character): Character {
     const newFace = character.baseDie[roll1D6()];
     const updatedCharacter = updateCharacter(character, { currentFace: newFace });
-    return { character: updatedCharacter, face: newFace };
+    return updatedCharacter;
 }
 
 export function canRollDie(character: Character): boolean {
@@ -20,8 +20,7 @@ export function canRollDie(character: Character): boolean {
 
 export function rollForTurn(character: Character): Character {
     if (canRollDie(character)) {
-        const { character: updatedCharacter } = rollDie(character);
-        return updatedCharacter;
+        return rollDie(character);
     }
     return character;
 }
