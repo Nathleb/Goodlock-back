@@ -1,12 +1,10 @@
 import { dealDamage } from "src/services/Character.service";
 import { findSingleTarget } from "src/services/Position.service";
-import Character from "src/types/Character.type";
 import Effect from "../types/Effect.type";
 import TargetingFunction from "./TargetType.type";
 import Position from "src/types/Position.type";
-import { Player } from "src/types/Player.type";
 import GameState from "src/types/GameState.type";
-
+import { applyEffectToTargets } from "./TargetUtils";
 
 export default class SingleTargetDamage implements Effect {
     readonly priority: number;
@@ -18,9 +16,11 @@ export default class SingleTargetDamage implements Effect {
         this.amount = amount;
     }
 
-    solve(gameState: GameState, target: Position) {
+    solve(gameState: GameState, target: Position): GameState {
         const targetedCharacters = this.findTargets(gameState.players, target);
 
-        return targetedCharacters.map(chara => dealDamage(chara, this.amount));
+        const updatedPlayers = applyEffectToTargets(gameState.players, targetedCharacters, (character) => dealDamage(character, this.amount));
+
+        return { ...gameState, players: updatedPlayers };
     }
 }

@@ -1,0 +1,42 @@
+{
+    "name": "Eve",
+    "maxHp": 28,
+    "baseDieInstructions": {
+        "0": [
+            {
+                "effect": "SingleTargetDamage",
+                "magnitude": 2
+            }
+        ],
+        "1": [
+            {
+                "effect": "SingleTargetDamage",
+                "magnitude": 1
+            }
+        ],
+        "2": [
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 2
+            }
+        ],
+        "3": [
+            {
+                "effect": "SingleTargetShield",
+                "magnitude": 2
+            }
+        ],
+        "4": [
+            {
+                "effect": "SingleTargetShield",
+                "magnitude": 1
+            }
+        ],
+        "5": [
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 2
+            }
+        ]
+    }
+}

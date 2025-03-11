@@ -31,7 +31,7 @@ export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace:
 export function addAllEffectsToPriorityQueue(gameState: GameState): void {
     const { players, priorityQueue } = gameState;
     players.forEach((player) => player.team.forEach(char => {
-        addEffectsToPriorityQueue(priorityQueue, char.currentFace, char.currentTarget)
+        addEffectsToPriorityQueue(priorityQueue, char.face, char.target)
     })
     );
 }

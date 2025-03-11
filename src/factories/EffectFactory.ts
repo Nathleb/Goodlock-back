@@ -8,6 +8,14 @@ export default class EffectFactory {
         this.registry[effect] = constructorFn;
     }
 
+    public static unregisterEffect(effect: EffectLabels): void {
+        delete this.registry[effect];
+    }
+
+    public static isEffectRegistered(effect: EffectLabels): boolean {
+        return !!this.registry[effect];
+    }
+
     public static createEffect(effect: EffectLabels, amount: number, priority: number): Effect {
         const constructorFn = this.registry[effect];
         if (!constructorFn) {

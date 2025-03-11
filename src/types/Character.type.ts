@@ -3,22 +3,21 @@ import DieFace from "src/types/DieFace.type";
 import Modifier from "./Modifier.type";
 import Position from "./Position.type";
 
-
 type Character = {
     id: string;
     name: string;
     maxHp: number;
     baseDie: Die;
 
-    currentHp: number;
-    currentShield: number;
-    currentDie: Die;
-    currentPosition: Position;
+    hp: number;
+    shield: number;
+    die: Die;
+    position: Position;
     modifiers: Modifier[];
 
-    currentFace: DieFace;
+    face: DieFace;
     isFaceLocked: boolean;
-    currentTarget: Position;
+    target: Position;
 };
 
 export default Character;

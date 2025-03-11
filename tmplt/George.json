@@ -1,0 +1,42 @@
+{
+    "name": "George",
+    "maxHp": 34,
+    "baseDieInstructions": {
+        "0": [
+            {
+                "effect": "SingleTargetDamage",
+                "magnitude": 3
+            }
+        ],
+        "1": [
+            {
+                "effect": "SingleTargetDamage",
+                "magnitude": 2
+            }
+        ],
+        "2": [
+            {
+                "effect": "SingleTargetDamage",
+                "magnitude": 2
+            }
+        ],
+        "3": [
+            {
+                "effect": "SingleTargetShield",
+                "magnitude": 2
+            }
+        ],
+        "4": [
+            {
+                "effect": "SingleTargetShield",
+                "magnitude": 1
+            }
+        ],
+        "5": [
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 2
+            }
+        ]
+    }
+}

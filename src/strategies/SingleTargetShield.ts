@@ -2,9 +2,9 @@ import { gainShield } from "src/services/Character.service";
 import { findSingleTarget } from "src/services/Position.service";
 import Effect from "../types/Effect.type";
 import TargetingFunction from "./TargetType.type";
-import { Player } from "src/types/Player.type";
 import Position from "src/types/Position.type";
-
+import GameState from "src/types/GameState.type";
+import { applyEffectToTargets } from "./TargetUtils";
 
 export default class SingleTargetShield implements Effect {
     readonly priority: number;
@@ -19,15 +19,7 @@ export default class SingleTargetShield implements Effect {
     solve(gameState: GameState, target: Position): GameState {
         const targetedCharacters = this.findTargets(gameState.players, target);
 
-        const updatedPlayers = gameState.players.map((player) => {
-            const updatedTeam = player.team.map((character) => {
-                if (targetedCharacters.includes(character)) {
-                    return gainShield(character, this.amount);
-                }
-                return character;
-            });
-            return { ...player, team: updatedTeam };
-        }) as [Player, Player];
+        const updatedPlayers = applyEffectToTargets(gameState.players, targetedCharacters, (character) => gainShield(character, this.amount));
 
         return { ...gameState, players: updatedPlayers };
     }

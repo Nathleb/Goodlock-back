@@ -1,3 +1,3 @@
-type Modifier = {};
+type Modifier = object;
 
 export default Modifier;

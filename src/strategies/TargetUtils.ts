@@ -9,9 +9,11 @@ import { Player } from "src/types/Player.type";
  * @returns The updated players.
  */
 export function applyEffectToTargets(players: [Player, Player], targetedCharacters: Character[], effectCallback: (character: Character) => Character): [Player, Player] {
+    const targetedCharacterIds = new Set(targetedCharacters.map(character => character.id));
+
     return players.map((player) => {
         const updatedTeam = player.team.map((character) => {
-            if (targetedCharacters.includes(character)) {
+            if (targetedCharacterIds.has(character.id)) {
                 return effectCallback(character);
             }
             return character;

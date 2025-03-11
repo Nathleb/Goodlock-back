@@ -5,18 +5,10 @@
         "0": [
             {
                 "effect": "SingleTargetDamage",
-                "magnitude": 1
-            },
-            {
-                "effect": "SingleTargetDamage",
-                "magnitude": 1
+                "magnitude": 3
             }
         ],
         "1": [
-            {
-                "effect": "SingleTargetDamage",
-                "magnitude": 2
-            },
             {
                 "effect": "SingleTargetDamage",
                 "magnitude": 2
@@ -25,25 +17,29 @@
         "2": [
             {
                 "effect": "SingleTargetDamage",
-                "magnitude": 3
+                "magnitude": 2
             }
         ],
         "3": [
             {
-                "effect": "SingleTargetDamage",
-                "magnitude": 4
+                "effect": "SingleTargetShield",
+                "magnitude": 2
             }
         ],
         "4": [
             {
-                "effect": "SingleTargetDamage",
-                "magnitude": 5
+                "effect": "SingleTargetShield",
+                "magnitude": 1
+            },
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 1
             }
         ],
         "5": [
             {
-                "effect": "SingleTargetDamage",
-                "magnitude": 6
+                "effect": "SingleTargetHeal",
+                "magnitude": 2
             }
         ]
     }

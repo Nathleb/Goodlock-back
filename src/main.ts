@@ -1,58 +1,42 @@
 import { NestFactory } from '@nestjs/core';
-import { readFileSync } from "fs";
 import { AppModule } from './app.module';
-import EffectFactory from './factories/EffectFactory';
-import { createCharacterFromJsonTemplate } from './services/CharacterGeneration.service';
-import { createGameState } from './services/GameInit.service';
-import { createPlayer, hasLost, rollDiceForTurn, selectCurrentTargetOfCharacter } from './services/Player.service';
-import { addAllEffectsToPriorityQueue, unstackPriorityQueue } from './services/PriorityQueue.service';
-import SingleTargetDamage from './strategies/SingleTargetDamage';
-import SingleTargetHeal from './strategies/SingleTargetHeal';
-import SingleTargetShield from './strategies/SingleTargetShield';
-import Position from './types/Position.type';
-import { rollRandomPosition } from './utils/Random.utils';
+import { runGameLoop } from './services/GameLoop.service';
+import { createPlayer } from './services/Player.service';
+import { createTeamsFromTemplates, initializeEffects } from './services/GameInit.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   await app.listen(3000);
 
-
   function main() {
-    EffectFactory.registerEffect("SingleTargetDamage", (amount, priority) => new SingleTargetDamage(amount, priority));
-    EffectFactory.registerEffect("SingleTargetHeal", (amount, priority) => new SingleTargetHeal(amount, priority));
-    EffectFactory.registerEffect("SingleTargetShield", (amount, priority) => new SingleTargetShield(amount, priority));
+    initializeEffects();
 
-    const jsonCharacterTemplate = readFileSync("./Jason.json", 'utf-8');
+    const team1Templates = [
+      "./tmplt/Jason.json",
+      "./tmplt/Alicent.json",
+      "./tmplt/Robbert.json",
+      "./tmplt/Charlie.json",
+      "./tmplt/Diana.json"
+    ];
 
-    let team = [];
-    for (let p = 0; p < 5; p++) {
-      team.push(createCharacterFromJsonTemplate(jsonCharacterTemplate));
-    }
-    const player1 = createPlayer(team);
-    team = [];
-    for (let p = 0; p < 5; p++) {
-      team.push(createCharacterFromJsonTemplate(jsonCharacterTemplate));
-    }
-    const player2 = createPlayer(team);
+    const team2Templates = [
+      "./tmplt/Edward.json",
+      "./tmplt/Fiona.json",
+      "./tmplt/George.json",
+      "./tmplt/Hannah.json",
+      "./tmplt/Eve.json"
+    ];
 
-    const game = createGameState(player1, player2);
+    const team1 = createTeamsFromTemplates(team1Templates);
+    const team2 = createTeamsFromTemplates(team2Templates);
 
-    while (!hasLost(player1) && !hasLost(player2)) {
-      rollDiceForTurn(player1);
-      rollDiceForTurn(player2);
+    const player1 = createPlayer(team1, 0);
+    const player2 = createPlayer(team2, 1);
 
-      player1.team.forEach((_c, index: Position) => selectCurrentTargetOfCharacter(player1, index, { player: 1, position: rollRandomPosition() }));
-
-      player2.team.forEach((_c, index: Position) => selectCurrentTargetOfCharacter(player2, index, { player: 0, position: rollRandomPosition() }));
-
-      addAllEffectsToPriorityQueue(game);
-
-      unstackPriorityQueue(game);
-    }
-
+    runGameLoop(player1, player2);
   }
 
   main();
-
 }
+
 bootstrap();

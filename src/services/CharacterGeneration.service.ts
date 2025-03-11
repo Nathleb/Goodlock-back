@@ -17,7 +17,7 @@ export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): 
     let characterTemplateObject: CharacterEntity;
     try {
         characterTemplateObject = JSON.parse(jsonCharacterTemplate);
-    } catch (error) {
+    } catch {
         throw new Error("Invalid JSON template");
     }
     const die = generateFullDie(characterTemplateObject.baseDieInstructions);
@@ -30,24 +30,23 @@ export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): 
  * @param name - The name of the character.
  * @param maxHp - The maximum HP of the character.
  * @param baseDie - The base die of the character.
- * @param playerId - The ID of the player owning the character.
- * @param currentPosition - The current position of the character.
+ * @param position - The position of the character.
  * @returns A new character object.
  */
-export function createCharacter(name: string, maxHp: number, baseDie: Die, currentPosition: Position): Character {
+export function createCharacter(name: string, maxHp: number, baseDie: Die, position: Position): Character {
     return {
         id: crypto.randomUUID(),
         name: name,
         maxHp: maxHp,
-        currentHp: maxHp,
+        hp: maxHp,
         baseDie: baseDie,
-        currentDie: baseDie,
-        currentShield: 0,
+        die: baseDie,
+        shield: 0,
         modifiers: [],
-        currentFace: baseDie[0],
+        face: baseDie[0],
         isFaceLocked: false,
-        currentTarget: null,
-        currentPosition
+        target: null,
+        position
     };
 }
 

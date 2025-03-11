@@ -1,6 +1,9 @@
+import CharacterIndex from "./CharacterIndex.type";
+import PlayerIndex from "./PlayerIndex.type";
+
 type Position = {
-    playerIndex: 0 | 1,
-    characterIndex: 0 | 1 | 2 | 3 | 4
+    playerIndex: PlayerIndex,
+    characterIndex: CharacterIndex
 };
 
 export default Position;

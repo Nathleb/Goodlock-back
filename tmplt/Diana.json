@@ -1,0 +1,42 @@
+{
+    "name": "Diana",
+    "maxHp": 27,
+    "baseDieInstructions": {
+        "0": [
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 3
+            }
+        ],
+        "1": [
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 2
+            }
+        ],
+        "2": [
+            {
+                "effect": "SingleTargetHeal",
+                "magnitude": 2
+            }
+        ],
+        "3": [
+            {
+                "effect": "SingleTargetShield",
+                "magnitude": 2
+            }
+        ],
+        "4": [
+            {
+                "effect": "SingleTargetShield",
+                "magnitude": 1
+            }
+        ],
+        "5": [
+            {
+                "effect": "SingleTargetDamage",
+                "magnitude": 2
+            }
+        ]
+    }
+}

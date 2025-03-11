@@ -1,6 +1,7 @@
 import Character from "./Character.type";
+import PlayerIndex from "./PlayerIndex.type";
 
 export type Player = {
-    playerIndex: 0 | 1;
+    playerIndex: PlayerIndex;
     team: Character[];
 };
