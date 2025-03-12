@@ -1,12 +1,12 @@
-import { gainHp } from "src/services/Character.service";
-import { findSingleTarget } from "src/services/Position.service";
-import Position from "src/types/Position.type";
+import { gainShield } from "../services/Character.service";
+import { findSingleTarget } from "../services/Position.service";
 import Effect from "../types/Effect.type";
 import TargetingFunction from "./TargetType.type";
-import GameState from "src/types/GameState.type";
+import Position from "../types/Position.type";
+import GameState from "../types/GameState.type";
 import { applyEffectToTargets } from "./TargetUtils";
 
-export default class SingleTargetHeal implements Effect {
+export default class SingleTargetShield implements Effect {
     readonly priority: number;
     readonly amount: number;
     readonly findTargets: TargetingFunction = findSingleTarget;
@@ -19,7 +19,7 @@ export default class SingleTargetHeal implements Effect {
     solve(gameState: GameState, target: Position): GameState {
         const targetedCharacters = this.findTargets(gameState.players, target);
 
-        const updatedPlayers = applyEffectToTargets(gameState.players, targetedCharacters, (character) => gainHp(character, this.amount));
+        const updatedPlayers = applyEffectToTargets(gameState.players, targetedCharacters, (character) => gainShield(character, this.amount));
 
         return { ...gameState, players: updatedPlayers };
     }

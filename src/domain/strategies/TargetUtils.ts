@@ -1,5 +1,5 @@
-import Character from "src/types/Character.type";
-import { Player } from "src/types/Player.type";
+import Character from "../types/Character.type";
+import { Player } from "../types/Player.type";
 
 /**
  * Applies an effect to the targeted characters.

@@ -1,7 +1,7 @@
-import PriorityQueue from "src/types/PriorityQueue.type";
+import PriorityQueue from "../types/PriorityQueue.type";
 import Position from "./../types/Position.type";
-import DieFace from "src/types/DieFace.type";
-import GameState from "src/types/GameState.type";
+import DieFace from "../types/DieFace.type";
+import GameState from "../types/GameState.type";
 
 /**
  * Creates a priority queue with the given length.

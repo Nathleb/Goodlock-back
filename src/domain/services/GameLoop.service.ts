@@ -1,9 +1,9 @@
-import GameState from "src/types/GameState.type";
+import GameState from "../types/GameState.type";
 import { createGameState } from "./GameInit.service";
-import { rollRandomPosition } from "src/utils/Random.utils";
-import { hasLost, rollDiceForTurn, selectTargetOfCharacter } from "./Player.service";
+import { rollRandomPosition } from "../utils/Random.utils";
+import { rollDiceForTurn, selectTargetOfCharacter } from "./Player.service";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueue } from "./PriorityQueue.service";
-import { Player } from "src/types/Player.type";
+import { Player } from "../types/Player.type";
 
 
 function logGameState(game: GameState) {

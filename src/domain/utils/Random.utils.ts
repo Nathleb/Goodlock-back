@@ -1,6 +1,6 @@
-import CharacterIndex from "src/types/CharacterIndex.type";
-import PlayerIndex from "src/types/PlayerIndex.type";
-import Position from "src/types/Position.type";
+import CharacterIndex from "../types/CharacterIndex.type";
+import PlayerIndex from "../types/PlayerIndex.type";
+import Position from "../types/Position.type";
 
 /**
  * Rolls a 6-sided die and returns a value between 0 and 5.
@@ -16,7 +16,7 @@ export function roll1D6(): number {
  * @returns A random position within the player's team.
  */
 export function rollRandomPosition(playerIndex: PlayerIndex): Position {
-    return { playerIndex, characterIndex: roll1D(5) as CharacterIndex};
+    return { playerIndex, characterIndex: roll1D(5) as CharacterIndex };
 }
 
 /**

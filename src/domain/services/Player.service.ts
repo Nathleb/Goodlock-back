@@ -1,9 +1,9 @@
-import Character from "src/types/Character.type";
+import Character from "../types/Character.type";
 import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "./Character.service";
-import { Player } from "src/types/Player.type";
-import Position from "src/types/Position.type";
-import CharacterIndex from "src/types/CharacterIndex.type";
-import PlayerIndex from "src/types/PlayerIndex.type";
+import { Player } from "../types/Player.type";
+import Position from "../types/Position.type";
+import CharacterIndex from "../types/CharacterIndex.type";
+import PlayerIndex from "../types/PlayerIndex.type";
 
 /**
  * Toggles the die lock for a character at a given position.

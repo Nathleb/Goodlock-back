@@ -1,12 +1,12 @@
-import CharacterEntity from "src/entities/CharacterEntity.entity";
+import CharacterEntity from "../entities/CharacterEntity.entity";
 import EffectFactory from "./../factories/EffectFactory";
-import Die from "src/types/Die.type";
-import DieFace from "src/types/DieFace.type";
-import { BaseDieInstructions, EffectEntry } from "src/types/BaseDieInstructions.type";
-import Face from "src/types/Face.type";
-import EffectLabels from "src/types/EffectLabels.type";
-import Character from "src/types/Character.type";
-import Position from "src/types/Position.type";
+import Die from "../types/Die.type";
+import DieFace from "../types/DieFace.type";
+import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
+import Face from "../types/Face.type";
+import EffectLabels from "../types/EffectLabels.type";
+import Character from "../types/Character.type";
+import Position from "../types/Position.type";
 
 /**
  * Creates a character from a JSON template.

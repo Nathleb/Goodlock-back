@@ -1,9 +1,9 @@
-import { dealDamage } from "src/services/Character.service";
-import { findSingleTarget } from "src/services/Position.service";
+import { dealDamage } from "../services/Character.service";
+import { findSingleTarget } from "../services/Position.service";
 import Effect from "../types/Effect.type";
 import TargetingFunction from "./TargetType.type";
-import Position from "src/types/Position.type";
-import GameState from "src/types/GameState.type";
+import Position from "../types/Position.type";
+import GameState from "../types/GameState.type";
 import { applyEffectToTargets } from "./TargetUtils";
 
 export default class SingleTargetDamage implements Effect {
