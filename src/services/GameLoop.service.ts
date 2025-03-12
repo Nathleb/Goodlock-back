@@ -1,33 +1,47 @@
+import GameState from "src/types/GameState.type";
 import { createGameState } from "./GameInit.service";
+import { rollRandomPosition } from "src/utils/Random.utils";
+import { hasLost, rollDiceForTurn, selectTargetOfCharacter } from "./Player.service";
+import { addAllEffectsToPriorityQueue, unstackPriorityQueue } from "./PriorityQueue.service";
+import { Player } from "src/types/Player.type";
 
 
-function logGameState(game) {
+function logGameState(game: GameState) {
     console.log(`Round: ${game.currentRound}`);
     game.players.forEach((player, playerIndex) => {
-        console.log(`Player ${playerIndex + 1}:`);
+        console.log(`Player ${playerIndex}:`);
         player.team.forEach((character, charIndex) => {
-            console.log(`  Character ${charIndex + 1} (${character.name}):`);
-            console.log(`    HP: ${character.currentHp}/${character.maxHp}`);
-            console.log(`    Shield: ${character.currentShield}`);
-            console.log(`    Current Face: ${character.currentFace.map(effect => `${effect.effect} (${effect.magnitude})`).join(', ')}`);
-            console.log(`    Target: Player ${character.currentTarget?.playerIndex + 1}, Character ${character.currentTarget?.characterIndex + 1}`);
+            console.log(`  Character ${charIndex} (${character.name}):`);
+            console.log(`    HP: ${character.hp}/${character.maxHp}`);
+            console.log(`    Shield: ${character.shield}`);
+            console.log(`    Current Face: ${character.face}`);
+            console.log(`    Target: Player ${character.target?.playerIndex}, Character ${character.target?.characterIndex}`);
         });
     });
 }
 
-export function runGameLoop(player1, player2) {
-    const game = createGameState(player1, player2);
+export function runGameLoop(player1: Player, player2: Player) {
+    let game = createGameState(player1, player2);
 
-    // while (!hasLost(player1) && !hasLost(player2)) {
-        // rollDiceForTurn(player1);
-        // rollDiceForTurn(player2);
+    while (game.currentRound < 3) {
+        let [player1, player2] = game.players;
+        rollDiceForTurn(player1);
+        rollDiceForTurn(player2);
 
-        // player1.team.forEach((_c, index: Position) => selectCurrentTargetOfCharacter(player1, index, rollRandomPosition(1)));
-        // player2.team.forEach((_c, index: Position) => selectCurrentTargetOfCharacter(player2, index, rollRandomPosition(0)));
+        for (const c of player1.team) {
+            player1 = selectTargetOfCharacter(player1, c.position.characterIndex, rollRandomPosition(player2.playerIndex));
+            game.players[0] = player1;
+        }
+        for (const c of player2.team) {
+            player2 = selectTargetOfCharacter(player2, c.position.characterIndex, rollRandomPosition(player1.playerIndex));
+            game.players[1] = player2;
+        }
 
-        // addAllEffectsToPriorityQueue(game);
-        // unstackPriorityQueue(game);
 
+        addAllEffectsToPriorityQueue(game);
+        game = { ...unstackPriorityQueue(game) };
+        game.currentRound++;
         logGameState(game);
-    // }
+    }
 }
+

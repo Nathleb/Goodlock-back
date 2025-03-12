@@ -1,3 +1,5 @@
+import CharacterIndex from "src/types/CharacterIndex.type";
+import PlayerIndex from "src/types/PlayerIndex.type";
 import Position from "src/types/Position.type";
 
 /**
@@ -13,8 +15,8 @@ export function roll1D6(): number {
  * @param playerIndex - The index of the player (0 or 1).
  * @returns A random position within the player's team.
  */
-export function rollRandomPosition(playerIndex: 0 | 1): Position {
-    return { playerIndex, characterIndex: roll1D(5) as 0 | 1 | 2 | 3 | 4 };
+export function rollRandomPosition(playerIndex: PlayerIndex): Position {
+    return { playerIndex, characterIndex: roll1D(5) as CharacterIndex};
 }
 
 /**

@@ -21,14 +21,15 @@ export function toggleDieLockForCharacter(player: Player, position: Position): P
 /**
  * Selects the target of a character at a given position.
  * @param player - The player whose character's target is to be set.
- * @param position - The position of the character.
+ * @param characterIndex - The index of the character in the player's team.
  * @param target - The target position to be set.
  * @returns A new player object with the updated team.
  */
-export function selectTargetOfCharacter(player: Player, position: Position, target: Position): Player {
-    const newTeam = player.team.map((char, index) =>
-        index === position.characterIndex ? setTarget(char, target) : char
+export function selectTargetOfCharacter(player: Player, characterIndex: CharacterIndex, target: Position): Player {
+    const newTeam = player.team.map((char) =>
+        char.position.characterIndex === characterIndex ? setTarget(char, target) : char
     );
+
     return { ...player, team: newTeam };
 }
 
@@ -70,7 +71,7 @@ export function rollDieFromPlayer(player: Player, position: Position): Player {
  * @returns A new player object.
  */
 export function createPlayer(team: Character[], playerIndex: PlayerIndex): Player {
-    team = team.map((char, index) => ({ ...char, currentPosition: { playerIndex, characterIndex: index as CharacterIndex }, currentFace: char.baseDie[0] }));
+    team = team.map((char, index) => ({ ...char, position: { playerIndex, characterIndex: index as CharacterIndex }, face: char.baseDie[0] }));
 
     return {
         playerIndex,

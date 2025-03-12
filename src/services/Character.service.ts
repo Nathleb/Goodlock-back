@@ -98,6 +98,7 @@ export function dealDamage(character: Character, amount: number): Character {
     if (damageTaken > 0) {
         updatedCharacter = loseHp(updatedCharacter, damageTaken);
     }
+    console.log(`${character.name} took ${amount} damage! ${updatedCharacter.hp}`);
 
     return updatedCharacter;
 }
