@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { runGameLoop } from './services/GameLoop.service';
-import { createPlayer } from './services/Player.service';
-import { createTeamsFromTemplates, initializeEffects } from './services/GameInit.service';
+import { runGameLoop } from './domain/services/GameLoop.service';
+import { createPlayer } from './domain/services/Player.service';
+import { createTeamsFromTemplates, initializeEffects } from './domain/services/GameInit.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
