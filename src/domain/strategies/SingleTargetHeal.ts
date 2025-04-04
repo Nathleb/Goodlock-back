@@ -2,9 +2,9 @@ import { gainHp } from "../services/Character.service";
 import { findSingleTarget } from "../services/Position.service";
 import Position from "../types/Position.type";
 import Effect from "../types/Effect.type";
-import TargetingFunction from "./TargetType.type";
+import TargetingFunction from "../strategies/TargetType.type";
 import GameState from "../types/GameState.type";
-import { applyEffectToTargets } from "./TargetUtils";
+import { applyEffectToTargets } from "../strategies/TargetUtils";
 
 export default class SingleTargetHeal implements Effect {
     readonly priority: number;

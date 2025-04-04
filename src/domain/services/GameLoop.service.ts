@@ -1,12 +1,12 @@
 import GameState from "../types/GameState.type";
 import { createGameState } from "./GameInit.service";
-import { rollRandomPosition } from "../utils/Random.utils";
+import { rollRandomPosition3 } from "../utils/Random.utils";
 import { rollDiceForTurn, selectTargetOfCharacter } from "./Player.service";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueue } from "./PriorityQueue.service";
 import { Player } from "../types/Player.type";
 
 
-function logGameState(game: GameState) {
+export function logGameState(game: GameState) {
     console.log(`Round: ${game.currentRound}`);
     game.players.forEach((player, playerIndex) => {
         console.log(`Player ${playerIndex}:`);
@@ -29,11 +29,11 @@ export function runGameLoop(player1: Player, player2: Player) {
         rollDiceForTurn(player2);
 
         for (const c of player1.team) {
-            player1 = selectTargetOfCharacter(player1, c.position.characterIndex, rollRandomPosition(player2.playerIndex));
+            player1 = selectTargetOfCharacter(player1, c.position.characterIndex, rollRandomPosition3(player2.playerIndex));
             game.players[0] = player1;
         }
         for (const c of player2.team) {
-            player2 = selectTargetOfCharacter(player2, c.position.characterIndex, rollRandomPosition(player1.playerIndex));
+            player2 = selectTargetOfCharacter(player2, c.position.characterIndex, rollRandomPosition3(player1.playerIndex));
             game.players[1] = player2;
         }
 

@@ -1,5 +1,8 @@
-import Effect from "src/types/Effect.type";
+import Effect from "./Effect.type";
 
-type DieFace = Effect[];
+type DieFace = {
+    effects: Effect[];
+    description: string;
+};
 
 export default DieFace;

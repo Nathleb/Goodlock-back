@@ -1,5 +1,5 @@
-import Effect from "src/types/Effect.type";
-import EffectLabels from "src/types/EffectLabels.type";
+import Effect from "../types/Effect.type";
+import EffectLabels from "../types/EffectLabels.type";
 
 export default class EffectFactory {
     private static registry: { [key in EffectLabels]?: (amount: number, priority: number) => Effect } = {};

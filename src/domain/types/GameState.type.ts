@@ -1,9 +1,10 @@
-import PriorityQueue from "src/types/PriorityQueue.type";
+import PriorityQueue from "./PriorityQueue.type";
 import { Player } from "./Player.type";
 
 
 type GameState = {
     currentRound: number;
+    rollsLeft: number;
     priorityQueue: PriorityQueue;
     players: [Player, Player];
 };

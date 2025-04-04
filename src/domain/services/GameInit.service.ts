@@ -1,26 +1,25 @@
 import GameState from "../types/GameState.type";
-import { createPriorityQueue } from "./PriorityQueue.service";
+import { createPriorityQueue } from "../services/PriorityQueue.service";
 import { Player } from "../types/Player.type";
-import { readFileSync } from "fs";
 import EffectFactory from "../factories/EffectFactory";
 import SingleTargetDamage from "../strategies/SingleTargetDamage";
 import SingleTargetHeal from "../strategies/SingleTargetHeal";
-import SingleTargetShield from "../strategies/SingleTargetshield";
+import SingleTargetShield from "../strategies/SingleTargetShield";
 import Character from "../types/Character.type";
-import { createCharacterFromJsonTemplate } from "./CharacterGeneration.service";
+import { createCharacterFromJsonTemplate } from "../services/CharacterGeneration.service";
 
 export function createGameState(player1: Player, player2: Player): GameState {
     return {
         currentRound: 0,
+        rollsLeft: 3,
         priorityQueue: createPriorityQueue(100),
         players: [player1, player2],
     };
 }
 
-export function createTeamsFromTemplates(templatePaths: string[]): Character[] {
+export function createTeamsFromTemplates(templateContents: string[]): Character[] {
     const team: Character[] = [];
-    templatePaths.forEach((templatePath) => {
-        const jsonCharacterTemplate = readFileSync(templatePath, 'utf-8');
+    templateContents.forEach((jsonCharacterTemplate) => {
         team.push(createCharacterFromJsonTemplate(jsonCharacterTemplate));
     });
     return team;

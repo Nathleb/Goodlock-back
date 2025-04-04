@@ -1,5 +1,5 @@
 import PriorityQueue from "../types/PriorityQueue.type";
-import Position from "./../types/Position.type";
+import Position from "../types/Position.type";
 import DieFace from "../types/DieFace.type";
 import GameState from "../types/GameState.type";
 
@@ -19,7 +19,7 @@ export function createPriorityQueue(length: number): PriorityQueue {
  * @param position - The position associated with the effects.
  */
 export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace: DieFace, position: Position): void {
-    dieFace.forEach(effect => {
+    dieFace.effects.forEach(effect => {
         priorityQueue[effect.priority].push([effect, position]);
     });
 }

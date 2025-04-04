@@ -1,5 +1,5 @@
 import CharacterEntity from "../entities/CharacterEntity.entity";
-import EffectFactory from "./../factories/EffectFactory";
+import EffectFactory from "../factories/EffectFactory";
 import Die from "../types/Die.type";
 import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
@@ -33,7 +33,7 @@ export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): 
  * @returns A new character object.
  */
 export function createCharacter(name: string, maxHp: number, baseDie: Die, position: Position): Character {
-    const die = baseDie.map(face => [...face]);
+    const die = baseDie.map(face => ({ ...face }));
 
     return {
         id: crypto.randomUUID(),
@@ -73,8 +73,7 @@ export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
 
     Object.entries(baseDieInstructions).forEach(([face, effectEntries]) => {
         const faceIndex = Number(face);
-        effectEntries = effectEntries as EffectEntry[];
-        die[faceIndex] = generateFaceFromEffectEntries([], effectEntries);
+        die[faceIndex] = generateFaceFromEffectEntries({ description: effectEntries.description, effects: [] }, effectEntries.effects);
     });
 
     return die;
@@ -101,5 +100,5 @@ export function generateFaceFromEffectEntries(face: DieFace, effectEntries: Effe
  * @param priority - The priority of the effect.
  */
 export function addEffectToFace(dieFace: DieFace, effect: EffectLabels, magnitude: number, priority: number = 1): void {
-    dieFace.push(EffectFactory.createEffect(effect, magnitude, priority));
+    dieFace.effects.push(EffectFactory.createEffect(effect, magnitude, priority));
 }

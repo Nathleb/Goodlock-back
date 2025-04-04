@@ -7,4 +7,4 @@ export type EffectEntry = {
     priority: number;
 };
 
-export type BaseDieInstructions = Record<Face, EffectEntry[]>;
+export type BaseDieInstructions = Record<Face, { description: string, effects: EffectEntry[] }>;

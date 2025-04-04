@@ -1,5 +1,5 @@
-import Effect from "src/types/Effect.type";
-import Position from "./Position.type";
+import Effect from "../types/Effect.type";
+import Position from "../types/Position.type";
 
 type PriorityQueue = [Effect, Position][][];
 

@@ -1,6 +1,6 @@
-import TargetingFunction from "src/strategies/TargetType.type";
-import GameState from "./GameState.type";
-import Position from "./Position.type";
+import TargetingFunction from "../strategies/TargetType.type";
+import GameState from "../types/GameState.type";
+import Position from "../types/Position.type";
 
 type Effect = {
     priority: number;
