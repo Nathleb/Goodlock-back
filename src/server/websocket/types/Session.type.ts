@@ -1,7 +1,9 @@
 export type Session = {
-    isConnected: boolean;
+    sessionId: string;
     socketId: string;
+    isConnected: boolean;
     deviceIdentifier: string;
     inRoomId: string;
     pseudo: string;
+    lastUpdate: Date;
 }

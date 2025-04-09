@@ -1,5 +1,5 @@
 import Character from "../types/Character.type";
-import { roll1D6 } from "../utils/Random.utils";
+import { roll1D6 } from "../utils/random.utils";
 import Position from "../types/Position.type";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
@@ -98,7 +98,6 @@ export function dealDamage(character: Character, amount: number): Character {
     if (damageTaken > 0) {
         updatedCharacter = loseHp(updatedCharacter, damageTaken);
     }
-    console.log(`${character.name} took ${amount} damage! ${updatedCharacter.hp}`);
 
     return updatedCharacter;
 }

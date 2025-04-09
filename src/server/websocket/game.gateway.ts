@@ -1,9 +1,9 @@
 import { WebSocketGateway, SubscribeMessage, WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket } from 'socket.io';
-import { RoomService } from "src/domain/services/Room.service";
-import { SessionService } from "src/domain/services/Session.service";
-import { DEFAULT } from "src/domain/constants/Default.constants";
-import { Session } from "src/domain/types/Session.type";
+import { RoomService } from "src/server/websocket/services/room.service";
+import { SessionService } from "src/server/websocket/services/session.service";
+import { DEFAULT } from "src/server/websocket/constants/Default.constants";
+import { Session } from "src/server/websocket/Session.type";
 
 @WebSocketGateway(3002, { cors: true })
 export class GameGateway {

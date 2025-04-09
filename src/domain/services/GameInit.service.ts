@@ -1,12 +1,12 @@
 import GameState from "../types/GameState.type";
-import { createPriorityQueue } from "../services/PriorityQueue.service";
+import { createPriorityQueue } from "./priorityQueue.service";
 import { Player } from "../types/Player.type";
-import EffectFactory from "../factories/EffectFactory";
-import SingleTargetDamage from "../strategies/SingleTargetDamage";
-import SingleTargetHeal from "../strategies/SingleTargetHeal";
-import SingleTargetShield from "../strategies/SingleTargetShield";
+import EffectFactory from "../factories/EffectFactory.class";
+import SingleTargetDamage from "../strategies/SingleTargetDamage.class";
+import SingleTargetHeal from "../strategies/SingleTargetHeal.class";
+import SingleTargetShield from "../strategies/SingleTargetShield.class";
 import Character from "../types/Character.type";
-import { createCharacterFromJsonTemplate } from "../services/CharacterGeneration.service";
+import { createCharacterFromJsonTemplate } from "./characterGeneration.service";
 
 export function createGameState(player1: Player, player2: Player): GameState {
     return {

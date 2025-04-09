@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Room } from '../types/Room.type';
 import { Session } from '../types/Session.type';
 import { DEFAULT } from '../constants/Default.constants';
-import { WebSocketService } from './WebSocket.service';
+import { WebSocketService } from './webSocket.service';
 
 @Injectable()
 export class RoomService {
@@ -13,15 +13,16 @@ export class RoomService {
     createRoom(owner: Session): Room {
         const roomId = crypto.randomUUID();
         const room: Room = {
-            id: roomId,
-            players: [owner],
-            ownerId: owner.deviceIdentifier,
-            isStarted: false
+            roomId: roomId,
+            playersId: [owner.socketId],
+            ownerId: owner.socketId,
+            isStarted: false,
         };
 
         this.rooms.set(roomId, room);
         this.webSocketService.joinRoom(owner.socketId, roomId);
         this.webSocketService.emitToSocket(owner.socketId, 'createRoom', roomId);
+        //update le inRoomId du joueur
 
         return room;
     }
@@ -29,12 +30,13 @@ export class RoomService {
     joinRoom(joiningPlayer: Session, roomId: string): Room {
         const room = this.rooms.get(roomId);
         if (!room) throw new Error('Room not found');
-        if (room.players.length >= 2) throw new Error('Room is full');
+        if (room.playersId.length >= 2) throw new Error('Room is full');
         if (room.isStarted) throw new Error('Game already started');
 
-        room.players.push(joiningPlayer);
+        room.playersId.push(joiningPlayer.sessionId);
         this.webSocketService.joinRoom(joiningPlayer.socketId, roomId);
         this.webSocketService.emitToRoom(roomId, "joinRoom", room);
+        //update le inRoomId du joueur
 
         return room;
     }
@@ -46,17 +48,17 @@ export class RoomService {
         const room = this.rooms.get(roomId);
         if (!room) return null;
 
-        room.players = room.players.filter(p => p.socketId !== session.socketId);
+        room.playersId = room.playersId.filter(id => id !== session.sessionId);
         this.webSocketService.leaveRoom(session.socketId, roomId);
 
-        if (room.players.length === 0) {
+        if (room.playersId.length === 0) {
             this.rooms.delete(roomId);
             return null;
         }
 
-        if (room.ownerId === session.deviceIdentifier) {
-            room.ownerId = room.players[0].deviceIdentifier;
-            this.webSocketService.emitToSocket(room.players[0].socketId, 'isPlayerOwner', true);
+        if (room.ownerId === session.sessionId) {
+            room.ownerId = room.playersId[0];
+            this.webSocketService.emitToSocket(room.playersId[0], 'isPlayerOwner', true);
         }
 
         this.webSocketService.emitToRoom(roomId, "joinRoom", room);

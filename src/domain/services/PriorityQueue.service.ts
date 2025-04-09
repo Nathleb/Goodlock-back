@@ -18,9 +18,9 @@ export function createPriorityQueue(length: number): PriorityQueue {
  * @param dieFace - The die face containing effects.
  * @param position - The position associated with the effects.
  */
-export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace: DieFace, position: Position): void {
+export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace: DieFace, position: Position, characterId: string): void {
     dieFace.effects.forEach(effect => {
-        priorityQueue[effect.priority].push([effect, position]);
+        priorityQueue[effect.priority].push([effect, position, characterId]);
     });
 }
 
@@ -31,7 +31,7 @@ export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace:
 export function addAllEffectsToPriorityQueue(gameState: GameState): void {
     const { players, priorityQueue } = gameState;
     players.forEach((player) => player.team.forEach(char => {
-        addEffectsToPriorityQueue(priorityQueue, char.face, char.target)
+        addEffectsToPriorityQueue(priorityQueue, char.face, char.target, char.id)
     })
     );
 }

@@ -15,17 +15,8 @@ export function roll1D6(): number {
  * @param playerIndex - The index of the player (0 or 1).
  * @returns A random position within the player's team.
  */
-export function rollRandomPosition(playerIndex: PlayerIndex): Position {
-    return { playerIndex, characterIndex: roll1D(5) as CharacterIndex };
-}
-
-/**
- * Rolls a random position for a character within a player's team.
- * @param playerIndex - The index of the player (0 or 1).
- * @returns A random position within the player's team.
- */
-export function rollRandomPosition3(playerIndex: PlayerIndex): Position {
-    return { playerIndex, characterIndex: roll1D(3) as CharacterIndex };
+export function rollRandomPosition(playerIndex: PlayerIndex, maxIndex: CharacterIndex): Position {
+    return { playerIndex, characterIndex: roll1D(maxIndex) };
 }
 
 /**

@@ -1,5 +1,5 @@
 import Character from "../types/Character.type";
-import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "../services/Character.service";
+import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "./character.service";
 import { Player } from "../types/Player.type";
 import Position from "../types/Position.type";
 import CharacterIndex from "../types/CharacterIndex.type";
@@ -44,6 +44,16 @@ export function rollDiceForTurn(player: Player): Player {
 }
 
 /**
+ * Unlock dice of all characters in the player's team.
+ * @param player - The player whose team's dice are unlocked.
+ * @returns A new player object with the updated team.
+ */
+export function unlockAllDice(player: Player): Player {
+    const newTeam = player.team.map(char => char.isFaceLocked ? toggleIsFaceLocked(char) : char);
+    return { ...player, team: newTeam };
+}
+
+/**
  * Checks if the player has lost the game.
  * @param player - The player to check.
  * @returns True if all characters in the player's team are dead, otherwise false.
@@ -71,7 +81,7 @@ export function rollDieFromPlayer(player: Player, position: Position): Player {
  * @returns A new player object.
  */
 export function createPlayer(team: Character[], playerIndex: PlayerIndex): Player {
-    team = team.map((char, index) => ({ ...char, position: { playerIndex, characterIndex: index as CharacterIndex }, face: char.baseDie[0] }));
+    team = team.map((char, index) => ({ ...char, position: { playerIndex, characterIndex: index }, face: char.baseDie[0] }));
 
     return {
         playerIndex,

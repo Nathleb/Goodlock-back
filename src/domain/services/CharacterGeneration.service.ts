@@ -1,5 +1,5 @@
 import CharacterEntity from "../entities/CharacterEntity.entity";
-import EffectFactory from "../factories/EffectFactory";
+import EffectFactory from "../factories/EffectFactory.class";
 import Die from "../types/Die.type";
 import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";

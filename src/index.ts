@@ -1,15 +1,15 @@
-export * from "./domain/factories/EffectFactory";
+export * from "./domain/factories/EffectFactory.class";
 
-export * from "./domain/services/Character.service";
-export * from "./domain/services/CharacterGeneration.service";
-export * from "./domain/services/GameInit.service";
-export * from "./domain/services/Position.service";
-export * from "./domain/services/Player.service";
-export * from "./domain/services/PriorityQueue.service";
+export * from "./domain/services/character.service";
+export * from "./domain/services/characterGeneration.service";
+export * from "./domain/services/gameInit.service";
+export * from "./domain/services/position.service";
+export * from "./domain/services/player.service";
+export * from "./domain/services/priorityQueue.service";
 
-export * from "./domain/strategies/SingleTargetDamage";
-export * from "./domain/strategies/SingleTargetHeal";
-export * from "./domain/strategies/SingleTargetshield";
+export * from "./domain/strategies/SingleTargetDamage.class";
+export * from "./domain/strategies/SingleTargetHeal.class";
+export * from "./domain/strategies/SingleTargetShield.class";
 export * from "./domain/strategies/TargetType.type";
 
 
