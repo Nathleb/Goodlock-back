@@ -47,4 +47,14 @@ export class SessionService {
     updateSessionRoom(sessionId: string, roomId: string): Session {
         return this.sessionManager.updateSession(sessionId, { inRoomId: roomId });
     }
+
+    disconnectSession(socketId: string): void {
+        const session = this.sessionManager.getSession(socketId);
+        if (session) {
+            this.sessionManager.updateSession(socketId, {
+                isConnected: false,
+                lastUpdate: new Date()
+            });
+        }
+    }
 }
