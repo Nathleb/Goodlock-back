@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
+import { WebSocketPort } from '@application/ports/WebSocketPort';
 
 @Injectable()
-export class WebSocketService {
+export class WebSocketService implements WebSocketPort {
+
     private server: Server;
 
     setServer(server: Server) {

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Session } from '../types/Session.type';
+import { SessionPort } from '@application/ports/SessionPort';
+import { Session } from '@domain/types/Session.type';
 import { SessionManager } from '../managers/session.manager';
 import { RoomManager } from '../managers/room.manager';
 
 @Injectable()
-export class SessionService {
+export class SessionService implements SessionPort {
 
     constructor(private readonly sessionManager: SessionManager, private readonly roomanager: RoomManager) { };
 

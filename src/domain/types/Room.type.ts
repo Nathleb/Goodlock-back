@@ -1,4 +1,4 @@
-import GameState from "../../../domain/types/GameState.type";
+import GameState from "./GameState.type";
 
 export type Room = {
     roomId: string;
