@@ -3,45 +3,37 @@ import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
 import { Session } from '@domain/types/Session.type';
 import { DEFAULT } from "src/infrastructure/adapters/websocket/constants/Default.constants";
+import { RoomManager } from "@infrastructure/adapters/managers/room.manager";
 
 @Injectable()
 export class RoomService implements RoomPort {
-    private rooms: Map<string, Room> = new Map();
+    constructor(private readonly roomManager: RoomManager) { }
 
     createRoom(owner: Session): Room {
-        const roomId = crypto.randomUUID();
-        const room: Room = {
-            roomId: roomId,
-            playersId: [owner.socketId],
-            ownerId: owner.socketId,
-            isStarted: false,
-        };
-
-        this.rooms.set(roomId, room);
-        return room;
+        return this.roomManager.createRoom(owner.socketId);
     }
 
     joinRoom(joiningPlayer: Session, roomId: string): Room {
-        const room = this.rooms.get(roomId);
+        const room = this.roomManager.getRoom(roomId);
         if (!room) throw new Error('Room not found');
         if (room.playersId.length >= 2) throw new Error('Room is full');
         if (room.isStarted) throw new Error('Game already started');
 
         room.playersId.push(joiningPlayer.sessionId);
-        return room;
+        return this.roomManager.updateRoom(roomId, room)!;
     }
 
     quitRoom(session: Session): Room | null {
         const roomId = session.inRoomId;
         if (roomId === DEFAULT.NO_ROOM) return null;
 
-        const room = this.rooms.get(roomId);
+        const room = this.roomManager.getRoom(roomId);
         if (!room) return null;
 
         room.playersId = room.playersId.filter(id => id !== session.sessionId);
 
         if (room.playersId.length === 0) {
-            this.rooms.delete(roomId);
+            this.roomManager.deleteRoom(roomId);
             return null;
         }
 
@@ -49,10 +41,10 @@ export class RoomService implements RoomPort {
             room.ownerId = room.playersId[0];
         }
 
-        return room;
+        return this.roomManager.updateRoom(roomId, room)!;
     }
 
     getRoom(roomId: string): Room | undefined {
-        return this.rooms.get(roomId);
+        return this.roomManager.getRoom(roomId);
     }
 }

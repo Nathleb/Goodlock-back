@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { RoomService } from './Room.service';
-import { RoomWebSocketHandlerService } from './RoomWebSocketHandler.service';
+import { RoomService } from '@domain/services/Room.service';
 import { Session } from '@domain/types/Session.type';
 import { Room } from '@domain/types/Room.type';
+import { RoomWebSocketHandlerService } from '@infrastructure/adapters/websocket/services/RoomWebSocketHandler.service';
 
 @Injectable()
 export class RoomCoordinatorService {

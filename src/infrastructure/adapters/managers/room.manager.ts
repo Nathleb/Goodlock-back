@@ -1,6 +1,6 @@
+import { Room } from "@domain/types/Room.type";
 import { Injectable } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { Room } from "../types/Room.type";
 
 @Injectable()
 export class RoomManager {
@@ -15,7 +15,8 @@ export class RoomManager {
             // name: gameParameters.roomName,
             // isPublic: gameParameters.isPublic
             playersId: [ownerId],
-            isStarted: false
+            isStarted: false,
+            name: ""
         };
 
         this.rooms.set(roomId, Room);

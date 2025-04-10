@@ -1,23 +1,25 @@
 import { Module } from '@nestjs/common';
-import { GameGateway } from './infrastructure/adapters/websocket/game.gateway';
-import { RoomService } from './infrastructure/adapters/websocket/services/Room.service';
-import { RoomWebSocketHandlerService } from './infrastructure/adapters/websocket/services/RoomWebSocketHandler.service';
-import { RoomCoordinatorService } from './infrastructure/adapters/websocket/services/RoomCoordinator.service';
-import { SessionService } from './infrastructure/adapters/websocket/services/Session.service';
-import { WebSocketService } from './infrastructure/adapters/websocket/services/webSocket.service';
-import { ROOM_PORT, SESSION_PORT } from './application/ports/tokens';
+import { GameGateway } from '@infrastructure/adapters/websocket/game.gateway';
+import { RoomService } from '@domain/services/Room.service';
+import { RoomWebSocketHandlerService } from '@infrastructure/adapters/websocket/services/RoomWebSocketHandler.service';
+import { SessionService } from '@domain/services/Session.service';
+import { WebSocketService } from '@infrastructure/adapters/websocket/services/webSocket.service';
+import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
+import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
+import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 
 @Module({
   imports: [],
   controllers: [],
   providers: [
+    SessionManager,
+    RoomManager,
     GameGateway,
+    WebSocketService,
     RoomService,
     RoomWebSocketHandlerService,
     RoomCoordinatorService,
-    WebSocketService,
-    { provide: ROOM_PORT, useClass: RoomCoordinatorService },
-    { provide: SESSION_PORT, useClass: SessionService }
+    SessionService,
   ],
 })
 export class AppModule { }

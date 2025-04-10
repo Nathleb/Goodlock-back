@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { SessionPort } from '@application/ports/SessionPort';
 import { Session } from '@domain/types/Session.type';
-import { SessionManager } from '../managers/session.manager';
-import { RoomManager } from '../managers/room.manager';
+import { SessionManager } from '../../infrastructure/adapters/managers/session.manager';
 
 @Injectable()
 export class SessionService implements SessionPort {
 
-    constructor(private readonly sessionManager: SessionManager, private readonly roomanager: RoomManager) { };
+    constructor(private readonly sessionManager: SessionManager) { };
 
     getSession(socketId: string): Session | undefined {
         return this.sessionManager.getSession(socketId);
@@ -17,11 +16,7 @@ export class SessionService implements SessionPort {
         return this.sessionManager.getSessionByDeviceIdentifier(deviceIdentifier);
     }
 
-    createSession(socketId: string, deviceIdentifier: string): Session {
-        return this.sessionManager.createSession(socketId, deviceIdentifier);
-    }
-
-    reconnectSessionByDeviceIdentifier(socketId: string, deviceIdentifier: string): Session {
+    createOrReconnectSession(socketId: string, deviceIdentifier: string): Session {
         const existingSession = this.getSessionByDeviceIdentifier(deviceIdentifier);
 
         if (existingSession) {
@@ -45,8 +40,8 @@ export class SessionService implements SessionPort {
         this.sessionManager.deleteSession(socketId);
     }
 
-    updateSessionRoom(sessionId: string, roomId: string): Session {
-        return this.sessionManager.updateSession(sessionId, { inRoomId: roomId });
+    updateSession(sessionId: string, updates: Partial<Session>): Session {
+        return this.sessionManager.updateSession(sessionId, updates);
     }
 
     disconnectSession(socketId: string): void {

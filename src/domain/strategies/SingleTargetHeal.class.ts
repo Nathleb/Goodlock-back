@@ -1,5 +1,5 @@
-import { gainHp } from "../services/character.service";
-import { findSingleTarget } from "../services/position.service";
+import { gainHp } from "../services/Character.service";
+import { findSingleTarget } from "../services/Position.service";
 import Position from "../types/Position.type";
 import Effect from "../types/Effect.type";
 import TargetingFunction from "./TargetType.type";

@@ -3,8 +3,11 @@ import { RoomDTO } from '@application/dtos/Room.dto';
 
 export class RoomMapper {
     static toDTO(room: Room): RoomDTO {
-        return new RoomDTO(
-
-        );
+        return {
+            roomId: room.roomId,
+            players: [],
+            ownerId: '',
+            isStarted: false
+        }
     }
 }

@@ -1,11 +1,7 @@
-import { Inject } from '@nestjs/common';
 import { WebSocketGateway, SubscribeMessage, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { ROOM_PORT, SESSION_PORT } from '@application/ports/tokens';
-import { SessionPort } from '@application/ports/SessionPort';
-import { DEFAULT } from './constants/Default.constants';
-import { Session } from '@domain/types/Session.type';
-import { RoomPort } from '@application/ports/RoomPort';
+import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
+import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 
 @WebSocketGateway(3002, { cors: true })
 export class GameGateway {
@@ -13,30 +9,19 @@ export class GameGateway {
     server: Server;
 
     constructor(
-        @Inject(ROOM_PORT) private roomService: RoomPort,
-        @Inject(SESSION_PORT) private sessionService: SessionPort
+        private roomService: RoomCoordinatorService,
+        private sessionService: SessionCoordinatorService
     ) { }
 
     handleConnection(client: Socket) {
-        this.getSessionInfos(client);
+        const deviceIdentifier = client.handshake.query.deviceIdentifier;
+        if (typeof deviceIdentifier === 'string') {
+            this.sessionService.createOrReconnectSession(client.id, deviceIdentifier);
+        }
     }
 
     handleDisconnect(client: Socket) {
-        const session = this.sessionService.getSession(client.id);
-        if (session && session.inRoomId !== DEFAULT.NO_ROOM) {
-            session.isConnected = false;
-            this.roomService.quitRoom(session);
-        }
-    }
-
-    @SubscribeMessage('getSessionInfos')
-    getSessionInfos(client: Socket): void {
-        const deviceIdentifier = client.handshake.query.deviceIdentifier;
-        if (typeof deviceIdentifier === 'string') {
-            const session: Session = this.sessionService.reconnectSessionByDeviceIdentifier(client.id, deviceIdentifier)
-
-            client.emit("getSessionInfos", { pseudo: session.pseudo, inRoomId: session.inRoomId });
-        }
+        this.sessionService.disconnectSession(client.id);
     }
 
     @SubscribeMessage('createRoom')

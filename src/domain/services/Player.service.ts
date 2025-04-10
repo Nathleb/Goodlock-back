@@ -1,5 +1,5 @@
 import Character from "../types/Character.type";
-import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "./character.service";
+import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "./Character.service";
 import { Player } from "../types/Player.type";
 import Position from "../types/Position.type";
 import CharacterIndex from "../types/CharacterIndex.type";
