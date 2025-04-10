@@ -1,7 +1,7 @@
-import EffectFactory from "../src/factories/EffectFactory";
-import SingleTargetDamage from "../src/strategies/SingleTargetDamage";
-import SingleTargetHeal from "../src/strategies/SingleTargetHeal";
-import SingleTargetShield from "../src/strategies/SingleTargetShield";
+import EffectFactory from "@domain/factories/EffectFactory.class";
+import SingleTargetDamage from "@domain/strategies/SingleTargetDamage.class";
+import SingleTargetHeal from "@domain/strategies/SingleTargetHeal.class";
+import SingleTargetShield from "@domain/strategies/SingleTargetShield.class";
 
 describe('EffectFactory', () => {
   it('should register and create SingleTargetDamage effect', () => {

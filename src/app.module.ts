@@ -8,6 +8,9 @@ import { SessionManager } from '@infrastructure/adapters/managers/session.manage
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import { ErrorWebSocketHandlerService } from '@infrastructure/adapters/websocket/services/ErrorWebSocketHandler.service';
 import { SessionGateway } from '@infrastructure/adapters/websocket/session.gateway';
+import { SharedWebSocketService } from '@infrastructure/adapters/websocket/shared.gateway';
+import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
+import { SessionWebSocketHandlerService } from '@infrastructure/adapters/websocket/services/SessionWebSocketHandler.service';
 
 @Module({
   imports: [],
@@ -21,7 +24,10 @@ import { SessionGateway } from '@infrastructure/adapters/websocket/session.gatew
     RoomWebSocketHandlerService,
     RoomCoordinatorService,
     SessionService,
-    ErrorWebSocketHandlerService
+    SessionCoordinatorService,
+    SessionWebSocketHandlerService,
+    ErrorWebSocketHandlerService,
+    SharedWebSocketService
   ],
 })
 export class AppModule { }

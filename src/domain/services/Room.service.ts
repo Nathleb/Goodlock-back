@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
 import { Session } from '@domain/types/Session.type';
-import { DEFAULT } from "src/infrastructure/adapters/websocket/constants/Default.constants";
 import { RoomManager } from "@infrastructure/adapters/managers/room.manager";
+import { DEFAULT } from '@infrastructure/adapters/websocket/constants/Default.constants';
 
 @Injectable()
 export class RoomService implements RoomPort {

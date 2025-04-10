@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { RoomMapper } from '@application/mappers/RoomMapper';
 import { Session } from '@domain/types/Session.type';
 import { Room } from '@domain/types/Room.type';
-import { WebSocketPort } from '@application/ports/WebSocketPort';
+import { WebSocketService } from './webSocket.service';
 
 @Injectable()
 export class RoomWebSocketHandlerService {
-    constructor(private webSocketService: WebSocketPort) { }
+    constructor(private webSocketService: WebSocketService) { }
 
     handleRoomJoin(joiningPlayer: Session, room: Room): void {
         const roomDTO = RoomMapper.toDTO(room);

@@ -1,7 +1,7 @@
 import { Session } from "@domain/types/Session.type";
 import { Injectable } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { DEFAULT } from "src/infrastructure/adapters/websocket/constants/Default.constants";
+import { DEFAULT } from "@infrastructure/adapters/websocket/constants/Default.constants";
 
 
 @Injectable()

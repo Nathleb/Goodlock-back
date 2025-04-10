@@ -17,7 +17,7 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "baseUrl": ".",
+    "resolveJsonModule": true,
     "paths": {
       "@application/*": ["src/application/*"],
       "@domain/*": ["src/domain/*"],
