@@ -14,7 +14,10 @@ export class SessionCoordinatorService {
     ) {}
 
     handleConnect(socketId: string, deviceIdentifier: string): void {
-        this.sessionPort.createOrReconnectSession(socketId, deviceIdentifier);
+        const session = this.sessionPort.createOrReconnectSession(socketId, deviceIdentifier);
+        if (session.roomId) {
+            this.wsPort.joinRoom(socketId, session.roomId);
+        }
     }
 
     handleDisconnect(socketId: string): void {

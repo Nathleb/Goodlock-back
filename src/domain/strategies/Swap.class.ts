@@ -2,17 +2,22 @@ import { executeSwap, SwapDirection } from "../services/Player.service";
 import Effect from "../types/Effect.type";
 import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
-import TargetingFunction from "../types/TargetingFunction.type";
 
 export default class SwapEffect implements Effect {
-    readonly direction: SwapDirection;
-    readonly findTargets: TargetingFunction = () => [];
+    constructor(private readonly direction: SwapDirection) {}
 
-    constructor(direction: SwapDirection) {
-        this.direction = direction;
-    }
+    solve(gameState: GameState, _target: Position, actorId: string): { state: GameState; affected: string[] } {
+        const affected: string[] = [actorId];
 
-    solve(gameState: GameState, _target: Position, actorId: string): GameState {
-        return executeSwap(gameState, actorId, this.direction);
+        for (const player of gameState.players) {
+            const idx = player.team.findIndex(c => c.id === actorId);
+            if (idx === -1) continue;
+            const neighborIdx = this.direction === SwapDirection.LEFT ? idx - 1 : idx + 1;
+            if (neighborIdx >= 0 && neighborIdx < player.team.length) {
+                affected.push(player.team[neighborIdx].id);
+            }
+        }
+
+        return { state: executeSwap(gameState, actorId, this.direction), affected };
     }
 }

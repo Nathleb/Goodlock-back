@@ -1,21 +1,16 @@
 import { gainHp } from "../services/Character.service";
 import { findAdjacentTargets } from "../services/Position.service";
-import { applyEffectToTargets } from "../utils/TargetUtils";
 import Effect from "../types/Effect.type";
-import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
-import TargetingFunction from "../types/TargetingFunction.type";
+import GameState from "../types/GameState.type";
+import { applyEffectToTargets } from "../utils/TargetUtils";
 
 export default class CleaveHeal implements Effect {
-    readonly amount: number;
-    readonly findTargets: TargetingFunction = findAdjacentTargets;
+    constructor(private readonly amount: number) {}
 
-    constructor(amount: number) {
-        this.amount = amount;
-    }
-
-    solve(gameState: GameState, target: Position, _actorId: string): GameState {
-        const targets = this.findTargets(gameState.players, target);
-        return { ...gameState, players: applyEffectToTargets(gameState.players, targets, c => gainHp(c, this.amount)) };
+    solve(gameState: GameState, target: Position, _actorId: string): { state: GameState; affected: string[] } {
+        const targets = findAdjacentTargets(gameState.players, target);
+        const players = applyEffectToTargets(gameState.players, targets, c => gainHp(c, this.amount));
+        return { state: { ...gameState, players }, affected: targets.map(c => c.id) };
     }
 }

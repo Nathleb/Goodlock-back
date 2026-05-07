@@ -13,11 +13,23 @@ export class RoomCoordinatorService {
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
     ) {}
 
+    private leaveCurrentRoom(socketId: string, sessionId: string, roomId: string): void {
+        const updatedRoom = this.roomPort.quitRoom(sessionId);
+        this.sessionPort.setSessionRoom(socketId, undefined);
+        this.wsPort.leaveRoom(socketId, roomId);
+        if (updatedRoom) {
+            this.wsPort.emitToRoom(updatedRoom.roomId, 'roomUpdated', RoomMapper.toDTO(updatedRoom));
+        }
+    }
+
     createRoom(socketId: string): void {
         const session = this.sessionPort.getSession(socketId);
         if (!session) return;
 
         try {
+            if (session.roomId) {
+                this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
+            }
             const room = this.roomPort.createRoom(session.sessionId);
             this.sessionPort.setSessionRoom(socketId, room.roomId);
             this.wsPort.joinRoom(socketId, room.roomId);
@@ -32,6 +44,9 @@ export class RoomCoordinatorService {
         if (!session) return;
 
         try {
+            if (session.roomId) {
+                this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
+            }
             const room = this.roomPort.joinRoom(session.sessionId, roomId);
             this.sessionPort.setSessionRoom(socketId, room.roomId);
             this.wsPort.joinRoom(socketId, room.roomId);
@@ -45,14 +60,8 @@ export class RoomCoordinatorService {
         const session = this.sessionPort.getSession(socketId);
         if (!session || !session.roomId) return;
 
-        const roomId = session.roomId;
         try {
-            const updatedRoom = this.roomPort.quitRoom(session.sessionId);
-            this.sessionPort.setSessionRoom(socketId, undefined);
-            this.wsPort.leaveRoom(socketId, roomId);
-            if (updatedRoom) {
-                this.wsPort.emitToRoom(updatedRoom.roomId, 'roomUpdated', RoomMapper.toDTO(updatedRoom));
-            }
+            this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
         } catch (e: unknown) {
             this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
         }

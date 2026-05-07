@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { SharedWebSocketService } from './services/SharedWebSocketService';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
+import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -18,6 +19,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         private readonly shared: SharedWebSocketService,
         private readonly sessionCoordinator: SessionCoordinatorService,
         private readonly roomCoordinator: RoomCoordinatorService,
+        private readonly gameCoordinator: GameCoordinatorService,
     ) {}
 
     afterInit(server: Server): void {
@@ -37,6 +39,8 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         this.sessionCoordinator.handleDisconnect(client.id);
     }
 
+    // ── Lobby ────────────────────────────────────────────────────────────────
+
     @SubscribeMessage('createRoom')
     handleCreateRoom(@ConnectedSocket() client: Socket): void {
         this.roomCoordinator.createRoom(client.id);
@@ -53,5 +57,51 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('quitRoom')
     handleQuitRoom(@ConnectedSocket() client: Socket): void {
         this.roomCoordinator.quitRoom(client.id);
+    }
+
+    // ── Game ─────────────────────────────────────────────────────────────────
+
+    @SubscribeMessage('startGame')
+    handleStartGame(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.startGame(client.id);
+    }
+
+    @SubscribeMessage('rearrangeTeam')
+    handleRearrangeTeam(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { characterIds: string[] },
+    ): void {
+        this.gameCoordinator.rearrangeTeam(client.id, data.characterIds);
+    }
+
+    @SubscribeMessage('confirmPlacement')
+    handleConfirmPlacement(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.confirmPlacement(client.id);
+    }
+
+    @SubscribeMessage('toggleDieLock')
+    handleToggleDieLock(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { characterId: string },
+    ): void {
+        this.gameCoordinator.toggleDieLock(client.id, data.characterId);
+    }
+
+    @SubscribeMessage('confirmKeep')
+    handleConfirmKeep(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.confirmKeep(client.id);
+    }
+
+    @SubscribeMessage('selectTarget')
+    handleSelectTarget(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { characterId: string; target: { playerIndex: number; slot: number } },
+    ): void {
+        this.gameCoordinator.selectTarget(client.id, data.characterId, data.target);
+    }
+
+    @SubscribeMessage('confirmAssignment')
+    handleConfirmAssignment(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.confirmAssignment(client.id);
     }
 }

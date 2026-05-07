@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
+import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import { SharedWebSocketService } from '@infrastructure/adapters/websocket/services/SharedWebSocketService';
@@ -17,6 +18,7 @@ import { SessionGateway } from '@infrastructure/adapters/websocket/session.gatew
         SharedWebSocketService,
         RoomCoordinatorService,
         SessionCoordinatorService,
+        GameCoordinatorService,
         SessionGateway,
     ],
 })

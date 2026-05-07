@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
-import { createRoom, addPlayerToRoom, removePlayerFromRoom } from '@domain/services/Room.service';
+import GameState from '@domain/types/GameState.type';
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom } from '@domain/services/Room.service';
 
 @Injectable()
 export class RoomManager implements RoomPort {
@@ -41,5 +42,19 @@ export class RoomManager implements RoomPort {
 
     getRoom(roomId: string): Room | undefined {
         return this.rooms.get(roomId);
+    }
+
+    startGame(roomId: string, gameState: GameState): Room {
+        const room = this.rooms.get(roomId);
+        if (!room) throw new Error('Room not found');
+        const started = startRoom(room, gameState);
+        this.rooms.set(roomId, started);
+        return started;
+    }
+
+    updateGameState(roomId: string, gameState: GameState): void {
+        const room = this.rooms.get(roomId);
+        if (!room) return;
+        this.rooms.set(roomId, { ...room, gameState });
     }
 }
