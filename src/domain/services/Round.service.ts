@@ -1,18 +1,19 @@
 import GameState from "../types/GameState.type";
 import { resetShield } from "./Character.service";
-import { hasLost } from "./Player.service";
+import { hasLost, unlockAllDice } from "./Player.service";
 import { Player } from "../types/Player.type";
 
 export function endOfRound(gameState: GameState): GameState {
-    const updatedPlayers = gameState.players.map(player => ({
-        ...player,
-        team: player.team.map(resetShield),
-    })) as [Player, Player];
+    const updatedPlayers = gameState.players.map(player => {
+        const unlocked = unlockAllDice(player);
+        return { ...unlocked, team: unlocked.team.map(resetShield) };
+    }) as [Player, Player];
     return {
         ...gameState,
         players: updatedPlayers,
         currentRound: gameState.currentRound + 1,
-        rollsLeft: 3,
+        rollsLeft: 2,
+        playersReady: [false, false],
     };
 }
 

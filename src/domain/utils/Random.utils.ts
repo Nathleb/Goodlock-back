@@ -5,7 +5,7 @@ export function roll1D6(): number {
 }
 
 export function rollRandomPosition(playerIndex: PlayerIndex, maxSlot: SlotIndex): Position {
-    return { playerIndex, slot: roll1D(maxSlot) };
+    return { playerIndex, slot: roll1D(maxSlot) as SlotIndex };
 }
 
 export function roll1D(size: number): number {

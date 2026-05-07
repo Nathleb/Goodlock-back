@@ -1,4 +1,5 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
+import { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { loseHp } from "@domain/services/Character.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
@@ -21,7 +22,7 @@ describe('PriorityQueueService', () => {
   const die = generateFullDie(baseDieInstructions);
   // baseSpeed: 0 so finalPriority = face.priority + 0 = face.priority
   const character = createCharacter("TestCharacter", 100, 0, die, { playerIndex: 0, slot: 0 });
-  const target = { playerIndex: 1 as const, slot: 0 };
+  const target = { playerIndex: 1 as const, slot: 0 as SlotIndex };
   const player1: Player = { playerIndex: 0, team: [character] };
   const player2: Player = { playerIndex: 1, team: [character] };
 

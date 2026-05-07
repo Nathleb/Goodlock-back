@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
+import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
+import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
+import { SharedWebSocketService } from '@infrastructure/adapters/websocket/services/SharedWebSocketService';
+import { WebSocketService } from '@infrastructure/adapters/websocket/services/WebSocketService';
+import { SessionGateway } from '@infrastructure/adapters/websocket/session.gateway';
 
 @Module({
-  imports: [],
-  controllers: [],
-  providers: [
-    RoomCoordinatorService,
-    SessionCoordinatorService,
-  ],
+    imports: [],
+    providers: [
+        { provide: ROOM_PORT, useClass: RoomManager },
+        { provide: SESSION_PORT, useClass: SessionManager },
+        { provide: WEBSOCKET_PORT, useClass: WebSocketService },
+        SharedWebSocketService,
+        RoomCoordinatorService,
+        SessionCoordinatorService,
+        SessionGateway,
+    ],
 })
-export class AppModule { }
+export class AppModule {}

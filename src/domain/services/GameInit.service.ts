@@ -22,7 +22,8 @@ export function createGameState(player1: Player, player2: Player): GameState {
     return {
         phase: GamePhase.PLACEMENT,
         currentRound: 0,
-        rollsLeft: 3,
+        rollsLeft: 2,
+        playersReady: [false, false],
         priorityQueue: createPriorityQueue(100),
         players: [player1, player2],
     };

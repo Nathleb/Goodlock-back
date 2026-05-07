@@ -1,3 +1,4 @@
+import { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer, canSwap, executeSwap, SwapDirection } from "@domain/services/Player.service";
@@ -104,7 +105,7 @@ describe('Swap', () => {
 });
 
 describe('SwapEffect (via priority queue)', () => {
-    const withSwap = (gs: ReturnType<typeof createGameState>, face: ReturnType<typeof createGameState>['players'][0]['team'][0]['baseDie'][0], slot: number, actorId: string, baseSpeed: number) =>
+    const withSwap = (gs: ReturnType<typeof createGameState>, face: ReturnType<typeof createGameState>['players'][0]['team'][0]['baseDie'][0], slot: SlotIndex, actorId: string, baseSpeed: number) =>
         ({ ...gs, priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(10), face, { playerIndex: 0 as const, slot }, actorId, baseSpeed) });
 
     it('SwapLeft effect moves the actor one slot to the left', () => {

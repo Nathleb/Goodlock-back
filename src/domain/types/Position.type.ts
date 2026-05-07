@@ -1,5 +1,5 @@
 export type PlayerIndex = 0 | 1;
-export type SlotIndex = number;
+export type SlotIndex = 0 | 1 | 2 | 3 | 4;
 
 type Position = {
     playerIndex: PlayerIndex;

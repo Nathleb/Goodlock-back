@@ -3,6 +3,7 @@ export * from "./domain/factories/EffectFactory.class";
 export * from "./domain/services/Character.service";
 export * from "./domain/services/CharacterGeneration.service";
 export * from "./domain/services/GameInit.service";
+export * from "./domain/services/GameLoop.service";
 export * from "./domain/services/Phase.service";
 export * from "./domain/services/Position.service";
 export * from "./domain/services/Player.service";

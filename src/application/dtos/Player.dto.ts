@@ -1,8 +1,4 @@
 export type PlayerDTO = {
-    id: string;
-    name: string;
-    isReady: boolean;
+    playerId: string;
     isOwner: boolean;
-    isSpectator: boolean;
-    isDisconnected: boolean;
 }

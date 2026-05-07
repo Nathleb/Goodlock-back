@@ -6,6 +6,7 @@ type GameState = {
     phase: GamePhase;
     currentRound: number;
     rollsLeft: number;
+    playersReady: [boolean, boolean];
     priorityQueue: PriorityQueue;
     players: [Player, Player];
 };

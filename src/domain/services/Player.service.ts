@@ -33,6 +33,10 @@ export function unlockAllDice(player: Player): Player {
     return { ...player, team: newTeam };
 }
 
+export function allDiceLocked(player: Player): boolean {
+    return player.team.every(char => char.isFaceLocked);
+}
+
 export function hasLost(player: Player): boolean {
     return player.team.filter(char => isDead(char)).length >= 3;
 }
@@ -55,7 +59,7 @@ export function rearrangeTeam(player: Player, order: SlotIndex[]): Player {
 export function createPlayer(team: Character[], playerIndex: PlayerIndex): Player {
     const positioned = team.map((char, index) => ({
         ...char,
-        position: { playerIndex, slot: index },
+        position: { playerIndex, slot: index as SlotIndex },
         face: char.baseDie[0],
     }));
     return { playerIndex, team: positioned };
@@ -75,8 +79,8 @@ export function executeSwap(gameState: GameState, characterId: string, direction
         if (neighborIdx < 0 || neighborIdx >= player.team.length) return player;
 
         const newTeam = [...player.team];
-        newTeam[idx] = { ...player.team[neighborIdx], position: { ...player.team[neighborIdx].position, slot: idx } };
-        newTeam[neighborIdx] = { ...player.team[idx], position: { ...player.team[idx].position, slot: neighborIdx } };
+        newTeam[idx] = { ...player.team[neighborIdx], position: { ...player.team[neighborIdx].position, slot: idx as SlotIndex } };
+        newTeam[neighborIdx] = { ...player.team[idx], position: { ...player.team[idx].position, slot: neighborIdx as SlotIndex } };
 
         return { ...player, team: newTeam };
     }) as [Player, Player];

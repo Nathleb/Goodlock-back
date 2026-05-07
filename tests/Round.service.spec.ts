@@ -2,7 +2,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { gainShield, loseHp } from "@domain/services/Character.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
-import { createPlayer } from "@domain/services/Player.service";
+import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
 import { endOfRound, checkWinner } from "@domain/services/Round.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
@@ -58,7 +58,7 @@ describe('Round.service', () => {
         expect(updated.currentRound).toBe(gameState.currentRound + 1);
     });
 
-    it('should reset rollsLeft to 3', () => {
+    it('should reset rollsLeft to 2', () => {
         const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
         const player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         const player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
@@ -66,7 +66,22 @@ describe('Round.service', () => {
 
         const updated = endOfRound(gameState);
 
-        expect(updated.rollsLeft).toBe(3);
+        expect(updated.rollsLeft).toBe(2);
+    });
+
+    it('should unlock all dice', () => {
+        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        let player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
+        let player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
+        player1 = toggleDieLockForCharacter(player1, { playerIndex: 0, slot: 0 });
+        player2 = toggleDieLockForCharacter(player2, { playerIndex: 1, slot: 2 });
+        const gameState = createGameState(player1, player2);
+
+        const updated = endOfRound(gameState);
+
+        updated.players.forEach(player =>
+            player.team.forEach(char => expect(char.isFaceLocked).toBe(false))
+        );
     });
 });
 

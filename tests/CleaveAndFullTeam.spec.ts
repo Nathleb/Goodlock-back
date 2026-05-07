@@ -5,7 +5,7 @@ import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueue } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import GameState from "@domain/types/GameState.type";
-import Position from "@domain/types/Position.type";
+import Position, { SlotIndex } from "@domain/types/Position.type";
 import DieFace from "@domain/types/DieFace.type";
 
 initializeEffects();
@@ -20,12 +20,12 @@ const cleaveInstructions: BaseDieInstructions = [
 ];
 
 const die = generateFullDie(cleaveInstructions);
-const makeChar = (name: string, playerIndex: 0 | 1, slot: number) =>
+const makeChar = (name: string, playerIndex: 0 | 1, slot: SlotIndex) =>
     createCharacter(name, 100, 0, die, { playerIndex, slot });
 
 function makeGameState() {
-    const team1 = [0, 1, 2, 3, 4].map(i => makeChar(`A${i}`, 0, i));
-    const team2 = [0, 1, 2, 3, 4].map(i => makeChar(`B${i}`, 1, i));
+    const team1 = [0, 1, 2, 3, 4].map(i => makeChar(`A${i}`, 0, i as SlotIndex));
+    const team2 = [0, 1, 2, 3, 4].map(i => makeChar(`B${i}`, 1, i as SlotIndex));
     return createGameState(createPlayer(team1, 0), createPlayer(team2, 1));
 }
 

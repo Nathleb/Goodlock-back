@@ -5,9 +5,12 @@ export class RoomMapper {
     static toDTO(room: Room): RoomDTO {
         return {
             roomId: room.roomId,
-            players: [],
-            ownerId: '',
-            isStarted: false
-        }
+            players: room.playersId.map(id => ({
+                playerId: id,
+                isOwner: id === room.ownerId,
+            })),
+            ownerId: room.ownerId,
+            isStarted: room.isStarted,
+        };
     }
 }
