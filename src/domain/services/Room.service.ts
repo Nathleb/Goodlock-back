@@ -4,7 +4,6 @@ import GameState from '../types/GameState.type';
 export function createRoom(ownerId: string): Room {
     return {
         roomId: crypto.randomUUID(),
-        name: '',
         playersId: [ownerId],
         ownerId,
         isStarted: false,

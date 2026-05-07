@@ -44,10 +44,10 @@ const withDeadEnemies = (gs: typeof baseGs) => ({
 });
 
 const makeRoom = (gameState: typeof baseGs): Room => ({
-    roomId: 'room-1', name: '', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: true, gameState,
+    roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: true, gameState,
 });
 
-const lobbyRoom: Room = { roomId: 'room-1', name: '', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
+const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
 const singlePlayerRoom: Room = { ...lobbyRoom, playersId: ['p0'] };
 
 // ── Mocks ───────────────────────────────────────────────────────────────────

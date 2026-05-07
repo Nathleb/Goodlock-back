@@ -8,7 +8,7 @@ const SOCKET = 'socket-0';
 const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, deviceIdentifier: 'dev-0' };
 const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: 'room-1' };
 
-const ROOM: Room = { roomId: 'room-1', name: '', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
+const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
 const ROOM_SINGLE: Room = { ...ROOM, playersId: ['p0'] };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
