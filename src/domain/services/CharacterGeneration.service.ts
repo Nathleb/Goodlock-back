@@ -3,7 +3,7 @@ import EffectFactory from "../factories/EffectFactory.class";
 import Die from "../types/Die.type";
 import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
-import EffectLabels from "../types/EffectLabels.type";
+import EffectLabel from "../types/EffectLabels.type";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
 
@@ -57,6 +57,6 @@ export function generateFaceFromEffectEntries(face: DieFace, effectEntries: Effe
     );
 }
 
-export function addEffectToFace(dieFace: DieFace, effect: EffectLabels, magnitude: number): DieFace {
+export function addEffectToFace(dieFace: DieFace, effect: EffectLabel, magnitude: number): DieFace {
     return { ...dieFace, effects: [...dieFace.effects, EffectFactory.createEffect(effect, magnitude)] };
 }

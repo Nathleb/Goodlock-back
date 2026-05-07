@@ -1,3 +1,4 @@
+import EffectLabel from "@domain/types/EffectLabels.type";
 import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom } from "@domain/services/Room.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
@@ -6,12 +7,12 @@ import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
 initializeEffects();
 const die = generateFullDie([
-    { description: "D", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
 ] as BaseDieInstructions);
 const makeTeam = (pi: 0 | 1) => createPlayer([0,1,2,3,4].map(i => createCharacter("C", 100, 1, die, { playerIndex: pi, slot: i })), pi);
 const gameState = createGameState(makeTeam(0), makeTeam(1));

@@ -1,5 +1,8 @@
 import GameState from "../types/GameState.type";
+import GamePhase from "../types/GamePhase.type";
+import EffectLabel from "../types/EffectLabels.type";
 import { createPriorityQueue } from "./PriorityQueue.service";
+import { SwapDirection } from "./Player.service";
 import { Player } from "../types/Player.type";
 import EffectFactory from "../factories/EffectFactory.class";
 import SingleTargetDamage from "../strategies/SingleTargetDamage.class";
@@ -17,6 +20,7 @@ import { createCharacterFromJsonTemplate } from "./CharacterGeneration.service";
 
 export function createGameState(player1: Player, player2: Player): GameState {
     return {
+        phase: GamePhase.PLACEMENT,
         currentRound: 0,
         rollsLeft: 3,
         priorityQueue: createPriorityQueue(100),
@@ -29,15 +33,15 @@ export function createTeamsFromTemplates(templateContents: string[]): Character[
 }
 
 export function initializeEffects() {
-    EffectFactory.registerEffect("SingleTargetDamage", (amount) => new SingleTargetDamage(amount));
-    EffectFactory.registerEffect("SingleTargetHeal", (amount) => new SingleTargetHeal(amount));
-    EffectFactory.registerEffect("SingleTargetShield", (amount) => new SingleTargetShield(amount));
-    EffectFactory.registerEffect("CleaveDamage", (amount) => new CleaveDamage(amount));
-    EffectFactory.registerEffect("CleaveHeal", (amount) => new CleaveHeal(amount));
-    EffectFactory.registerEffect("CleaveShield", (amount) => new CleaveShield(amount));
-    EffectFactory.registerEffect("FullTeamDamage", (amount) => new FullTeamDamage(amount));
-    EffectFactory.registerEffect("FullTeamHeal", (amount) => new FullTeamHeal(amount));
-    EffectFactory.registerEffect("FullTeamShield", (amount) => new FullTeamShield(amount));
-    EffectFactory.registerEffect("SwapLeft", () => new SwapEffect("left"));
-    EffectFactory.registerEffect("SwapRight", () => new SwapEffect("right"));
+    EffectFactory.registerEffect(EffectLabel.SingleTargetDamage,  (amount) => new SingleTargetDamage(amount));
+    EffectFactory.registerEffect(EffectLabel.SingleTargetHeal,    (amount) => new SingleTargetHeal(amount));
+    EffectFactory.registerEffect(EffectLabel.SingleTargetShield,  (amount) => new SingleTargetShield(amount));
+    EffectFactory.registerEffect(EffectLabel.CleaveDamage,        (amount) => new CleaveDamage(amount));
+    EffectFactory.registerEffect(EffectLabel.CleaveHeal,          (amount) => new CleaveHeal(amount));
+    EffectFactory.registerEffect(EffectLabel.CleaveShield,        (amount) => new CleaveShield(amount));
+    EffectFactory.registerEffect(EffectLabel.FullTeamDamage,      (amount) => new FullTeamDamage(amount));
+    EffectFactory.registerEffect(EffectLabel.FullTeamHeal,        (amount) => new FullTeamHeal(amount));
+    EffectFactory.registerEffect(EffectLabel.FullTeamShield,      (amount) => new FullTeamShield(amount));
+    EffectFactory.registerEffect(EffectLabel.SwapLeft,            () => new SwapEffect(SwapDirection.LEFT));
+    EffectFactory.registerEffect(EffectLabel.SwapRight,           () => new SwapEffect(SwapDirection.RIGHT));
 }

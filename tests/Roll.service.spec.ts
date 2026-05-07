@@ -1,3 +1,4 @@
+import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
@@ -5,12 +6,12 @@ import { canReroll, reroll } from "@domain/services/Roll.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
-    { description: "Heal", priority: 1, effects: [{ effect: "SingleTargetHeal", magnitude: 5 }] },
-    { description: "Shield", priority: 1, effects: [{ effect: "SingleTargetShield", magnitude: 5 }] },
-    { description: "Damage", priority: 2, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
-    { description: "Heal", priority: 2, effects: [{ effect: "SingleTargetHeal", magnitude: 5 }] },
-    { description: "Shield", priority: 2, effects: [{ effect: "SingleTargetShield", magnitude: 5 }] },
+    { description: "Damage", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
+    { description: "Heal", priority: 1, effects: [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }] },
+    { description: "Shield", priority: 1, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
+    { description: "Damage", priority: 2, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
+    { description: "Heal", priority: 2, effects: [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }] },
+    { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
 ];
 
 initializeEffects();

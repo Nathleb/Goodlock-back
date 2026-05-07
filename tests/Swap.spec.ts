@@ -1,16 +1,17 @@
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
-import { createPlayer, canSwap, executeSwap } from "@domain/services/Player.service";
+import { createPlayer, canSwap, executeSwap, SwapDirection } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueue } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
+import EffectLabel from "@domain/types/EffectLabels.type";
 
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage",     priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
-    { description: "Heal",       priority: 1, effects: [{ effect: "SingleTargetHeal",   magnitude: 5 }] },
-    { description: "Shield",     priority: 1, effects: [{ effect: "SingleTargetShield", magnitude: 5 }] },
-    { description: "Swap left",  priority: 1, effects: [{ effect: "SwapLeft",           magnitude: 0 }] },
-    { description: "Swap right", priority: 1, effects: [{ effect: "SwapRight",          magnitude: 0 }] },
-    { description: "Damage2",    priority: 2, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
+    { description: "Damage",     priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
+    { description: "Heal",       priority: 1, effects: [{ effect: EffectLabel.SingleTargetHeal,   magnitude: 5 }] },
+    { description: "Shield",     priority: 1, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
+    { description: "Swap left",  priority: 1, effects: [{ effect: EffectLabel.SwapLeft,           magnitude: 0 }] },
+    { description: "Swap right", priority: 1, effects: [{ effect: EffectLabel.SwapRight,          magnitude: 0 }] },
+    { description: "Damage2",    priority: 2, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
 ];
 
 initializeEffects();
@@ -25,19 +26,19 @@ const player2 = createPlayer(team2, 1);
 describe('Swap', () => {
     describe('canSwap', () => {
         it('should allow left swap when not at leftmost slot', () => {
-            expect(canSwap(player1, 2, "left")).toBe(true);
+            expect(canSwap(player1, 2, SwapDirection.LEFT)).toBe(true);
         });
 
         it('should deny left swap at slot 0', () => {
-            expect(canSwap(player1, 0, "left")).toBe(false);
+            expect(canSwap(player1, 0, SwapDirection.LEFT)).toBe(false);
         });
 
         it('should allow right swap when not at rightmost slot', () => {
-            expect(canSwap(player1, 2, "right")).toBe(true);
+            expect(canSwap(player1, 2, SwapDirection.RIGHT)).toBe(true);
         });
 
         it('should deny right swap at last slot', () => {
-            expect(canSwap(player1, 4, "right")).toBe(false);
+            expect(canSwap(player1, 4, SwapDirection.RIGHT)).toBe(false);
         });
     });
 
@@ -47,7 +48,7 @@ describe('Swap', () => {
             const charA = gameState.players[0].team[0];
             const charB = gameState.players[0].team[1];
 
-            const updated = executeSwap(gameState, charA.id, "right");
+            const updated = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[0].team[0].id).toBe(charB.id);
             expect(updated.players[0].team[1].id).toBe(charA.id);
@@ -57,7 +58,7 @@ describe('Swap', () => {
             const gameState = createGameState(player1, player2);
             const charA = gameState.players[0].team[0];
 
-            const updated = executeSwap(gameState, charA.id, "right");
+            const updated = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[0].team[1].position.slot).toBe(1);
             expect(updated.players[0].team[0].position.slot).toBe(0);
@@ -67,7 +68,7 @@ describe('Swap', () => {
             const gameState = createGameState(player1, player2);
             const charA = gameState.players[0].team[0];
 
-            const updated = executeSwap(gameState, charA.id, "left");
+            const updated = executeSwap(gameState, charA.id, SwapDirection.LEFT);
 
             expect(updated.players[0].team[0].id).toBe(charA.id);
         });
@@ -77,7 +78,7 @@ describe('Swap', () => {
             const charA = gameState.players[0].team[0];
             const p2before = gameState.players[1].team.map(c => c.id);
 
-            const updated = executeSwap(gameState, charA.id, "right");
+            const updated = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[1].team.map(c => c.id)).toEqual(p2before);
         });
@@ -94,7 +95,7 @@ describe('Swap', () => {
                 ] as [typeof player1, typeof player2],
             };
 
-            const updated = executeSwap(stateWithDead, charA.id, "right");
+            const updated = executeSwap(stateWithDead, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[0].team[0].id).toBe(deadB.id);
             expect(updated.players[0].team[1].id).toBe(charA.id);

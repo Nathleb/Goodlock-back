@@ -4,7 +4,10 @@ import { Player } from "../types/Player.type";
 import Position, { SlotIndex, PlayerIndex } from "../types/Position.type";
 import GameState from "../types/GameState.type";
 
-export type SwapDirection = "left" | "right";
+export enum SwapDirection {
+    LEFT  = "left",
+    RIGHT = "right",
+}
 
 export function toggleDieLockForCharacter(player: Player, position: Position): Player {
     const newTeam = player.team.map((char, index) =>
@@ -41,6 +44,14 @@ export function rollDieFromPlayer(player: Player, position: Position): Player {
     return { ...player, team: newTeam };
 }
 
+export function rearrangeTeam(player: Player, order: SlotIndex[]): Player {
+    const newTeam = order.map((fromSlot, toSlot) => ({
+        ...player.team[fromSlot],
+        position: { ...player.team[fromSlot].position, slot: toSlot as SlotIndex },
+    }));
+    return { ...player, team: newTeam };
+}
+
 export function createPlayer(team: Character[], playerIndex: PlayerIndex): Player {
     const positioned = team.map((char, index) => ({
         ...char,
@@ -51,7 +62,7 @@ export function createPlayer(team: Character[], playerIndex: PlayerIndex): Playe
 }
 
 export function canSwap(player: Player, slot: SlotIndex, direction: SwapDirection): boolean {
-    if (direction === "left") return slot > 0;
+    if (direction === SwapDirection.LEFT) return slot > 0;
     return slot < player.team.length - 1;
 }
 
@@ -60,7 +71,7 @@ export function executeSwap(gameState: GameState, characterId: string, direction
         const idx = player.team.findIndex(c => c.id === characterId);
         if (idx === -1) return player;
 
-        const neighborIdx = direction === "left" ? idx - 1 : idx + 1;
+        const neighborIdx = direction === SwapDirection.LEFT ? idx - 1 : idx + 1;
         if (neighborIdx < 0 || neighborIdx >= player.team.length) return player;
 
         const newTeam = [...player.team];

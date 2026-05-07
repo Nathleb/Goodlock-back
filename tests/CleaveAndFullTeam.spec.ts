@@ -1,3 +1,4 @@
+import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -10,12 +11,12 @@ import DieFace from "@domain/types/DieFace.type";
 initializeEffects();
 
 const cleaveInstructions: BaseDieInstructions = [
-    { description: "Cleave Damage",    priority: 1, effects: [{ effect: "CleaveDamage",    magnitude: 5 }] },
-    { description: "Cleave Heal",      priority: 1, effects: [{ effect: "CleaveHeal",      magnitude: 5 }] },
-    { description: "Cleave Shield",    priority: 1, effects: [{ effect: "CleaveShield",    magnitude: 5 }] },
-    { description: "Full Team Damage", priority: 1, effects: [{ effect: "FullTeamDamage",  magnitude: 3 }] },
-    { description: "Full Team Heal",   priority: 1, effects: [{ effect: "FullTeamHeal",    magnitude: 3 }] },
-    { description: "Full Team Shield", priority: 1, effects: [{ effect: "FullTeamShield",  magnitude: 3 }] },
+    { description: "Cleave Damage",    priority: 1, effects: [{ effect: EffectLabel.CleaveDamage,    magnitude: 5 }] },
+    { description: "Cleave Heal",      priority: 1, effects: [{ effect: EffectLabel.CleaveHeal,      magnitude: 5 }] },
+    { description: "Cleave Shield",    priority: 1, effects: [{ effect: EffectLabel.CleaveShield,    magnitude: 5 }] },
+    { description: "Full Team Damage", priority: 1, effects: [{ effect: EffectLabel.FullTeamDamage,  magnitude: 3 }] },
+    { description: "Full Team Heal",   priority: 1, effects: [{ effect: EffectLabel.FullTeamHeal,    magnitude: 3 }] },
+    { description: "Full Team Shield", priority: 1, effects: [{ effect: EffectLabel.FullTeamShield,  magnitude: 3 }] },
 ];
 
 const die = generateFullDie(cleaveInstructions);

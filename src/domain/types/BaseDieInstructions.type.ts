@@ -1,7 +1,7 @@
-import EffectLabels from "./EffectLabels.type";
+import EffectLabel from "./EffectLabels.type";
 
 export type EffectEntry = {
-    effect: EffectLabels;
+    effect: EffectLabel;
     magnitude: number;
 };
 
