@@ -1,4 +1,4 @@
-import TargetingFunction from "../strategies/TargetType.type";
+import TargetingFunction from "../types/TargetingFunction.type";
 import Character from "../types/Character.type";
 import { Player } from "../types/Player.type";
 import Position from "../types/Position.type";

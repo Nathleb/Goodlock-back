@@ -10,11 +10,10 @@ export * from "./domain/services/PriorityQueue.service";
 export * from "./domain/strategies/SingleTargetDamage.class";
 export * from "./domain/strategies/SingleTargetHeal.class";
 export * from "./domain/strategies/SingleTargetShield.class";
-export * from "./domain/strategies/TargetType.type";
+export * from "./domain/types/TargetingFunction.type";
 
 
 export * from "./domain/types/Die.type";
-export * from "./domain/types/Face.type";
 export * from "./domain/types/Player.type";
 export * from "./domain/types/DieFace.type";
 export * from "./domain/types/GameState.type";

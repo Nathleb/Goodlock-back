@@ -2,7 +2,7 @@ import { executeSwap, SwapDirection } from "../services/Player.service";
 import Effect from "../types/Effect.type";
 import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
-import TargetingFunction from "./TargetType.type";
+import TargetingFunction from "../types/TargetingFunction.type";
 
 export default class SwapEffect implements Effect {
     readonly direction: SwapDirection;

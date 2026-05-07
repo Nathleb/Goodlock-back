@@ -1,15 +1,16 @@
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer, canSwap, executeSwap } from "@domain/services/Player.service";
+import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueue } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
-    { description: "Heal", priority: 1, effects: [{ effect: "SingleTargetHeal", magnitude: 5 }] },
-    { description: "Shield", priority: 1, effects: [{ effect: "SingleTargetShield", magnitude: 5 }] },
-    { description: "Damage", priority: 2, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
-    { description: "Heal", priority: 2, effects: [{ effect: "SingleTargetHeal", magnitude: 5 }] },
-    { description: "Shield", priority: 2, effects: [{ effect: "SingleTargetShield", magnitude: 5 }] },
+    { description: "Damage",     priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
+    { description: "Heal",       priority: 1, effects: [{ effect: "SingleTargetHeal",   magnitude: 5 }] },
+    { description: "Shield",     priority: 1, effects: [{ effect: "SingleTargetShield", magnitude: 5 }] },
+    { description: "Swap left",  priority: 1, effects: [{ effect: "SwapLeft",           magnitude: 0 }] },
+    { description: "Swap right", priority: 1, effects: [{ effect: "SwapRight",          magnitude: 0 }] },
+    { description: "Damage2",    priority: 2, effects: [{ effect: "SingleTargetDamage", magnitude: 5 }] },
 ];
 
 initializeEffects();
@@ -98,5 +99,44 @@ describe('Swap', () => {
             expect(updated.players[0].team[0].id).toBe(deadB.id);
             expect(updated.players[0].team[1].id).toBe(charA.id);
         });
+    });
+});
+
+describe('SwapEffect (via priority queue)', () => {
+    const withSwap = (gs: ReturnType<typeof createGameState>, face: ReturnType<typeof createGameState>['players'][0]['team'][0]['baseDie'][0], slot: number, actorId: string, baseSpeed: number) =>
+        ({ ...gs, priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(10), face, { playerIndex: 0 as const, slot }, actorId, baseSpeed) });
+
+    it('SwapLeft effect moves the actor one slot to the left', () => {
+        const gs = createGameState(player1, player2);
+        const charB = gs.players[0].team[1]; // slot 1 — can swap left
+        const updated = unstackPriorityQueue(withSwap(gs, charB.baseDie[3], 1, charB.id, charB.baseSpeed));
+
+        expect(updated.players[0].team[0].id).toBe(charB.id);
+        expect(updated.players[0].team[1].id).toBe(gs.players[0].team[0].id);
+    });
+
+    it('SwapRight effect moves the actor one slot to the right', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0]; // slot 0 — can swap right
+        const updated = unstackPriorityQueue(withSwap(gs, charA.baseDie[4], 0, charA.id, charA.baseSpeed));
+
+        expect(updated.players[0].team[1].id).toBe(charA.id);
+        expect(updated.players[0].team[0].id).toBe(gs.players[0].team[1].id);
+    });
+
+    it('SwapLeft has no effect at slot 0 (boundary)', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const updated = unstackPriorityQueue(withSwap(gs, charA.baseDie[3], 0, charA.id, charA.baseSpeed));
+
+        expect(updated.players[0].team[0].id).toBe(charA.id);
+    });
+
+    it('SwapRight has no effect at last slot (boundary)', () => {
+        const gs = createGameState(player1, player2);
+        const charE = gs.players[0].team[4];
+        const updated = unstackPriorityQueue(withSwap(gs, charE.baseDie[4], 4, charE.id, charE.baseSpeed));
+
+        expect(updated.players[0].team[4].id).toBe(charE.id);
     });
 });

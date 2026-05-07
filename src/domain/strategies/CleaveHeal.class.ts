@@ -1,10 +1,10 @@
 import { gainHp } from "../services/Character.service";
 import { findAdjacentTargets } from "../services/Position.service";
-import { applyEffectToTargets } from "./TargetUtils";
+import { applyEffectToTargets } from "../utils/TargetUtils";
 import Effect from "../types/Effect.type";
 import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
-import TargetingFunction from "./TargetType.type";
+import TargetingFunction from "../types/TargetingFunction.type";
 
 export default class CleaveHeal implements Effect {
     readonly amount: number;

@@ -1,6 +1,7 @@
-import Effect from "../types/Effect.type";
-import Position from "../types/Position.type";
+import Effect from "./Effect.type";
+import Position from "./Position.type";
 
-type PriorityQueue = [Effect, Position, string][][];
+export type QueueEntry = [Effect, Position, string]; // [effect, targetPosition, actorId]
+type PriorityQueue = QueueEntry[][];
 
 export default PriorityQueue;

@@ -1,4 +1,4 @@
-import TargetingFunction from "../strategies/TargetType.type";
+import TargetingFunction from "./TargetingFunction.type";
 import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
 

@@ -7,6 +7,8 @@ export function canReroll(gameState: GameState): boolean {
 }
 
 export function reroll(gameState: GameState, playerIndex: PlayerIndex): GameState {
+    if (!canReroll(gameState)) throw new Error('No rolls left');
+
     const updatedPlayers = [...gameState.players] as typeof gameState.players;
     updatedPlayers[playerIndex] = rollDiceForTurn(gameState.players[playerIndex]);
     return { ...gameState, rollsLeft: gameState.rollsLeft - 1, players: updatedPlayers };

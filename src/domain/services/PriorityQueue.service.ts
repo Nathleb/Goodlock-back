@@ -1,4 +1,4 @@
-import PriorityQueue from "../types/PriorityQueue.type";
+import PriorityQueue, { QueueEntry } from "../types/PriorityQueue.type";
 import Position from "../types/Position.type";
 import DieFace from "../types/DieFace.type";
 import GameState from "../types/GameState.type";
@@ -7,24 +7,32 @@ export function createPriorityQueue(length: number): PriorityQueue {
     return Array.from({ length }, () => []);
 }
 
-export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace: DieFace, target: Position, characterId: string, baseSpeed: number): void {
+export function addEffectsToPriorityQueue(
+    priorityQueue: PriorityQueue,
+    dieFace: DieFace,
+    target: Position,
+    characterId: string,
+    baseSpeed: number
+): PriorityQueue {
     const finalPriority = dieFace.priority + baseSpeed;
-    dieFace.effects.forEach(effect => {
-        priorityQueue[finalPriority].push([effect, target, characterId]);
-    });
+    const newEntries: QueueEntry[] = dieFace.effects.map(effect => [effect, target, characterId]);
+    return priorityQueue.map((bucket, i) =>
+        i === finalPriority ? [...bucket, ...newEntries] : bucket
+    ) as PriorityQueue;
 }
 
-export function addAllEffectsToPriorityQueue(gameState: GameState): void {
-    const { players, priorityQueue } = gameState;
-    players.forEach((player) => player.team.forEach(char => {
+export function addAllEffectsToPriorityQueue(gameState: GameState): GameState {
+    let queue = gameState.priorityQueue;
+    gameState.players.forEach(player => player.team.forEach(char => {
         if (char.target !== null) {
-            addEffectsToPriorityQueue(priorityQueue, char.face, char.target, char.id, char.baseSpeed);
+            queue = addEffectsToPriorityQueue(queue, char.face, char.target, char.id, char.baseSpeed);
         }
     }));
+    return { ...gameState, priorityQueue: queue };
 }
 
-export function resetPriorityQueue(gameState: GameState): void {
-    gameState.priorityQueue.forEach((queue) => queue.length = 0);
+export function resetPriorityQueue(gameState: GameState): GameState {
+    return { ...gameState, priorityQueue: createPriorityQueue(gameState.priorityQueue.length) };
 }
 
 function isActorAlive(gameState: GameState, characterId: string): boolean {
@@ -33,22 +41,23 @@ function isActorAlive(gameState: GameState, characterId: string): boolean {
     );
 }
 
+function shuffled<T>(arr: readonly T[]): T[] {
+    return arr.reduce<T[]>((acc, item) => {
+        const i = Math.floor(Math.random() * (acc.length + 1));
+        return [...acc.slice(0, i), item, ...acc.slice(i)];
+    }, []);
+}
+
 export function unstackPriorityQueue(gameState: GameState): GameState {
-    for (let i = gameState.priorityQueue.length - 1; i >= 0; i--) {
-        const queue = gameState.priorityQueue[i];
+    let state = gameState;
 
-        for (let j = queue.length - 1; j > 0; j--) {
-            const k = Math.floor(Math.random() * (j + 1));
-            [queue[j], queue[k]] = [queue[k], queue[j]];
-        }
-
-        for (const [effect, targetedPosition, characterId] of queue) {
-            if (isActorAlive(gameState, characterId)) {
-                gameState = effect.solve(gameState, targetedPosition, characterId);
+    for (let i = state.priorityQueue.length - 1; i >= 0; i--) {
+        for (const [effect, targetedPosition, characterId] of shuffled(state.priorityQueue[i])) {
+            if (isActorAlive(state, characterId)) {
+                state = effect.solve(state, targetedPosition, characterId);
             }
         }
     }
 
-    resetPriorityQueue(gameState);
-    return gameState;
+    return resetPriorityQueue(state);
 }

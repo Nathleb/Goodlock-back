@@ -1,10 +1,10 @@
 import { gainShield } from "../services/Character.service";
 import { findFullTeam } from "../services/Position.service";
-import { applyEffectToTargets } from "./TargetUtils";
+import { applyEffectToTargets } from "../utils/TargetUtils";
 import Effect from "../types/Effect.type";
 import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
-import TargetingFunction from "./TargetType.type";
+import TargetingFunction from "../types/TargetingFunction.type";
 
 export default class FullTeamShield implements Effect {
     readonly amount: number;
