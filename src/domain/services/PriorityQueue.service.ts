@@ -3,65 +3,49 @@ import Position from "../types/Position.type";
 import DieFace from "../types/DieFace.type";
 import GameState from "../types/GameState.type";
 
-/**
- * Creates a priority queue with the given length.
- * @param length - The length of the priority queue.
- * @returns A new priority queue.
- */
 export function createPriorityQueue(length: number): PriorityQueue {
     return Array.from({ length }, () => []);
 }
 
-/**
- * Adds effects to the priority queue based on their priority.
- * @param priorityQueue - The priority queue to add effects to.
- * @param dieFace - The die face containing effects.
- * @param position - The position associated with the effects.
- */
-export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace: DieFace, position: Position, characterId: string): void {
+export function addEffectsToPriorityQueue(priorityQueue: PriorityQueue, dieFace: DieFace, target: Position, characterId: string, baseSpeed: number): void {
+    const finalPriority = dieFace.priority + baseSpeed;
     dieFace.effects.forEach(effect => {
-        priorityQueue[effect.priority].push([effect, position, characterId]);
+        priorityQueue[finalPriority].push([effect, target, characterId]);
     });
 }
 
-/**
- * Adds all effects from the game state characters to the priority queue.
- * @param gameState - The current game state.
- */
 export function addAllEffectsToPriorityQueue(gameState: GameState): void {
     const { players, priorityQueue } = gameState;
     players.forEach((player) => player.team.forEach(char => {
-        addEffectsToPriorityQueue(priorityQueue, char.face, char.target, char.id)
-    })
-    );
+        if (char.target !== null) {
+            addEffectsToPriorityQueue(priorityQueue, char.face, char.target, char.id, char.baseSpeed);
+        }
+    }));
 }
 
-/**
- * Resets the priority queue by clearing all queues.
- * @param gameState - The current game state.
- */
 export function resetPriorityQueue(gameState: GameState): void {
     gameState.priorityQueue.forEach((queue) => queue.length = 0);
 }
 
-/**
- * Unstacks the priority queue by shuffling and resolving effects.
- * @param gameState - The current game state.
- * @returns The updated game state.
- */
+function isActorAlive(gameState: GameState, characterId: string): boolean {
+    return gameState.players.some(player =>
+        player.team.some(char => char.id === characterId && char.hp > 0)
+    );
+}
+
 export function unstackPriorityQueue(gameState: GameState): GameState {
     for (let i = gameState.priorityQueue.length - 1; i >= 0; i--) {
         const queue = gameState.priorityQueue[i];
 
-        // Shuffle the queue
         for (let j = queue.length - 1; j > 0; j--) {
             const k = Math.floor(Math.random() * (j + 1));
             [queue[j], queue[k]] = [queue[k], queue[j]];
         }
 
-        // Resolve effects
-        for (const [effect, targetedPosition] of queue) {
-            gameState = effect.solve(gameState, targetedPosition);
+        for (const [effect, targetedPosition, characterId] of queue) {
+            if (isActorAlive(gameState, characterId)) {
+                gameState = effect.solve(gameState, targetedPosition, characterId);
+            }
         }
     }
 

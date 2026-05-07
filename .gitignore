@@ -38,3 +38,9 @@ lerna-debug.log*
 /files
 .env
 /ormconfig.json
+
+# BMad Method
+.bmad-core/
+.ai/
+.claude/
+web-bundles/

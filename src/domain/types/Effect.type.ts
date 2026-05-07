@@ -3,10 +3,8 @@ import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
 
 type Effect = {
-    priority: number;
     findTargets: TargetingFunction;
-
-    solve(gameState: GameState, target: Position): GameState;
+    solve(gameState: GameState, target: Position, actorId: string): GameState;
 };
 
 export default Effect;

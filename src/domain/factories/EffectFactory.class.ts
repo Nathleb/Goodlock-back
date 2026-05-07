@@ -2,9 +2,9 @@ import Effect from "../types/Effect.type";
 import EffectLabels from "../types/EffectLabels.type";
 
 export default class EffectFactory {
-    private static registry: { [key in EffectLabels]?: (amount: number, priority: number) => Effect } = {};
+    private static registry: { [key in EffectLabels]?: (amount: number) => Effect } = {};
 
-    public static registerEffect(effect: EffectLabels, constructorFn: (amount: number, priority: number) => Effect): void {
+    public static registerEffect(effect: EffectLabels, constructorFn: (amount: number) => Effect): void {
         this.registry[effect] = constructorFn;
     }
 
@@ -16,11 +16,11 @@ export default class EffectFactory {
         return !!this.registry[effect];
     }
 
-    public static createEffect(effect: EffectLabels, amount: number, priority: number): Effect {
+    public static createEffect(effect: EffectLabels, amount: number): Effect {
         const constructorFn = this.registry[effect];
         if (!constructorFn) {
             throw new Error("No implementation registered for effect: " + effect);
         }
-        return constructorFn(amount, priority);
+        return constructorFn(amount);
     }
 }

@@ -1,5 +1,5 @@
 import Character from "../types/Character.type";
-import { roll1D6 } from "../utils/random.utils";
+import { roll1D6 } from "../utils/Random.utils";
 import Position from "../types/Position.type";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({

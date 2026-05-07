@@ -1,9 +1,9 @@
-import CharacterIndex from "./CharacterIndex.type";
-import PlayerIndex from "./PlayerIndex.type";
+export type PlayerIndex = 0 | 1;
+export type SlotIndex = number;
 
 type Position = {
-    playerIndex: PlayerIndex,
-    characterIndex: CharacterIndex
+    playerIndex: PlayerIndex;
+    slot: SlotIndex;
 };
 
 export default Position;

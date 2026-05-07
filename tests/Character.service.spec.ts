@@ -5,18 +5,18 @@ import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead, to
 import { initializeEffects } from "@domain/services/GameInit.service";
 
 describe('CharacterService', () => {
-  const baseDieInstructions: BaseDieInstructions = {
-    "0": { description: "Deals 1 damage", effects: [{ effect: "SingleTargetDamage", magnitude: 1, priority: 1 }] },
-    "1": { description: "Heals 2 HP", effects: [{ effect: "SingleTargetHeal", magnitude: 2, priority: 1 }] },
-    "2": { description: "Grants 3 shield", effects: [{ effect: "SingleTargetShield", magnitude: 3, priority: 1 }] },
-    "3": { description: "Deals 4 damage", effects: [{ effect: "SingleTargetDamage", magnitude: 4, priority: 1 }] },
-    "4": { description: "Heals 5 HP", effects: [{ effect: "SingleTargetHeal", magnitude: 5, priority: 1 }] },
-    "5": { description: "Grants 6 shield", effects: [{ effect: "SingleTargetShield", magnitude: 6, priority: 1 }] }
-  };
+  const baseDieInstructions: BaseDieInstructions = [
+    { description: "Deals 1 damage", priority: 1, effects: [{ effect: "SingleTargetDamage", magnitude: 1 }] },
+    { description: "Heals 2 HP", priority: 1, effects: [{ effect: "SingleTargetHeal", magnitude: 2 }] },
+    { description: "Grants 3 shield", priority: 1, effects: [{ effect: "SingleTargetShield", magnitude: 3 }] },
+    { description: "Deals 4 damage", priority: 2, effects: [{ effect: "SingleTargetDamage", magnitude: 4 }] },
+    { description: "Heals 5 HP", priority: 2, effects: [{ effect: "SingleTargetHeal", magnitude: 5 }] },
+    { description: "Grants 6 shield", priority: 2, effects: [{ effect: "SingleTargetShield", magnitude: 6 }] },
+  ];
 
   initializeEffects();
   const die = generateFullDie(baseDieInstructions);
-  const character = createCharacter("TestCharacter", 100, die, { playerIndex: 0, characterIndex: 0 });
+  const character = createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
 
   it('should roll a die for the character', () => {
     const updatedCharacter = rollDie(character);
@@ -49,8 +49,7 @@ describe('CharacterService', () => {
   });
 
   it('should check if character is dead', () => {
-    const dead = isDead(character);
-    expect(dead).toBe(false);
+    expect(isDead(character)).toBe(false);
   });
 
   it('should toggle face lock status', () => {
@@ -58,8 +57,8 @@ describe('CharacterService', () => {
     expect(updatedCharacter.isFaceLocked).toBe(true);
   });
 
-  it('should set  target', () => {
-    const updatedCharacter = setTarget(character, { playerIndex: 1, characterIndex: 0 });
-    expect(updatedCharacter.target).toEqual({ playerIndex: 1, characterIndex: 0 });
+  it('should set target', () => {
+    const updatedCharacter = setTarget(character, { playerIndex: 1, slot: 0 });
+    expect(updatedCharacter.target).toEqual({ playerIndex: 1, slot: 0 });
   });
 });

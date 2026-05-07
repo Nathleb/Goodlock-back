@@ -1,66 +1,67 @@
 {
     "name": "Hannah",
     "maxHp": 29,
-    "baseDieInstructions": {
-        "0": {
+    "baseDieInstructions": [
+        {
             "description": "Heals 3 HP for a single target.",
+            "priority": 1,
             "effects": [
                 {
                     "effect": "SingleTargetHeal",
-                    "magnitude": 3,
-                    "priority": 1
+                    "magnitude": 3
                 }
             ]
         },
-        "1": {
+        {
             "description": "Heals 2 HP for a single target.",
+            "priority": 1,
             "effects": [
                 {
                     "effect": "SingleTargetHeal",
-                    "magnitude": 2,
-                    "priority": 1
+                    "magnitude": 2
                 }
             ]
         },
-        "2": {
+        {
             "description": "Heals 2 HP for a single target.",
+            "priority": 1,
             "effects": [
                 {
                     "effect": "SingleTargetHeal",
-                    "magnitude": 2,
-                    "priority": 1
+                    "magnitude": 2
                 }
             ]
         },
-        "3": {
+        {
             "description": "Grants 2 shield to a single target.",
+            "priority": 1,
             "effects": [
                 {
                     "effect": "SingleTargetShield",
-                    "magnitude": 2,
-                    "priority": 1
+                    "magnitude": 2
                 }
             ]
         },
-        "4": {
+        {
             "description": "Grants 1 shield to a single target.",
+            "priority": 1,
             "effects": [
                 {
                     "effect": "SingleTargetShield",
-                    "magnitude": 1,
-                    "priority": 1
+                    "magnitude": 1
                 }
             ]
         },
-        "5": {
+        {
             "description": "Deals 2 damage to a single target.",
+            "priority": 1,
             "effects": [
                 {
                     "effect": "SingleTargetDamage",
-                    "magnitude": 2,
-                    "priority": 1
+                    "magnitude": 2
                 }
             ]
         }
-    }
+    ],
+    "baseSpeed": 1
 }

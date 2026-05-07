@@ -1,10 +1,14 @@
 import EffectLabels from "./EffectLabels.type";
-import Face from "./Face.type";
 
 export type EffectEntry = {
     effect: EffectLabels;
     magnitude: number;
-    priority: number;
 };
 
-export type BaseDieInstructions = Record<Face, { description: string, effects: EffectEntry[] }>;
+export type FaceTemplate = {
+    description: string;
+    priority: number;
+    effects: EffectEntry[];
+};
+
+export type BaseDieInstructions = [FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate];

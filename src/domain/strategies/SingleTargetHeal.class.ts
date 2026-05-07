@@ -7,20 +7,16 @@ import GameState from "../types/GameState.type";
 import { applyEffectToTargets } from "./TargetUtils";
 
 export default class SingleTargetHeal implements Effect {
-    readonly priority: number;
     readonly amount: number;
     readonly findTargets: TargetingFunction = findSingleTarget;
 
-    constructor(amount: number, priority: number) {
-        this.priority = priority;
+    constructor(amount: number) {
         this.amount = amount;
     }
 
-    solve(gameState: GameState, target: Position): GameState {
+    solve(gameState: GameState, target: Position, _actorId: string): GameState {
         const targetedCharacters = this.findTargets(gameState.players, target);
-
         const updatedPlayers = applyEffectToTargets(gameState.players, targetedCharacters, (character) => gainHp(character, this.amount));
-
         return { ...gameState, players: updatedPlayers };
     }
 }

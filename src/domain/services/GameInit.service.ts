@@ -5,6 +5,13 @@ import EffectFactory from "../factories/EffectFactory.class";
 import SingleTargetDamage from "../strategies/SingleTargetDamage.class";
 import SingleTargetHeal from "../strategies/SingleTargetHeal.class";
 import SingleTargetShield from "../strategies/SingleTargetShield.class";
+import CleaveDamage from "../strategies/CleaveDamage.class";
+import CleaveHeal from "../strategies/CleaveHeal.class";
+import CleaveShield from "../strategies/CleaveShield.class";
+import FullTeamDamage from "../strategies/FullTeamDamage.class";
+import FullTeamHeal from "../strategies/FullTeamHeal.class";
+import FullTeamShield from "../strategies/FullTeamShield.class";
+import SwapEffect from "../strategies/Swap.class";
 import Character from "../types/Character.type";
 import { createCharacterFromJsonTemplate } from "./CharacterGeneration.service";
 
@@ -18,15 +25,19 @@ export function createGameState(player1: Player, player2: Player): GameState {
 }
 
 export function createTeamsFromTemplates(templateContents: string[]): Character[] {
-    const team: Character[] = [];
-    templateContents.forEach((jsonCharacterTemplate) => {
-        team.push(createCharacterFromJsonTemplate(jsonCharacterTemplate));
-    });
-    return team;
+    return templateContents.map(createCharacterFromJsonTemplate);
 }
 
 export function initializeEffects() {
-    EffectFactory.registerEffect("SingleTargetDamage", (amount, priority) => new SingleTargetDamage(amount, priority));
-    EffectFactory.registerEffect("SingleTargetHeal", (amount, priority) => new SingleTargetHeal(amount, priority));
-    EffectFactory.registerEffect("SingleTargetShield", (amount, priority) => new SingleTargetShield(amount, priority));
+    EffectFactory.registerEffect("SingleTargetDamage", (amount) => new SingleTargetDamage(amount));
+    EffectFactory.registerEffect("SingleTargetHeal", (amount) => new SingleTargetHeal(amount));
+    EffectFactory.registerEffect("SingleTargetShield", (amount) => new SingleTargetShield(amount));
+    EffectFactory.registerEffect("CleaveDamage", (amount) => new CleaveDamage(amount));
+    EffectFactory.registerEffect("CleaveHeal", (amount) => new CleaveHeal(amount));
+    EffectFactory.registerEffect("CleaveShield", (amount) => new CleaveShield(amount));
+    EffectFactory.registerEffect("FullTeamDamage", (amount) => new FullTeamDamage(amount));
+    EffectFactory.registerEffect("FullTeamHeal", (amount) => new FullTeamHeal(amount));
+    EffectFactory.registerEffect("FullTeamShield", (amount) => new FullTeamShield(amount));
+    EffectFactory.registerEffect("SwapLeft", () => new SwapEffect("left"));
+    EffectFactory.registerEffect("SwapRight", () => new SwapEffect("right"));
 }

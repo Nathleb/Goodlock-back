@@ -1,6 +1,7 @@
 import Effect from "./Effect.type";
 
 type DieFace = {
+    priority: number;
     effects: Effect[];
     description: string;
 };
