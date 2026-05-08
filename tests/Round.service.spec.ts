@@ -1,6 +1,6 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { gainShield, loseHp } from "@domain/services/Character.service";
+import { gainShield, loseHp, setTarget } from "@domain/services/Character.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
 import { endOfRound, checkWinner } from "@domain/services/Round.service";
@@ -67,6 +67,20 @@ describe('Round.service', () => {
         const updated = endOfRound(gameState);
 
         expect(updated.rollsLeft).toBe(2);
+    });
+
+    it('should reset all targets to null', () => {
+        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        const withTarget = setTarget(makeChar(), { playerIndex: 1, slot: 2 });
+        const player1 = createPlayer([withTarget, makeChar(), makeChar(), makeChar(), makeChar()], 0);
+        const player2 = createPlayer([makeChar(), withTarget, makeChar(), makeChar(), makeChar()], 1);
+        const gameState = createGameState(player1, player2);
+
+        const updated = endOfRound(gameState);
+
+        updated.players.forEach(player =>
+            player.team.forEach(char => expect(char.target).toBeNull())
+        );
     });
 
     it('should unlock all dice', () => {

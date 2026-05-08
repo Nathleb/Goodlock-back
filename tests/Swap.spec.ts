@@ -2,7 +2,7 @@ import { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer, canSwap, executeSwap, SwapDirection } from "@domain/services/Player.service";
-import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueue } from "@domain/services/PriorityQueue.service";
+import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
 
@@ -111,34 +111,34 @@ describe('SwapEffect (via priority queue)', () => {
     it('SwapLeft effect moves the actor one slot to the left', () => {
         const gs = createGameState(player1, player2);
         const charB = gs.players[0].team[1]; // slot 1 — can swap left
-        const updated = unstackPriorityQueue(withSwap(gs, charB.baseDie[3], 1, charB.id, charB.baseSpeed));
+        const { state } = unstackPriorityQueueWithLog(withSwap(gs, charB.baseDie[3], 1, charB.id, charB.baseSpeed));
 
-        expect(updated.players[0].team[0].id).toBe(charB.id);
-        expect(updated.players[0].team[1].id).toBe(gs.players[0].team[0].id);
+        expect(state.players[0].team[0].id).toBe(charB.id);
+        expect(state.players[0].team[1].id).toBe(gs.players[0].team[0].id);
     });
 
     it('SwapRight effect moves the actor one slot to the right', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0 — can swap right
-        const updated = unstackPriorityQueue(withSwap(gs, charA.baseDie[4], 0, charA.id, charA.baseSpeed));
+        const { state } = unstackPriorityQueueWithLog(withSwap(gs, charA.baseDie[4], 0, charA.id, charA.baseSpeed));
 
-        expect(updated.players[0].team[1].id).toBe(charA.id);
-        expect(updated.players[0].team[0].id).toBe(gs.players[0].team[1].id);
+        expect(state.players[0].team[1].id).toBe(charA.id);
+        expect(state.players[0].team[0].id).toBe(gs.players[0].team[1].id);
     });
 
     it('SwapLeft has no effect at slot 0 (boundary)', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
-        const updated = unstackPriorityQueue(withSwap(gs, charA.baseDie[3], 0, charA.id, charA.baseSpeed));
+        const { state } = unstackPriorityQueueWithLog(withSwap(gs, charA.baseDie[3], 0, charA.id, charA.baseSpeed));
 
-        expect(updated.players[0].team[0].id).toBe(charA.id);
+        expect(state.players[0].team[0].id).toBe(charA.id);
     });
 
     it('SwapRight has no effect at last slot (boundary)', () => {
         const gs = createGameState(player1, player2);
         const charE = gs.players[0].team[4];
-        const updated = unstackPriorityQueue(withSwap(gs, charE.baseDie[4], 4, charE.id, charE.baseSpeed));
+        const { state } = unstackPriorityQueueWithLog(withSwap(gs, charE.baseDie[4], 4, charE.id, charE.baseSpeed));
 
-        expect(updated.players[0].team[4].id).toBe(charE.id);
+        expect(state.players[0].team[4].id).toBe(charE.id);
     });
 });

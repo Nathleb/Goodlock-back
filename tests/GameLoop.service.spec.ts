@@ -168,14 +168,20 @@ describe('confirmAssignment', () => {
 describe('performResolve', () => {
     it('transitions to RESULT phase', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const result = performResolve(inResolve);
-        expect(result.phase).toBe(GamePhase.RESULT);
+        const { state } = performResolve(inResolve);
+        expect(state.phase).toBe(GamePhase.RESULT);
     });
 
     it('resets the priority queue after resolving', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const result = performResolve(inResolve);
-        expect(result.priorityQueue.every(bucket => bucket.length === 0)).toBe(true);
+        const { state } = performResolve(inResolve);
+        expect(state.priorityQueue.every(bucket => bucket.length === 0)).toBe(true);
+    });
+
+    it('returns a log array', () => {
+        const inResolve = { ...gs, phase: GamePhase.RESOLVE };
+        const { log } = performResolve(inResolve);
+        expect(Array.isArray(log)).toBe(true);
     });
 
     it('throws when called outside RESOLVE phase', () => {

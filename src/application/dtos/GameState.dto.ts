@@ -27,9 +27,7 @@ export type ResolveChangeDTO = {
 };
 
 export type ResolveStepDTO = {
-    actorId: string;
-    actorName: string;
-    effectDescription: string;
+    characterId: string;
     skipped: boolean;
     changes: ResolveChangeDTO[];
 };

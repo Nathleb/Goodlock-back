@@ -12,17 +12,17 @@ import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import Position, { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
-import { assertPhase, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
+import { assertPhase, beginRollPhase } from '@domain/services/Phase.service';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer, rearrangeTeam, toggleDieLockForCharacter, selectTargetOfCharacter } from '@domain/services/Player.service';
 import { isRoomReady } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
-import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from '@domain/services/PriorityQueue.service';
 import {
     confirmPlacement, performRoll,
     confirmKeep,
     confirmAssignment as domainConfirmAssignment,
+    performResolve,
 } from '@domain/services/GameLoop.service';
 
 type GameContext = { session: Session; room: Room; playerIndex: PlayerIndex };
@@ -203,9 +203,8 @@ export class GameCoordinatorService {
                 return;
             }
 
-            const withQueue = addAllEffectsToPriorityQueue(gs);
-            const { state: resolved, log } = unstackPriorityQueueWithLog(withQueue);
-            gs = beginResultPhase(resolved);
+            const { state: resolved, log } = performResolve(gs);
+            gs = resolved;
             const winner = checkWinner(gs);
 
             this.roomPort.updateGameState(room.roomId, gs);

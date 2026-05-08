@@ -4,7 +4,8 @@ import { PlayerIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
 import { assertPhase, beginRollPhase, beginKeepPhase, beginAssignPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
 import { rollDiceForTurn, allDiceLocked } from "./Player.service";
-import { addAllEffectsToPriorityQueue, unstackPriorityQueue } from "./PriorityQueue.service";
+import { ResolveStep } from "../types/PriorityQueue.type";
+import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "./PriorityQueue.service";
 
 function markPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     const ready: [boolean, boolean] = [gs.playersReady[0], gs.playersReady[1]];
@@ -60,9 +61,9 @@ export function confirmAssignment(gs: GameState, playerIndex: PlayerIndex): Game
     return resetReady(beginResolvePhase(updated));
 }
 
-export function performResolve(gs: GameState): GameState {
+export function performResolve(gs: GameState): { state: GameState; log: ResolveStep[] } {
     assertPhase(gs, GamePhase.RESOLVE);
     const withQueue = addAllEffectsToPriorityQueue(gs);
-    const resolved = unstackPriorityQueue(withQueue);
-    return beginResultPhase(resolved);
+    const { state, log } = unstackPriorityQueueWithLog(withQueue);
+    return { state: beginResultPhase(state), log };
 }

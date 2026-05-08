@@ -6,7 +6,7 @@ import { Player } from "../types/Player.type";
 export function endOfRound(gameState: GameState): GameState {
     const updatedPlayers = gameState.players.map(player => {
         const unlocked = unlockAllDice(player);
-        return { ...unlocked, team: unlocked.team.map(resetShield) };
+        return { ...unlocked, team: unlocked.team.map(c => resetShield({ ...c, target: null })) };
     }) as [Player, Player];
     return {
         ...gameState,

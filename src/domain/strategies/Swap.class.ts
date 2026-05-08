@@ -7,14 +7,14 @@ export default class SwapEffect implements Effect {
     constructor(private readonly direction: SwapDirection) {}
 
     solve(gameState: GameState, _target: Position, actorId: string): { state: GameState; affected: string[] } {
-        const affected: string[] = [actorId];
+        const affected: string[] = [];
 
         for (const player of gameState.players) {
             const idx = player.team.findIndex(c => c.id === actorId);
             if (idx === -1) continue;
             const neighborIdx = this.direction === SwapDirection.LEFT ? idx - 1 : idx + 1;
             if (neighborIdx >= 0 && neighborIdx < player.team.length) {
-                affected.push(player.team[neighborIdx].id);
+                affected.push(actorId, player.team[neighborIdx].id);
             }
         }
 

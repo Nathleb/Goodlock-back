@@ -32,6 +32,7 @@ export function loseHp(character: Character, amount: number): Character {
 }
 
 export function gainHp(character: Character, amount: number): Character {
+    if (isDead(character)) return character;
     return updateCharacter(character, { hp: Math.min(character.hp + amount, character.maxHp) });
 }
 

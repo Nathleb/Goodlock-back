@@ -16,9 +16,9 @@ export function addEffectsToPriorityQueue(
     baseSpeed: number
 ): PriorityQueue {
     const finalPriority = dieFace.priority + baseSpeed;
-    const newEntries: QueueEntry[] = dieFace.effects.map(effect => [effect, target, characterId]);
+    const newEntry: QueueEntry = [dieFace, target, characterId];
     return priorityQueue.map((bucket, i) =>
-        i === finalPriority ? [...bucket, ...newEntries] : bucket
+        i === finalPriority ? [...bucket, newEntry] : bucket
     ) as PriorityQueue;
 }
 
@@ -36,7 +36,7 @@ export function resetPriorityQueue(gameState: GameState): GameState {
     return { ...gameState, priorityQueue: createPriorityQueue(gameState.priorityQueue.length) };
 }
 
-function isActorAlive(gameState: GameState, characterId: string): boolean {
+function isAlive(gameState: GameState, characterId: string): boolean {
     return gameState.players.some(player =>
         player.team.some(char => char.id === characterId && char.hp > 0)
     );
@@ -57,44 +57,30 @@ function shuffled<T>(arr: readonly T[]): T[] {
     }, []);
 }
 
-export function unstackPriorityQueue(gameState: GameState): GameState {
-    let state = gameState;
-
-    for (let i = state.priorityQueue.length - 1; i >= 0; i--) {
-        for (const [effect, targetedPosition, characterId] of shuffled(state.priorityQueue[i])) {
-            if (isActorAlive(state, characterId)) {
-                ({ state } = effect.solve(state, targetedPosition, characterId));
-            }
-        }
-    }
-
-    return resetPriorityQueue(state);
-}
-
 export function unstackPriorityQueueWithLog(gameState: GameState): { state: GameState; log: ResolveStep[] } {
     let state = gameState;
     const log: ResolveStep[] = [];
 
     for (let i = state.priorityQueue.length - 1; i >= 0; i--) {
-        for (const [effect, targetedPosition, characterId] of shuffled(state.priorityQueue[i])) {
-            const actor = findCharacter(state, characterId);
-            const actorName = actor?.name ?? '';
-            const effectDescription = actor?.face.description ?? '';
-            const alive = isActorAlive(state, characterId);
-
-            if (!alive) {
-                log.push({ actorId: characterId, actorName, effectDescription, skipped: true, changes: [] });
+        for (const [face, targetedPosition, characterId] of shuffled(state.priorityQueue[i])) {
+            if (!isAlive(state, characterId)) {
+                log.push({ characterId, skipped: true, changes: [] });
                 continue;
             }
 
-            const { state: newState, affected } = effect.solve(state, targetedPosition, characterId);
-            const changes = affected
-                .map(id => findCharacter(newState, id))
+            const affectedIds = new Set<string>();
+            for (const effect of face.effects) {
+                const { state: newState, affected } = effect.solve(state, targetedPosition, characterId);
+                state = newState;
+                affected.forEach(id => affectedIds.add(id));
+            }
+
+            const changes = [...affectedIds]
+                .map(id => findCharacter(state, id))
                 .filter((c): c is Character => c !== undefined)
                 .map(c => ({ characterId: c.id, character: c }));
 
-            state = newState;
-            log.push({ actorId: characterId, actorName, effectDescription, skipped: false, changes });
+            log.push({ characterId, skipped: false, changes });
         }
     }
 

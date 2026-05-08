@@ -1,13 +1,11 @@
-import Effect from "./Effect.type";
+import DieFace from "./DieFace.type";
 import Position from "./Position.type";
 import Character from "./Character.type";
 
-export type QueueEntry = [Effect, Position, string]; // [effect, targetPosition, actorId]
+export type QueueEntry = [DieFace, Position, string]; // [dieFace, targetPosition, actorId]
 
 export type ResolveStep = {
-    actorId: string;
-    actorName: string;
-    effectDescription: string;
+    characterId: string;
     skipped: boolean;
     changes: { characterId: string; character: Character }[];
 };

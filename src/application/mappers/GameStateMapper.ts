@@ -18,9 +18,7 @@ export class GameStateMapper {
 
     static resolveStepsToDTO(steps: ResolveStep[]): ResolveStepDTO[] {
         return steps.map(step => ({
-            actorId: step.actorId,
-            actorName: step.actorName,
-            effectDescription: step.effectDescription,
+            characterId: step.characterId,
             skipped: step.skipped,
             changes: step.changes.map(c => ({
                 characterId: c.characterId,

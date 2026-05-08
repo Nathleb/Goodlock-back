@@ -44,6 +44,12 @@ describe('CharacterService', () => {
     expect(updatedCharacter.hp).toBe(100);
   });
 
+  it('should not heal a dead character', () => {
+    const dead = loseHp(character, character.hp);
+    const healed = gainHp(dead, 50);
+    expect(healed.hp).toBe(0);
+  });
+
   it('should deal damage', () => {
     const updatedCharacter = dealDamage(character, 10);
     expect(updatedCharacter.hp).toBe(90);
