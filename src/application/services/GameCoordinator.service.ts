@@ -12,7 +12,7 @@ import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import Position, { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
-import { assertPhase, beginRollPhase } from '@domain/services/Phase.service';
+import { assertPhase, assertNotReady, beginRollPhase } from '@domain/services/Phase.service';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer, rearrangeTeam, toggleDieLockForCharacter, selectTargetOfCharacter } from '@domain/services/Player.service';
@@ -65,6 +65,8 @@ export class GameCoordinatorService {
             this.roomPort.updateGameState(room.roomId, gs);
             if (wasOtherReady) {
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
+            } else {
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -117,6 +119,7 @@ export class GameCoordinatorService {
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.PLACEMENT);
+            assertNotReady(room.gameState, playerIndex);
             const player = room.gameState.players[playerIndex];
 
             if (characterIds.length !== 5) throw new Error('Order must contain exactly 5 character IDs');
@@ -131,7 +134,9 @@ export class GameCoordinatorService {
             const updatedPlayer = rearrangeTeam(player, order);
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;
-            this.roomPort.updateGameState(room.roomId, { ...room.gameState, players });
+            const updatedGs = { ...room.gameState, players };
+            this.roomPort.updateGameState(room.roomId, updatedGs);
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(updatedGs));
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -147,6 +152,7 @@ export class GameCoordinatorService {
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.KEEP);
+            assertNotReady(room.gameState, playerIndex);
             const player = room.gameState.players[playerIndex];
             const char = player.team.find(c => c.id === characterId);
             if (!char) throw new Error('Character not found');
@@ -154,7 +160,9 @@ export class GameCoordinatorService {
             const updatedPlayer = toggleDieLockForCharacter(player, char.position);
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;
-            this.roomPort.updateGameState(room.roomId, { ...room.gameState, players });
+            const updatedGs = { ...room.gameState, players };
+            this.roomPort.updateGameState(room.roomId, updatedGs);
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(updatedGs));
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -170,6 +178,7 @@ export class GameCoordinatorService {
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.ASSIGN);
+            assertNotReady(room.gameState, playerIndex);
             const player = room.gameState.players[playerIndex];
             const char = player.team.find(c => c.id === characterId);
             if (!char) throw new Error('Character not found');
@@ -183,7 +192,9 @@ export class GameCoordinatorService {
             const updatedPlayer = selectTargetOfCharacter(player, char.position.slot, target);
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;
-            this.roomPort.updateGameState(room.roomId, { ...room.gameState, players });
+            const updatedGs = { ...room.gameState, players };
+            this.roomPort.updateGameState(room.roomId, updatedGs);
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(updatedGs));
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -200,6 +211,7 @@ export class GameCoordinatorService {
 
             if (!wasOtherReady) {
                 this.roomPort.updateGameState(room.roomId, gs);
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
                 return;
             }
 

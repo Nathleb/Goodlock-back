@@ -335,3 +335,26 @@ describe('double-confirm guards', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });
+
+describe('post-confirm mutation guards', () => {
+    it('emits error when rearrangeTeam called after confirmPlacement', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
+        coordinator.rearrangeTeam(SOCKET_0, ['id0', 'id1', 'id2', 'id3', 'id4']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error when toggleDieLock called after confirmKeep', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
+        coordinator.toggleDieLock(SOCKET_0, 'any-char-id');
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error when selectTarget called after confirmAssignment', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
+        coordinator.selectTarget(SOCKET_0, 'any-char-id', { playerIndex: 1, slot: 0 });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+});
