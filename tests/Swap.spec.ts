@@ -49,29 +49,31 @@ describe('Swap', () => {
             const charA = gameState.players[0].team[0];
             const charB = gameState.players[0].team[1];
 
-            const updated = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
+            const { state: updated, affected } = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[0].team[0].id).toBe(charB.id);
             expect(updated.players[0].team[1].id).toBe(charA.id);
+            expect(affected).toEqual(expect.arrayContaining([charA.id, charB.id]));
         });
 
         it('should update position.slot after swap', () => {
             const gameState = createGameState(player1, player2);
             const charA = gameState.players[0].team[0];
 
-            const updated = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
+            const { state: updated } = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[0].team[1].position.slot).toBe(1);
             expect(updated.players[0].team[0].position.slot).toBe(0);
         });
 
-        it('should not move a character at the boundary in the blocked direction', () => {
+        it('should not move a character at the boundary and returns empty affected', () => {
             const gameState = createGameState(player1, player2);
             const charA = gameState.players[0].team[0];
 
-            const updated = executeSwap(gameState, charA.id, SwapDirection.LEFT);
+            const { state: updated, affected } = executeSwap(gameState, charA.id, SwapDirection.LEFT);
 
             expect(updated.players[0].team[0].id).toBe(charA.id);
+            expect(affected).toHaveLength(0);
         });
 
         it('should only affect the player who owns the character', () => {
@@ -79,7 +81,7 @@ describe('Swap', () => {
             const charA = gameState.players[0].team[0];
             const p2before = gameState.players[1].team.map(c => c.id);
 
-            const updated = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
+            const { state: updated } = executeSwap(gameState, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[1].team.map(c => c.id)).toEqual(p2before);
         });
@@ -96,7 +98,7 @@ describe('Swap', () => {
                 ] as [typeof player1, typeof player2],
             };
 
-            const updated = executeSwap(stateWithDead, charA.id, SwapDirection.RIGHT);
+            const { state: updated } = executeSwap(stateWithDead, charA.id, SwapDirection.RIGHT);
 
             expect(updated.players[0].team[0].id).toBe(deadB.id);
             expect(updated.players[0].team[1].id).toBe(charA.id);

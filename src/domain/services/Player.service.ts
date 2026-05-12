@@ -5,13 +5,13 @@ import Position, { SlotIndex, PlayerIndex } from "../types/Position.type";
 import GameState from "../types/GameState.type";
 
 export enum SwapDirection {
-    LEFT  = "left",
+    LEFT = "left",
     RIGHT = "right",
 }
 
 export function toggleDieLockForCharacter(player: Player, position: Position): Player {
-    const newTeam = player.team.map((char, index) =>
-        index === position.slot ? toggleIsFaceLocked(char) : char
+    const newTeam = player.team.map(char =>
+        char.position.slot === position.slot ? toggleIsFaceLocked(char) : char
     );
     return { ...player, team: newTeam };
 }
@@ -29,8 +29,7 @@ export function rollDiceForTurn(player: Player): Player {
 }
 
 export function unlockAllDice(player: Player): Player {
-    const newTeam = player.team.map(char => char.isFaceLocked ? toggleIsFaceLocked(char) : char);
-    return { ...player, team: newTeam };
+    return { ...player, team: player.team.map(c => ({ ...c, isFaceLocked: false })) };
 }
 
 export function allDiceLocked(player: Player): boolean {
@@ -42,8 +41,8 @@ export function hasLost(player: Player): boolean {
 }
 
 export function rollDieFromPlayer(player: Player, position: Position): Player {
-    const newTeam = player.team.map((char, index) =>
-        index === position.slot ? rollDie(char) : char
+    const newTeam = player.team.map(char =>
+        char.position.slot === position.slot ? rollDie(char) : char
     );
     return { ...player, team: newTeam };
 }
@@ -70,20 +69,29 @@ export function canSwap(player: Player, slot: SlotIndex, direction: SwapDirectio
     return slot < player.team.length - 1;
 }
 
-export function executeSwap(gameState: GameState, characterId: string, direction: SwapDirection): GameState {
-    const updatedPlayers = gameState.players.map(player => {
+export function executeSwap(gameState: GameState, characterId: string, direction: SwapDirection): { state: GameState; affected: string[] } {
+    for (let pi = 0; pi < gameState.players.length; pi++) {
+        const player = gameState.players[pi];
         const idx = player.team.findIndex(c => c.id === characterId);
-        if (idx === -1) return player;
+        if (idx === -1) continue;
 
-        const neighborIdx = direction === SwapDirection.LEFT ? idx - 1 : idx + 1;
-        if (neighborIdx < 0 || neighborIdx >= player.team.length) return player;
+        const neighborIdx = idx + (direction === SwapDirection.LEFT ? -1 : 1);
+        if (neighborIdx < 0 || neighborIdx >= player.team.length) {
+            return { state: gameState, affected: [] };
+        }
 
         const newTeam = [...player.team];
-        newTeam[idx] = { ...player.team[neighborIdx], position: { ...player.team[neighborIdx].position, slot: idx as SlotIndex } };
-        newTeam[neighborIdx] = { ...player.team[idx], position: { ...player.team[idx].position, slot: neighborIdx as SlotIndex } };
+        newTeam[idx]         = { ...player.team[neighborIdx], position: player.team[idx].position };
+        newTeam[neighborIdx] = { ...player.team[idx],         position: player.team[neighborIdx].position };
 
-        return { ...player, team: newTeam };
-    }) as [Player, Player];
+        const players = [...gameState.players] as [Player, Player];
+        players[pi] = { ...player, team: newTeam };
 
-    return { ...gameState, players: updatedPlayers };
+        return {
+            state: { ...gameState, players },
+            affected: [characterId, player.team[neighborIdx].id],
+        };
+    }
+
+    return { state: gameState, affected: [] };
 }

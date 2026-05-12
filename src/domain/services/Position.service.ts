@@ -4,11 +4,12 @@ import { Player } from "../types/Player.type";
 import Position from "../types/Position.type";
 
 export const findSingleTarget: TargetingFunction = (players: [Player, Player], position: Position): Character[] => {
-    return [players[position.playerIndex].team[position.slot]];
+    const char = players[position.playerIndex].team.find(c => c.position.slot === position.slot);
+    return char ? [char] : [];
 };
 
 export const findAdjacentTargets: TargetingFunction = (players: [Player, Player], position: Position): Character[] => {
-    return players[position.playerIndex].team.filter((_, i) => Math.abs(i - position.slot) <= 1);
+    return players[position.playerIndex].team.filter(c => Math.abs(c.position.slot - position.slot) <= 1);
 };
 
 export const findFullTeam: TargetingFunction = (players: [Player, Player], position: Position): Character[] => {

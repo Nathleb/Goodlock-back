@@ -114,6 +114,126 @@ describe('PriorityQueueService', () => {
     expect(log[0].changes[0].character.hp).toBe(0);
   });
 
+  it('a face with no effects produces an empty-changes step (not skipped)', () => {
+    const noOpDie = generateFullDie([
+      { description: "No-op", priority: 1, effects: [] },
+      { description: "B", priority: 1, effects: [] },
+      { description: "C", priority: 1, effects: [] },
+      { description: "D", priority: 1, effects: [] },
+      { description: "E", priority: 1, effects: [] },
+      { description: "F", priority: 1, effects: [] },
+    ]);
+    const actor = createCharacter("Actor", 100, 0, noOpDie, { playerIndex: 0, slot: 0 });
+    const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const stateWithQueue: GameState = {
+      ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
+      priorityQueue: addEffectsToPriorityQueue(
+        createPriorityQueue(10),
+        actor.baseDie[0],
+        { playerIndex: 1, slot: 0 as SlotIndex },
+        actor.id,
+        actor.baseSpeed
+      ),
+    };
+
+    const { log } = unstackPriorityQueueWithLog(stateWithQueue);
+
+    expect(log).toHaveLength(1);
+    expect(log[0].characterId).toBe(actor.id);
+    expect(log[0].skipped).toBe(false);
+    expect(log[0].changes).toHaveLength(0);
+  });
+
+  it('a boundary SwapLeft at slot 0 produces an empty-changes step (not skipped)', () => {
+    const swapDie = generateFullDie([
+      { description: "A",        priority: 1, effects: [] },
+      { description: "B",        priority: 1, effects: [] },
+      { description: "C",        priority: 1, effects: [] },
+      { description: "SwapLeft", priority: 1, effects: [{ effect: EffectLabel.SwapLeft, magnitude: 0 }] },
+      { description: "E",        priority: 1, effects: [] },
+      { description: "F",        priority: 1, effects: [] },
+    ]);
+    const actor = createCharacter("Swapper", 100, 0, swapDie, { playerIndex: 0, slot: 0 });
+    const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const stateWithQueue: GameState = {
+      ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
+      priorityQueue: addEffectsToPriorityQueue(
+        createPriorityQueue(10),
+        actor.baseDie[3], // SwapLeft face
+        { playerIndex: 0, slot: 0 as SlotIndex },
+        actor.id,
+        actor.baseSpeed
+      ),
+    };
+
+    const { log } = unstackPriorityQueueWithLog(stateWithQueue);
+
+    expect(log).toHaveLength(1);
+    expect(log[0].characterId).toBe(actor.id);
+    expect(log[0].skipped).toBe(false);
+    expect(log[0].changes).toHaveLength(0);
+  });
+
+  it('two actors in the same priority bucket each produce a log step', () => {
+    const actor1 = createCharacter("Actor1", 100, 0, die, { playerIndex: 0, slot: 0 });
+    const actor2 = createCharacter("Actor2", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const stateWithQueue: GameState = {
+      ...createGameState({ playerIndex: 0, team: [actor1] }, { playerIndex: 1, team: [actor2] }),
+      priorityQueue: addEffectsToPriorityQueue(
+        addEffectsToPriorityQueue(
+          createPriorityQueue(10),
+          actor1.baseDie[0], // priority 1
+          { playerIndex: 1, slot: 0 as SlotIndex },
+          actor1.id,
+          actor1.baseSpeed
+        ),
+        actor2.baseDie[0], // priority 1 — same bucket
+        { playerIndex: 0, slot: 0 as SlotIndex },
+        actor2.id,
+        actor2.baseSpeed
+      ),
+    };
+
+    const { log } = unstackPriorityQueueWithLog(stateWithQueue);
+
+    expect(log).toHaveLength(2);
+    expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining([actor1.id, actor2.id]));
+    expect(log.every(s => !s.skipped)).toBe(true);
+  });
+
+  it('an actor killed during resolution by a higher-priority action is marked skipped', () => {
+    // killer uses face[3] (priority 2, damage 4) — resolves first
+    // victim uses face[0] (priority 1, damage 1) — but is dead by then
+    const killer = createCharacter("Killer", 100, 0, die, { playerIndex: 0, slot: 0 });
+    const victim = createCharacter("Victim", 1, 0, die, { playerIndex: 1, slot: 0 });
+    const stateWithQueue: GameState = {
+      ...createGameState({ playerIndex: 0, team: [killer] }, { playerIndex: 1, team: [victim] }),
+      priorityQueue: addEffectsToPriorityQueue(
+        addEffectsToPriorityQueue(
+          createPriorityQueue(10),
+          killer.baseDie[3], // priority 2, damage 4 → kills victim (hp 1)
+          { playerIndex: 1, slot: 0 as SlotIndex },
+          killer.id,
+          killer.baseSpeed
+        ),
+        victim.baseDie[0], // priority 1 — victim already dead
+        { playerIndex: 0, slot: 0 as SlotIndex },
+        victim.id,
+        victim.baseSpeed
+      ),
+    };
+
+    const { log } = unstackPriorityQueueWithLog(stateWithQueue);
+
+    expect(log).toHaveLength(2);
+    const killerStep = log.find(s => s.characterId === killer.id)!;
+    const victimStep = log.find(s => s.characterId === victim.id)!;
+    expect(killerStep.skipped).toBe(false);
+    expect(killerStep.changes[0].character.hp).toBe(0);
+    expect(victimStep.skipped).toBe(true);
+    expect(victimStep.changes).toHaveLength(0);
+  });
+
   it('a face with multiple effects resolves atomically in one log step', () => {
     const multiDie = generateFullDie([
       { description: "Damage+Shield", priority: 1, effects: [

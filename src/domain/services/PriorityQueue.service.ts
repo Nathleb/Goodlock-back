@@ -17,9 +17,9 @@ export function addEffectsToPriorityQueue(
 ): PriorityQueue {
     const finalPriority = dieFace.priority + baseSpeed;
     const newEntry: QueueEntry = [dieFace, target, characterId];
-    return priorityQueue.map((bucket, i) =>
-        i === finalPriority ? [...bucket, newEntry] : bucket
-    ) as PriorityQueue;
+    const newQueue = [...priorityQueue];
+    newQueue[finalPriority] = [...newQueue[finalPriority], newEntry];
+    return newQueue as PriorityQueue;
 }
 
 export function addAllEffectsToPriorityQueue(gameState: GameState): GameState {
@@ -51,10 +51,12 @@ function findCharacter(gameState: GameState, characterId: string): Character | u
 }
 
 function shuffled<T>(arr: readonly T[]): T[] {
-    return arr.reduce<T[]>((acc, item) => {
-        const i = Math.floor(Math.random() * (acc.length + 1));
-        return [...acc.slice(0, i), item, ...acc.slice(i)];
-    }, []);
+    const out = [...arr];
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
 }
 
 export function unstackPriorityQueueWithLog(gameState: GameState): { state: GameState; log: ResolveStep[] } {
