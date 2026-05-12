@@ -8,6 +8,7 @@ import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import { SharedWebSocketService } from '@infrastructure/adapters/websocket/services/SharedWebSocketService';
 import { WebSocketService } from '@infrastructure/adapters/websocket/services/WebSocketService';
 import { SessionGateway } from '@infrastructure/adapters/websocket/session.gateway';
+import { SessionGuard } from '@infrastructure/adapters/websocket/guards/Session.guard';
 
 @Module({
     imports: [],
@@ -20,6 +21,7 @@ import { SessionGateway } from '@infrastructure/adapters/websocket/session.gatew
         SessionCoordinatorService,
         GameCoordinatorService,
         SessionGateway,
+        SessionGuard,
     ],
 })
 export class AppModule {}

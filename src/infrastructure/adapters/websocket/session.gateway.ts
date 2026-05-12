@@ -1,3 +1,4 @@
+import { UseGuards } from '@nestjs/common';
 import {
     WebSocketGateway,
     OnGatewayInit,
@@ -12,7 +13,13 @@ import { SharedWebSocketService } from './services/SharedWebSocketService';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
+import { JoinRoomPayload } from './payloads/JoinRoom.payload';
+import { RearrangeTeamPayload } from './payloads/RearrangeTeam.payload';
+import { ToggleDieLockPayload } from './payloads/ToggleDieLock.payload';
+import { SelectTargetPayload } from './payloads/SelectTarget.payload';
+import { SessionGuard } from './guards/Session.guard';
 
+@UseGuards(SessionGuard)
 @WebSocketGateway({ cors: { origin: '*' } })
 export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     constructor(
@@ -49,7 +56,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('joinRoom')
     handleJoinRoom(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { roomId: string },
+        @MessageBody() data: JoinRoomPayload,
     ): void {
         this.roomCoordinator.joinRoom(client.id, data.roomId);
     }
@@ -69,7 +76,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('rearrangeTeam')
     handleRearrangeTeam(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { characterIds: string[] },
+        @MessageBody() data: RearrangeTeamPayload,
     ): void {
         this.gameCoordinator.rearrangeTeam(client.id, data.characterIds);
     }
@@ -82,7 +89,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('toggleDieLock')
     handleToggleDieLock(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { characterId: string },
+        @MessageBody() data: ToggleDieLockPayload,
     ): void {
         this.gameCoordinator.toggleDieLock(client.id, data.characterId);
     }
@@ -95,7 +102,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('selectTarget')
     handleSelectTarget(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { characterId: string; target: { playerIndex: number; slot: number } },
+        @MessageBody() data: SelectTargetPayload,
     ): void {
         this.gameCoordinator.selectTarget(client.id, data.characterId, data.target);
     }
