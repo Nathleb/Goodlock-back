@@ -13,6 +13,12 @@ function markPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     return { ...gs, playersReady: ready };
 }
 
+function unmarkPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
+    const ready: [boolean, boolean] = [gs.playersReady[0], gs.playersReady[1]];
+    ready[playerIndex] = false;
+    return { ...gs, playersReady: ready };
+}
+
 function resetReady(gs: GameState): GameState {
     return { ...gs, playersReady: [false, false] };
 }
@@ -62,6 +68,24 @@ export function confirmAssignment(gs: GameState, playerIndex: PlayerIndex): Game
     const updated = markPlayerReady(gs, playerIndex);
     if (!areBothReady(updated)) return updated;
     return resetReady(beginResolvePhase(updated));
+}
+
+export function cancelPlacement(gs: GameState, playerIndex: PlayerIndex): GameState {
+    assertPhase(gs, GamePhase.PLACEMENT);
+    if (!gs.playersReady[playerIndex]) return gs;
+    return unmarkPlayerReady(gs, playerIndex);
+}
+
+export function cancelKeep(gs: GameState, playerIndex: PlayerIndex): GameState {
+    assertPhase(gs, GamePhase.KEEP);
+    if (!gs.playersReady[playerIndex]) return gs;
+    return unmarkPlayerReady(gs, playerIndex);
+}
+
+export function cancelAssignment(gs: GameState, playerIndex: PlayerIndex): GameState {
+    assertPhase(gs, GamePhase.ASSIGN);
+    if (!gs.playersReady[playerIndex]) return gs;
+    return unmarkPlayerReady(gs, playerIndex);
 }
 
 export function performResolve(gs: GameState): { state: GameState; log: ResolveStep[] } {

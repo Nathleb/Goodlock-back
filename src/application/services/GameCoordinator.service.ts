@@ -22,6 +22,9 @@ import {
     confirmPlacement, performRoll,
     confirmKeep,
     confirmAssignment as domainConfirmAssignment,
+    cancelPlacement as domainCancelPlacement,
+    cancelKeep as domainCancelKeep,
+    cancelAssignment as domainCancelAssignment,
     performResolve,
 } from '@domain/services/GameLoop.service';
 
@@ -65,8 +68,6 @@ export class GameCoordinatorService {
             this.roomPort.updateGameState(room.roomId, gs);
             if (wasOtherReady) {
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
-            } else {
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -211,7 +212,6 @@ export class GameCoordinatorService {
 
             if (!wasOtherReady) {
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
                 return;
             }
 
@@ -232,6 +232,42 @@ export class GameCoordinatorService {
                 this.roomPort.updateGameState(room.roomId, gs);
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
             }
+        } catch (e: unknown) {
+            this.emitError(socketId, (e as Error).message);
+        }
+    }
+
+    cancelPlacement(socketId: string): void {
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const { room, playerIndex } = ctx;
+        try {
+            const gs = domainCancelPlacement(room.gameState, playerIndex);
+            if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
+        } catch (e: unknown) {
+            this.emitError(socketId, (e as Error).message);
+        }
+    }
+
+    cancelKeep(socketId: string): void {
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const { room, playerIndex } = ctx;
+        try {
+            const gs = domainCancelKeep(room.gameState, playerIndex);
+            if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
+        } catch (e: unknown) {
+            this.emitError(socketId, (e as Error).message);
+        }
+    }
+
+    cancelAssignment(socketId: string): void {
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const { room, playerIndex } = ctx;
+        try {
+            const gs = domainCancelAssignment(room.gameState, playerIndex);
+            if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }

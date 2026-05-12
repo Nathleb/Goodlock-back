@@ -8,6 +8,7 @@ import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player
 import { beginKeepPhase, beginRollPhase, beginAssignPhase } from "@domain/services/Phase.service";
 import {
     confirmPlacement, performRoll, confirmKeep, confirmAssignment, performResolve,
+    cancelPlacement, cancelKeep, cancelAssignment,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
 import GameState from "@domain/types/GameState.type";
@@ -186,5 +187,66 @@ describe('performResolve', () => {
 
     it('throws when called outside RESOLVE phase', () => {
         expect(() => performResolve(gs)).toThrow();
+    });
+});
+
+describe('cancelPlacement', () => {
+    it('sets playersReady[i] to false when player was confirmed', () => {
+        const confirmed = confirmPlacement(gs, 0);
+        expect(confirmed.playersReady[0]).toBe(true);
+        const result = cancelPlacement(confirmed, 0);
+        expect(result.playersReady[0]).toBe(false);
+        expect(result.phase).toBe(GamePhase.PLACEMENT);
+    });
+
+    it('returns the same reference when player was not confirmed', () => {
+        const result = cancelPlacement(gs, 0);
+        expect(result).toBe(gs);
+    });
+
+    it('throws when called outside PLACEMENT phase', () => {
+        expect(() => cancelPlacement(beginRollPhase(gs), 0)).toThrow();
+    });
+});
+
+describe('cancelKeep', () => {
+    it('sets playersReady[i] to false when player was confirmed', () => {
+        const inKeep = beginKeepPhase(gs);
+        const confirmed = confirmKeep(inKeep, 0);
+        expect(confirmed.playersReady[0]).toBe(true);
+        const result = cancelKeep(confirmed, 0);
+        expect(result.playersReady[0]).toBe(false);
+        expect(result.phase).toBe(GamePhase.KEEP);
+    });
+
+    it('returns the same reference when player was not confirmed', () => {
+        const inKeep = beginKeepPhase(gs);
+        const result = cancelKeep(inKeep, 0);
+        expect(result).toBe(inKeep);
+    });
+
+    it('throws when called outside KEEP phase', () => {
+        expect(() => cancelKeep(gs, 0)).toThrow();
+    });
+});
+
+describe('cancelAssignment', () => {
+    it('sets playersReady[i] to false when player was confirmed', () => {
+        const inAssign = beginAssignPhase(gs);
+        const confirmed = confirmAssignment(inAssign, 0);
+        expect(confirmed.playersReady[0]).toBe(true);
+        const result = cancelAssignment(confirmed, 0);
+        expect(result.playersReady[0]).toBe(false);
+        expect(result.phase).toBe(GamePhase.ASSIGN);
+    });
+
+    it('returns the same reference when player was not confirmed', () => {
+        const inAssign = beginAssignPhase(gs);
+        const result = cancelAssignment(inAssign, 0);
+        expect(result).toBe(inAssign);
+    });
+
+    it('throws when called outside ASSIGN phase', () => {
+        expect(() => cancelAssignment(gs, 0)).toThrow();
     });
 });

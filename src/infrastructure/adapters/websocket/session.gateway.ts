@@ -111,4 +111,19 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     handleConfirmAssignment(@ConnectedSocket() client: Socket): void {
         this.gameCoordinator.confirmAssignment(client.id);
     }
+
+    @SubscribeMessage('cancelPlacement')
+    handleCancelPlacement(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.cancelPlacement(client.id);
+    }
+
+    @SubscribeMessage('cancelKeep')
+    handleCancelKeep(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.cancelKeep(client.id);
+    }
+
+    @SubscribeMessage('cancelAssignment')
+    handleCancelAssignment(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.cancelAssignment(client.id);
+    }
 }
