@@ -78,34 +78,39 @@ beforeEach(async () => {
 
 // ── No-context guards ────────────────────────────────────────────────────────
 
-describe('no-context guards (tested via rearrangeTeam)', () => {
-    it('does nothing when session is not found', () => {
+describe('context guards (tested via rearrangeTeam)', () => {
+    it('emits error when session is not found', () => {
         mockSession.getSession.mockReturnValue(undefined);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('does nothing when session has no roomId', () => {
+    it('emits error when session has no roomId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, roomId: undefined });
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('does nothing when room is not found', () => {
+    it('emits error when room is not found', () => {
         mockRoom.getRoom.mockReturnValue(undefined);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('does nothing when room has no game state', () => {
+    it('emits error when room has no game state', () => {
         mockRoom.getRoom.mockReturnValue(lobbyRoom);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('does nothing when sessionId is not in room.playersId', () => {
+    it('emits error when sessionId is not in room.playersId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, sessionId: 'unknown' });
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });

@@ -55,7 +55,7 @@ export class GameCoordinatorService {
         autoFn?: (gs: GameState) => GameState,
     ): void {
         const ctx = this.getContext(socketId);
-        if (!ctx) return;
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
@@ -115,7 +115,7 @@ export class GameCoordinatorService {
 
     rearrangeTeam(socketId: string, characterIds: string[]): void {
         const ctx = this.getContext(socketId);
-        if (!ctx) return;
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.PLACEMENT);
@@ -148,7 +148,7 @@ export class GameCoordinatorService {
 
     toggleDieLock(socketId: string, characterId: string): void {
         const ctx = this.getContext(socketId);
-        if (!ctx) return;
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.KEEP);
@@ -174,7 +174,7 @@ export class GameCoordinatorService {
 
     selectTarget(socketId: string, characterId: string, rawTarget: { playerIndex: number; slot: number }): void {
         const ctx = this.getContext(socketId);
-        if (!ctx) return;
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.ASSIGN);
@@ -202,7 +202,7 @@ export class GameCoordinatorService {
 
     confirmAssignment(socketId: string): void {
         const ctx = this.getContext(socketId);
-        if (!ctx) return;
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
