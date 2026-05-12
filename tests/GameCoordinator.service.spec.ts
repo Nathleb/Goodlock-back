@@ -174,9 +174,10 @@ describe('rearrangeTeam', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('updates game state without emitting when valid', () => {
+    it('updates game state and emits gameStateUpdated to the socket when valid', () => {
         coordinator.rearrangeTeam(SOCKET_0, validIds().reverse());
         expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
@@ -184,9 +185,10 @@ describe('rearrangeTeam', () => {
 // ── confirmPlacement ─────────────────────────────────────────────────────────
 
 describe('confirmPlacement', () => {
-    it('marks player ready but does not emit when the other has not confirmed', () => {
+    it('marks player ready and emits gameStateUpdated to the socket when first to confirm', () => {
         coordinator.confirmPlacement(SOCKET_0);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -214,9 +216,10 @@ describe('toggleDieLock', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('updates game state without emitting when valid', () => {
+    it('updates game state and emits gameStateUpdated to the socket when valid', () => {
         coordinator.toggleDieLock(SOCKET_0, keepGs.players[0].team[0].id);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
@@ -224,10 +227,11 @@ describe('toggleDieLock', () => {
 // ── confirmKeep ───────────────────────────────────────────────────────────────
 
 describe('confirmKeep', () => {
-    it('marks player ready but does not emit when the other has not confirmed', () => {
+    it('marks player ready and emits gameStateUpdated to the socket when first to confirm', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
         coordinator.confirmKeep(SOCKET_0);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -270,9 +274,10 @@ describe('selectTarget', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('updates game state without emitting when valid', () => {
+    it('updates game state and emits gameStateUpdated to the socket when valid', () => {
         coordinator.selectTarget(SOCKET_0, assignGs.players[0].team[0].id, { playerIndex: 1, slot: 0 });
         expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
@@ -280,10 +285,11 @@ describe('selectTarget', () => {
 // ── confirmAssignment ─────────────────────────────────────────────────────────
 
 describe('confirmAssignment', () => {
-    it('marks player ready but does not emit when the other has not confirmed', () => {
+    it('marks player ready and emits gameStateUpdated to the socket when first to confirm', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(assignGs));
         coordinator.confirmAssignment(SOCKET_0);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -302,5 +308,30 @@ describe('confirmAssignment', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0 });
         const calls = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
         expect(calls).not.toContain('gameStateUpdated');
+    });
+});
+
+// ── double-confirm guards ────────────────────────────────────────────────────
+
+describe('double-confirm guards', () => {
+    it('emits error on second confirmPlacement', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
+        coordinator.confirmPlacement(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error on second confirmKeep', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
+        coordinator.confirmKeep(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error on second confirmAssignment', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
+        coordinator.confirmAssignment(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });

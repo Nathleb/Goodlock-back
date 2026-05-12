@@ -2,7 +2,7 @@ import GameState from "../types/GameState.type";
 import GamePhase from "../types/GamePhase.type";
 import { PlayerIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
-import { assertPhase, beginRollPhase, beginKeepPhase, beginAssignPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
+import { assertPhase, assertNotReady, beginRollPhase, beginKeepPhase, beginAssignPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
 import { rollDiceForTurn, allDiceLocked } from "./Player.service";
 import { ResolveStep } from "../types/PriorityQueue.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "./PriorityQueue.service";
@@ -31,6 +31,7 @@ function rerollBothPlayers(gs: GameState): GameState {
 
 export function confirmPlacement(gs: GameState, playerIndex: PlayerIndex): GameState {
     assertPhase(gs, GamePhase.PLACEMENT);
+    assertNotReady(gs, playerIndex);
     const updated = markPlayerReady(gs, playerIndex);
     if (!areBothReady(updated)) return updated;
     return resetReady(beginRollPhase(updated));
@@ -43,6 +44,7 @@ export function performRoll(gs: GameState): GameState {
 
 export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): GameState {
     assertPhase(gs, GamePhase.KEEP);
+    assertNotReady(gs, playerIndex);
     const updated = markPlayerReady(gs, playerIndex);
     if (!areBothReady(updated)) return updated;
 
@@ -56,6 +58,7 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): GameState 
 
 export function confirmAssignment(gs: GameState, playerIndex: PlayerIndex): GameState {
     assertPhase(gs, GamePhase.ASSIGN);
+    assertNotReady(gs, playerIndex);
     const updated = markPlayerReady(gs, playerIndex);
     if (!areBothReady(updated)) return updated;
     return resetReady(beginResolvePhase(updated));
