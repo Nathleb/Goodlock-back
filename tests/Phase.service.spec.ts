@@ -1,9 +1,10 @@
-import { SlotIndex } from "@domain/types/Position.type";
+import { SlotIndex, PlayerIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer, rearrangeTeam } from "@domain/services/Player.service";
 import {
     assertPhase,
+    assertNotReady,
     beginPlacementPhase, beginRollPhase, beginKeepPhase,
     beginAssignPhase, beginResolvePhase, beginResultPhase,
 } from "@domain/services/Phase.service";
@@ -81,5 +82,29 @@ describe('rearrangeTeam', () => {
     it('does not mutate the original player', () => {
         rearrangeTeam(player, [4, 3, 2, 1, 0]);
         expect(player.team.map(c => c.name)).toEqual(names());
+    });
+});
+
+describe('assertNotReady', () => {
+    it('does not throw when player has not confirmed', () => {
+        expect(() => assertNotReady(gs, 0 as PlayerIndex)).not.toThrow();
+        expect(() => assertNotReady(gs, 1 as PlayerIndex)).not.toThrow();
+    });
+
+    it('throws when player 0 has already confirmed', () => {
+        const ready = { ...gs, playersReady: [true, false] as [boolean, boolean] };
+        expect(() => assertNotReady(ready, 0 as PlayerIndex))
+            .toThrow('Player has already confirmed');
+    });
+
+    it('throws when player 1 has already confirmed', () => {
+        const ready = { ...gs, playersReady: [false, true] as [boolean, boolean] };
+        expect(() => assertNotReady(ready, 1 as PlayerIndex))
+            .toThrow('Player has already confirmed');
+    });
+
+    it('does not throw for the other player when one has confirmed', () => {
+        const ready = { ...gs, playersReady: [true, false] as [boolean, boolean] };
+        expect(() => assertNotReady(ready, 1 as PlayerIndex)).not.toThrow();
     });
 });
