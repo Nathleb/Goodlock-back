@@ -1,67 +1,13 @@
 {
     "name": "Hannah",
-    "maxHp": 29,
+    "maxHp": 12,
+    "baseSpeed": 3,
     "baseDieInstructions": [
-        {
-            "description": "Heals 3 HP for a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetHeal",
-                    "magnitude": 3
-                }
-            ]
-        },
-        {
-            "description": "Heals 2 HP for a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetHeal",
-                    "magnitude": 2
-                }
-            ]
-        },
-        {
-            "description": "Heals 2 HP for a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetHeal",
-                    "magnitude": 2
-                }
-            ]
-        },
-        {
-            "description": "Grants 2 shield to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetShield",
-                    "magnitude": 2
-                }
-            ]
-        },
-        {
-            "description": "Grants 1 shield to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetShield",
-                    "magnitude": 1
-                }
-            ]
-        },
-        {
-            "description": "Deals 2 damage to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetDamage",
-                    "magnitude": 2
-                }
-            ]
-        }
-    ],
-    "baseSpeed": 1
+        { "description": "Cleave shield for 2.", "priority": 4, "effects": [{ "effect": "CleaveShield", "magnitude": 2 }] },
+        { "description": "Grant 3 shield to a single target.", "priority": 2, "effects": [{ "effect": "SingleTargetShield", "magnitude": 3 }] },
+        { "description": "Grant 2 shield to all allies.", "priority": 5, "effects": [{ "effect": "FullTeamShield", "magnitude": 2 }] },
+        { "description": "Cleave heal for 3 HP.", "priority": 1, "effects": [{ "effect": "CleaveHeal", "magnitude": 3 }] },
+        { "description": "Cleave shield for 3.", "priority": 3, "effects": [{ "effect": "CleaveShield", "magnitude": 3 }] },
+        { "description": "Heal a single target for 4 HP.", "priority": 2, "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }] }
+    ]
 }

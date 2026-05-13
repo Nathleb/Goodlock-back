@@ -1,40 +1,13 @@
 {
     "name": "Alicent",
-    "maxHp": 25,
-    "baseSpeed": 1,
+    "maxHp": 10,
+    "baseSpeed": 4,
     "baseDieInstructions": [
-        {
-            "description": "Heals 3 HP for a single target.",
-            "priority": 1,
-            "effects": [{ "effect": "SingleTargetHeal", "magnitude": 3 }]
-        },
-        {
-            "description": "Heals 2 HP for a single target and grants 1 shield.",
-            "priority": 1,
-            "effects": [
-                { "effect": "SingleTargetHeal", "magnitude": 2 },
-                { "effect": "SingleTargetShield", "magnitude": 1 }
-            ]
-        },
-        {
-            "description": "Heals 2 HP for a single target.",
-            "priority": 1,
-            "effects": [{ "effect": "SingleTargetHeal", "magnitude": 2 }]
-        },
-        {
-            "description": "Grants 2 shield to a single target.",
-            "priority": 1,
-            "effects": [{ "effect": "SingleTargetShield", "magnitude": 2 }]
-        },
-        {
-            "description": "Grants 1 shield to a single target.",
-            "priority": 1,
-            "effects": [{ "effect": "SingleTargetShield", "magnitude": 1 }]
-        },
-        {
-            "description": "Deals 2 damage to a single target.",
-            "priority": 1,
-            "effects": [{ "effect": "SingleTargetDamage", "magnitude": 2 }]
-        }
+        { "description": "Deal 5 damage to a single target.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
+        { "description": "Deal 7 damage to a single target.", "priority": 4, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 7 }] },
+        { "description": "Deal 3 damage to a single target.", "priority": 1, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }] },
+        { "description": "Deal 4 cleave damage.", "priority": 3, "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
+        { "description": "Sacrifice 3 HP to deal 9 damage.", "priority": 5, "effects": [{ "effect": "SelfDamage", "magnitude": 3 }, { "effect": "SingleTargetDamage", "magnitude": 9 }] },
+        { "description": "Deal 6 damage and gain 2 shield.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }, { "effect": "SelfShield", "magnitude": 2 }] }
     ]
 }

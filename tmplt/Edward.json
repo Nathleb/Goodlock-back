@@ -1,67 +1,13 @@
 {
     "name": "Edward",
-    "maxHp": 33,
+    "maxHp": 18,
+    "baseSpeed": 2,
     "baseDieInstructions": [
-        {
-            "description": "Deals 3 damage to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetDamage",
-                    "magnitude": 3
-                }
-            ]
-        },
-        {
-            "description": "Deals 2 damage to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetDamage",
-                    "magnitude": 2
-                }
-            ]
-        },
-        {
-            "description": "Deals 2 damage to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetDamage",
-                    "magnitude": 2
-                }
-            ]
-        },
-        {
-            "description": "Grants 2 shield to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetShield",
-                    "magnitude": 2
-                }
-            ]
-        },
-        {
-            "description": "Grants 1 shield to a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetShield",
-                    "magnitude": 1
-                }
-            ]
-        },
-        {
-            "description": "Heals 2 HP for a single target.",
-            "priority": 1,
-            "effects": [
-                {
-                    "effect": "SingleTargetHeal",
-                    "magnitude": 2
-                }
-            ]
-        }
-    ],
-    "baseSpeed": 1
+        { "description": "Deal 4 damage and gain 2 shield.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }, { "effect": "SelfShield", "magnitude": 2 }] },
+        { "description": "Deal 5 damage and gain 3 shield.", "priority": 4, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }, { "effect": "SelfShield", "magnitude": 3 }] },
+        { "description": "Deal 3 cleave damage.", "priority": 1, "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
+        { "description": "Deal 3 damage and gain 1 shield.", "priority": 3, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }, { "effect": "SelfShield", "magnitude": 1 }] },
+        { "description": "Deal 4 cleave damage.", "priority": 5, "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
+        { "description": "Gain 4 shield.", "priority": 1, "effects": [{ "effect": "SelfShield", "magnitude": 4 }] }
+    ]
 }
