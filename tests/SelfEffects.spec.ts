@@ -3,6 +3,7 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
+import { findSelf } from "@domain/services/Position.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import GameState from "@domain/types/GameState.type";
 import Position, { SlotIndex } from "@domain/types/Position.type";
@@ -52,6 +53,20 @@ describe('SelfDamage', () => {
 
         expect(updated.players[0].team[0].hp).toBe(17); // 20 - 3
         expect(updated.players[1].team[2].hp).toBe(20); // target unchanged
+        expect(updated.players[0].team[1].hp).toBe(20); // actor's teammate unchanged
+    });
+
+    it('damages the actor from player 1 team', () => {
+        const gs = makeGameState();
+        const actor = gs.players[1].team[0]; // B0, slot 0
+        const target: Position = { playerIndex: 0, slot: 2 };
+
+        const { state: updated } = unstackPriorityQueueWithLog(
+            withEffect(gs, actor.baseDie[0], target, actor.id, actor.baseSpeed)
+        );
+
+        expect(updated.players[1].team[0].hp).toBe(17); // 20 - 3
+        expect(updated.players[0].team[2].hp).toBe(20); // target unchanged
     });
 });
 
@@ -139,5 +154,35 @@ describe('Combo faces', () => {
 
         expect(updated.players[0].team[0].hp).toBe(18); // 20 - 2 (self)
         expect(updated.players[1].team[3].hp).toBe(14); // 20 - 6 (target)
+    });
+});
+
+describe('findSelf', () => {
+    it('returns array of length 1 with actor when actor is in player 0 team', () => {
+        const gs = makeGameState();
+        const actor = gs.players[0].team[2]; // A2
+
+        const result = findSelf(gs.players, actor.id);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe(actor.id);
+    });
+
+    it('returns array of length 1 with actor when actor is in player 1 team', () => {
+        const gs = makeGameState();
+        const actor = gs.players[1].team[3]; // B3
+
+        const result = findSelf(gs.players, actor.id);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe(actor.id);
+    });
+
+    it('returns empty array when actorId is unknown', () => {
+        const gs = makeGameState();
+
+        const result = findSelf(gs.players as [ReturnType<typeof createPlayer>, ReturnType<typeof createPlayer>], 'nonexistent-id');
+
+        expect(result).toHaveLength(0);
     });
 });
