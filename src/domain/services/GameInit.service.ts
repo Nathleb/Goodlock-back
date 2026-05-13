@@ -15,6 +15,9 @@ import FullTeamDamage from "../strategies/FullTeamDamage.class";
 import FullTeamHeal from "../strategies/FullTeamHeal.class";
 import FullTeamShield from "../strategies/FullTeamShield.class";
 import SwapEffect from "../strategies/Swap.class";
+import SelfDamage from "../strategies/SelfDamage.class";
+import SelfHeal from "../strategies/SelfHeal.class";
+import SelfShield from "../strategies/SelfShield.class";
 import Character from "../types/Character.type";
 import { createCharacterFromJsonTemplate } from "./CharacterGeneration.service";
 
@@ -45,4 +48,7 @@ export function initializeEffects() {
     EffectFactory.registerEffect(EffectLabel.FullTeamShield,      (amount) => new FullTeamShield(amount));
     EffectFactory.registerEffect(EffectLabel.SwapLeft,            () => new SwapEffect(SwapDirection.LEFT));
     EffectFactory.registerEffect(EffectLabel.SwapRight,           () => new SwapEffect(SwapDirection.RIGHT));
+    EffectFactory.registerEffect(EffectLabel.SelfDamage,  (amount) => new SelfDamage(amount));
+    EffectFactory.registerEffect(EffectLabel.SelfHeal,    (amount) => new SelfHeal(amount));
+    EffectFactory.registerEffect(EffectLabel.SelfShield,  (amount) => new SelfShield(amount));
 }

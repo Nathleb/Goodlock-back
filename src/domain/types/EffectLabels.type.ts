@@ -10,6 +10,9 @@ enum EffectLabel {
     FullTeamShield      = "FullTeamShield",
     SwapLeft            = "SwapLeft",
     SwapRight           = "SwapRight",
+    SelfDamage          = "SelfDamage",
+    SelfHeal            = "SelfHeal",
+    SelfShield          = "SelfShield",
 }
 
 export default EffectLabel;

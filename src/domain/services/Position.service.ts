@@ -15,3 +15,11 @@ export const findAdjacentTargets: TargetingFunction = (players: [Player, Player]
 export const findFullTeam: TargetingFunction = (players: [Player, Player], position: Position): Character[] => {
     return [...players[position.playerIndex].team];
 };
+
+export function findSelf(players: [Player, Player], actorId: string): Character[] {
+    for (const player of players) {
+        const char = player.team.find(c => c.id === actorId);
+        if (char) return [char];
+    }
+    return [];
+}
