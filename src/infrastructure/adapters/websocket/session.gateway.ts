@@ -9,6 +9,8 @@ import {
     ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { SharedWebSocketService } from './services/SharedWebSocketService';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
@@ -18,6 +20,7 @@ import { RearrangeTeamPayload } from './payloads/RearrangeTeam.payload';
 import { ToggleDieLockPayload } from './payloads/ToggleDieLock.payload';
 import { SelectTargetPayload } from './payloads/SelectTarget.payload';
 import { SessionGuard } from './guards/Session.guard';
+import { UserId } from '@shared/branded.types';
 
 @UseGuards(SessionGuard)
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -27,6 +30,8 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         private readonly sessionCoordinator: SessionCoordinatorService,
         private readonly roomCoordinator: RoomCoordinatorService,
         private readonly gameCoordinator: GameCoordinatorService,
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
     ) {}
 
     afterInit(server: Server): void {
@@ -34,12 +39,19 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     }
 
     handleConnection(client: Socket): void {
-        const deviceIdentifier = client.handshake.auth?.deviceIdentifier;
-        if (!deviceIdentifier) {
+        const token = client.handshake.auth?.token as string | undefined;
+        if (!token) {
             client.disconnect();
             return;
         }
-        this.sessionCoordinator.handleConnect(client.id, deviceIdentifier);
+        try {
+            const payload = this.jwtService.verify<{ sub: string }>(token, {
+                secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+            });
+            this.sessionCoordinator.handleConnect(client.id, payload.sub as UserId);
+        } catch {
+            client.disconnect();
+        }
     }
 
     handleDisconnect(client: Socket): void {

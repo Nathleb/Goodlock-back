@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
@@ -9,10 +12,18 @@ import { SharedWebSocketService } from '@infrastructure/adapters/websocket/servi
 import { WebSocketService } from '@infrastructure/adapters/websocket/services/WebSocketService';
 import { SessionGateway } from '@infrastructure/adapters/websocket/session.gateway';
 import { SessionGuard } from '@infrastructure/adapters/websocket/guards/Session.guard';
+import { PrismaModule } from '@infrastructure/prisma/prisma.module';
+import { AuthModule } from '@infrastructure/auth.module';
 
 @Module({
-    imports: [],
+    imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
+        ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+        PrismaModule,
+        AuthModule,
+    ],
     providers: [
+        { provide: APP_GUARD, useClass: ThrottlerGuard },
         { provide: ROOM_PORT, useClass: RoomManager },
         { provide: SESSION_PORT, useClass: SessionManager },
         { provide: WEBSOCKET_PORT, useClass: WebSocketService },

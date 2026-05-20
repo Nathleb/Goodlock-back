@@ -5,6 +5,7 @@ import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomMapper } from '@application/mappers/RoomMapper';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
+import { UserId } from '@shared/branded.types';
 
 @Injectable()
 export class SessionCoordinatorService {
@@ -14,8 +15,8 @@ export class SessionCoordinatorService {
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
     ) {}
 
-    handleConnect(socketId: string, deviceIdentifier: string): void {
-        const session = this.sessionPort.createOrReconnectSession(socketId, deviceIdentifier);
+    handleConnect(socketId: string, userId: UserId): void {
+        const session = this.sessionPort.createOrReconnectSession(socketId, userId);
         if (!session.roomId) return;
         this.wsPort.joinRoom(socketId, session.roomId);
         const room = this.roomPort.getRoom(session.roomId);

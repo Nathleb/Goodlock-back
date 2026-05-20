@@ -3,9 +3,11 @@ import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/toke
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
+import { UserId } from '@shared/branded.types';
 
 const SOCKET = 'socket-0';
-const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, deviceIdentifier: 'dev-0' };
+const USER_ID = 'user-uuid-1' as UserId;
+const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
 const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: 'room-1' };
 
 const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
@@ -33,14 +35,14 @@ beforeEach(async () => {
 describe('handleConnect', () => {
     it('creates a new session without joining a WS room when not in any room', () => {
         mockSession.createOrReconnectSession.mockReturnValue(SESSION);
-        coordinator.handleConnect(SOCKET, 'dev-0');
-        expect(mockSession.createOrReconnectSession).toHaveBeenCalledWith(SOCKET, 'dev-0');
+        coordinator.handleConnect(SOCKET, USER_ID);
+        expect(mockSession.createOrReconnectSession).toHaveBeenCalledWith(SOCKET, USER_ID);
         expect(mockWs.joinRoom).not.toHaveBeenCalled();
     });
 
     it('re-joins the WS room when reconnecting with an existing roomId', () => {
         mockSession.createOrReconnectSession.mockReturnValue(SESSION_WITH_ROOM);
-        coordinator.handleConnect(SOCKET, 'dev-0');
+        coordinator.handleConnect(SOCKET, USER_ID);
         expect(mockWs.joinRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
     });
 });

@@ -3,9 +3,11 @@ import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/toke
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
+import { UserId } from '@shared/branded.types';
 
 const SOCKET = 'socket-0';
-const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, deviceIdentifier: 'dev-0' };
+const USER_ID = 'user-uuid-0' as UserId;
+const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
 const SESSION_IN_ROOM: Session = { ...SESSION, roomId: 'old-room' };
 
 const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };

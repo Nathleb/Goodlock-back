@@ -34,7 +34,7 @@ describe('SessionGuard', () => {
     });
 
     it('returns true when session exists', () => {
-        mockSessionPort.getSession.mockReturnValue({ sessionId: 'p0', socketId: 'socket-0', deviceIdentifier: 'dev-0' });
+        mockSessionPort.getSession.mockReturnValue({ sessionId: 'p0', socketId: 'socket-0', userId: 'user-uuid-0' });
         const { ctx, emit } = makeContext('socket-0');
         expect(guard.canActivate(ctx)).toBe(true);
         expect(emit).not.toHaveBeenCalled();

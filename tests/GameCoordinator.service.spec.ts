@@ -11,13 +11,16 @@ import { createGameState, initializeEffects } from '@domain/services/GameInit.se
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase, beginAssignPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
+import { UserId } from '@shared/branded.types';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const SOCKET_0 = 'socket-0';
 const SOCKET_1 = 'socket-1';
-const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, deviceIdentifier: 'dev-0', roomId: 'room-1' };
-const SESSION_1: Session = { sessionId: 'p1', socketId: SOCKET_1, deviceIdentifier: 'dev-1', roomId: 'room-1' };
+const USER_ID_0 = 'user-uuid-0' as UserId;
+const USER_ID_1 = 'user-uuid-1' as UserId;
+const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, userId: USER_ID_0, roomId: 'room-1' };
+const SESSION_1: Session = { sessionId: 'p1', socketId: SOCKET_1, userId: USER_ID_1, roomId: 'room-1' };
 
 const die = generateFullDie([
     { description: 'A', priority: 1, effects: [] },
