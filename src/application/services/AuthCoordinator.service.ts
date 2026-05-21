@@ -1,6 +1,5 @@
 import { Injectable, ConflictException, UnauthorizedException, NotFoundException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { USER_PORT, REFRESH_TOKEN_PORT } from '@application/ports/tokens';
@@ -23,7 +22,6 @@ export class AuthCoordinatorService {
         @Inject(USER_PORT) private readonly userPort: UserPort,
         @Inject(REFRESH_TOKEN_PORT) private readonly refreshTokenPort: RefreshTokenPort,
         private readonly jwtService: JwtService,
-        private readonly configService: ConfigService,
     ) {}
 
     async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -93,13 +91,7 @@ export class AuthCoordinatorService {
     }
 
     private async issueTokenPair(userId: UserId, username: string): Promise<AuthResponseDto> {
-        const accessToken = await this.jwtService.signAsync(
-            { sub: userId, username },
-            {
-                secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-                expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN') as any,
-            },
-        );
+        const accessToken = await this.jwtService.signAsync({ sub: userId, username });
 
         const rawRefreshToken = randomBytes(64).toString('hex');
         const tokenHash = createHash('sha256').update(rawRefreshToken).digest('hex');

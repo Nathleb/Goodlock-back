@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: goodlock
-      POSTGRES_USER: goodlock
-      POSTGRES_PASSWORD: goodlock
+      POSTGRES_DB: ${POSTGRES_DB:-goodlock}
+      POSTGRES_USER: ${POSTGRES_USER:-goodlock}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-goodlock}
     ports:
       - "5432:5432"
     volumes:

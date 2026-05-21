@@ -5,6 +5,8 @@ import { UserId } from '@shared/branded.types';
 
 @Injectable()
 export class SessionManager implements SessionPort {
+    // One active session per userId. A second connect evicts the previous socketId entry
+    // (reconnect wins). Known limitation: evicted socket is not explicitly disconnected server-side.
     private readonly bySockId = new Map<string, Session>();
     private readonly byUserId = new Map<UserId, Session>();
 

@@ -41,15 +41,6 @@ const mockJwtService = {
     signAsync: jest.fn().mockResolvedValue('signed-access-token'),
 };
 
-const mockConfigService = {
-    get: (key: string) => ({
-        JWT_ACCESS_SECRET: 'access-secret-test',
-        JWT_REFRESH_SECRET: 'refresh-secret-test',
-        JWT_ACCESS_EXPIRES_IN: '15m',
-        JWT_REFRESH_EXPIRES_IN: '7d',
-    }[key] ?? ''),
-};
-
 let service: AuthCoordinatorService;
 
 beforeEach(() => {
@@ -61,7 +52,6 @@ beforeEach(() => {
         mockUserPort,
         mockRefreshTokenPort,
         mockJwtService as any,
-        mockConfigService as any,
     );
 });
 
