@@ -47,6 +47,33 @@ function resolve(
     return unstackPriorityQueueWithLog(state).state;
 }
 
+function resolveEffect(
+    gs: GameState,
+    actorId: string,
+    label: EffectLabel,
+    magnitude: number,
+    targetPlayerIndex: PlayerIndex,
+    targetSlot: SlotIndex,
+): ReturnType<typeof unstackPriorityQueueWithLog> {
+    const actor = gs.players.flatMap(p => p.team).find(c => c.id === actorId)!;
+    const emptyFace = { description: '-', priority: 1, effects: [] };
+    const face = generateFullDie([
+        { description: 'test', priority: 1, effects: [{ effect: label, magnitude }] },
+        emptyFace, emptyFace, emptyFace, emptyFace, emptyFace,
+    ])[0];
+    const state = {
+        ...gs,
+        priorityQueue: addEffectsToPriorityQueue(
+            createPriorityQueue(10),
+            face,
+            { playerIndex: targetPlayerIndex, slot: targetSlot },
+            actorId,
+            actor.baseSpeed,
+        ),
+    };
+    return unstackPriorityQueueWithLog(state);
+}
+
 describe('SwapAlly', () => {
     it('swaps actor with targeted ally', () => {
         const gs = createGameState(player1, player2);
@@ -97,6 +124,50 @@ describe('SwapAlly', () => {
         const result = resolve(gs, charB.id, 1, 0, 0);
 
         expect(result.players[1].team.map(c => c.id)).toEqual(before);
+    });
+
+    it('only moves the two swapped slots, leaving others unchanged', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const charE = gs.players[0].team[4];
+
+        const result = resolve(gs, charE.id, 1, 0, 0); // charE swaps with charA
+
+        expect(result.players[0].team[1].id).toBe(gs.players[0].team[1].id);
+        expect(result.players[0].team[2].id).toBe(gs.players[0].team[2].id);
+        expect(result.players[0].team[3].id).toBe(gs.players[0].team[3].id);
+        expect(result.players[0].team[0].id).toBe(charE.id);
+        expect(result.players[0].team[4].id).toBe(charA.id);
+    });
+
+    it('works with a dead ally', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const deadB = { ...gs.players[0].team[1], hp: 0 };
+        const gsWithDead = {
+            ...gs,
+            players: [
+                { ...gs.players[0], team: [charA, deadB, ...gs.players[0].team.slice(2)] },
+                gs.players[1],
+            ] as typeof gs.players,
+        };
+
+        const { state } = resolveEffect(gsWithDead, charA.id, EffectLabel.SwapAlly, 0, 0, 1);
+
+        expect(state.players[0].team[1].id).toBe(charA.id);
+        expect(state.players[0].team[0].id).toBe(deadB.id);
+    });
+
+    it('log reports both affected character IDs', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const charB = gs.players[0].team[1];
+
+        const { log } = resolveEffect(gs, charB.id, EffectLabel.SwapAlly, 0, 0, 0);
+
+        expect(log[0].changes.map(c => c.characterId)).toEqual(
+            expect.arrayContaining([charA.id, charB.id])
+        );
     });
 });
 
@@ -175,6 +246,58 @@ describe('Push', () => {
         expect(result.players[1].team[0].id).toBe(enemyB.id);
         expect(result.players[1].team[1].id).toBe(enemyA.id);
     });
+
+    it('pushing an enemy does not affect own team', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const before = gs.players[0].team.map(c => c.id);
+
+        const result = resolve(gs, charA.id, 2, 1, 1); // push enemy
+
+        expect(result.players[0].team.map(c => c.id)).toEqual(before);
+    });
+
+    it('PushRight with magnitude 2 moves target two slots right', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0]; // slot 0
+        const charC = gs.players[0].team[2]; // slot 2
+
+        const { state } = resolveEffect(gs, charA.id, EffectLabel.PushRight, 2, 0, 0);
+
+        expect(state.players[0].team[2].id).toBe(charA.id);
+        expect(state.players[0].team[0].id).toBe(charC.id);
+    });
+
+    it('PushRight magnitude 2 is a no-op when it would exceed boundary', () => {
+        const gs = createGameState(player1, player2);
+        const charE = gs.players[0].team[4]; // slot 4 — push right by 2 would be slot 6
+        const before = gs.players[0].team.map(c => c.id);
+
+        const { state } = resolveEffect(gs, charE.id, EffectLabel.PushRight, 2, 0, 4);
+
+        expect(state.players[0].team.map(c => c.id)).toEqual(before);
+    });
+
+    it('push preserves position.slot on both affected characters', () => {
+        const gs = createGameState(player1, player2);
+        const charB = gs.players[0].team[1]; // slot 1 → pushed left to slot 0
+
+        const { state } = resolveEffect(gs, charB.id, EffectLabel.PushLeft, 1, 0, 1);
+
+        expect(state.players[0].team[0].position.slot).toBe(0);
+        expect(state.players[0].team[1].position.slot).toBe(1);
+    });
+
+    it('push only moves the two involved slots, leaving others unchanged', () => {
+        const gs = createGameState(player1, player2);
+        const charC = gs.players[0].team[2]; // slot 2 — pushed right
+
+        const { state } = resolveEffect(gs, charC.id, EffectLabel.PushRight, 1, 0, 2);
+
+        expect(state.players[0].team[0].id).toBe(gs.players[0].team[0].id);
+        expect(state.players[0].team[1].id).toBe(gs.players[0].team[1].id);
+        expect(state.players[0].team[4].id).toBe(gs.players[0].team[4].id);
+    });
 });
 
 describe('MoveToSlot', () => {
@@ -209,5 +332,57 @@ describe('MoveToSlot', () => {
 
         expect(result.players[1].team[2].id).toBe(enemyA.id);
         expect(result.players[1].team[0].id).toBe(enemyC.id);
+    });
+
+    it('is a no-op when destination slot is out of bounds', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const before = gs.players[0].team.map(c => c.id);
+
+        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 5, 0, 0); // slot 5 doesn't exist
+
+        expect(state.players[0].team.map(c => c.id)).toEqual(before);
+    });
+
+    it('can move from a high slot to a low slot', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const charE = gs.players[0].team[4]; // slot 4 — moved to slot 0
+
+        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 0, 0, 4); // target slot 4, destination 0
+
+        expect(state.players[0].team[0].id).toBe(charE.id);
+        expect(state.players[0].team[4].id).toBe(charA.id);
+    });
+
+    it('preserves position.slot on both affected characters', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+
+        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 3, 0, 0); // move slot 0 → slot 3
+
+        expect(state.players[0].team[3].position.slot).toBe(3);
+        expect(state.players[0].team[0].position.slot).toBe(0);
+    });
+
+    it('only moves the two involved slots, leaving others unchanged', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+
+        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 4, 0, 0); // slot 0 ↔ slot 4
+
+        expect(state.players[0].team[1].id).toBe(gs.players[0].team[1].id);
+        expect(state.players[0].team[2].id).toBe(gs.players[0].team[2].id);
+        expect(state.players[0].team[3].id).toBe(gs.players[0].team[3].id);
+    });
+
+    it('moving an ally does not affect the opponent team', () => {
+        const gs = createGameState(player1, player2);
+        const charA = gs.players[0].team[0];
+        const before = gs.players[1].team.map(c => c.id);
+
+        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 4, 0, 0);
+
+        expect(state.players[1].team.map(c => c.id)).toEqual(before);
     });
 });
