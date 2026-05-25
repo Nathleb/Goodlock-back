@@ -2,12 +2,6 @@ import Character from "../types/Character.type";
 import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "./Character.service";
 import { Player } from "../types/Player.type";
 import Position, { SlotIndex, PlayerIndex } from "../types/Position.type";
-import GameState from "../types/GameState.type";
-
-export enum SwapDirection {
-    LEFT = "left",
-    RIGHT = "right",
-}
 
 export function toggleDieLockForCharacter(player: Player, position: Position): Player {
     const newTeam = player.team.map(char =>
@@ -64,34 +58,4 @@ export function createPlayer(team: Character[], playerIndex: PlayerIndex): Playe
     return { playerIndex, team: positioned };
 }
 
-export function canSwap(player: Player, slot: SlotIndex, direction: SwapDirection): boolean {
-    if (direction === SwapDirection.LEFT) return slot > 0;
-    return slot < player.team.length - 1;
-}
 
-export function executeSwap(gameState: GameState, characterId: string, direction: SwapDirection): { state: GameState; affected: string[] } {
-    for (let pi = 0; pi < gameState.players.length; pi++) {
-        const player = gameState.players[pi];
-        const idx = player.team.findIndex(c => c.id === characterId);
-        if (idx === -1) continue;
-
-        const neighborIdx = idx + (direction === SwapDirection.LEFT ? -1 : 1);
-        if (neighborIdx < 0 || neighborIdx >= player.team.length) {
-            return { state: gameState, affected: [] };
-        }
-
-        const newTeam = [...player.team];
-        newTeam[idx]         = { ...player.team[neighborIdx], position: player.team[idx].position };
-        newTeam[neighborIdx] = { ...player.team[idx],         position: player.team[neighborIdx].position };
-
-        const players = [...gameState.players] as [Player, Player];
-        players[pi] = { ...player, team: newTeam };
-
-        return {
-            state: { ...gameState, players },
-            affected: [characterId, player.team[neighborIdx].id],
-        };
-    }
-
-    return { state: gameState, affected: [] };
-}

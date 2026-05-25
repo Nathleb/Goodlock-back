@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly assign actions each round (play a face effect or swap positions), then all actions resolve in priority order. Built with NestJS + Socket.io; no database yet (all state in-memory).
+Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly assign die face effects each round, then all actions resolve in priority order. Built with NestJS + Socket.io; no database yet (all state in-memory).
 
 ## Active plugins
 
@@ -89,7 +89,7 @@ Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneratio
 1. **Coordinator pattern**: Application-layer coordinators (`RoomCoordinatorService`, `SessionCoordinatorService`) call domain services then dispatch WebSocket events. The gateway calls coordinators, never domain services directly.
 2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) + `deviceIdentifier` are persistent. `SessionService.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
-4. **Priority resolution**: `finalPriority(face) = face.priority + character.baseSpeed`; swap priority = `character.baseSpeed` only.
+4. **Priority resolution**: `finalPriority(face) = face.priority + character.baseSpeed`.
 
 ## Workflow for any non-trivial task
 

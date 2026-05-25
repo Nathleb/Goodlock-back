@@ -144,12 +144,12 @@ describe('PriorityQueueService', () => {
     expect(log[0].changes).toHaveLength(0);
   });
 
-  it('a boundary SwapLeft at slot 0 produces an empty-changes step (not skipped)', () => {
+  it('a boundary PushLeft at slot 0 produces an empty-changes step (not skipped)', () => {
     const swapDie = generateFullDie([
       { description: "A",        priority: 1, effects: [] },
       { description: "B",        priority: 1, effects: [] },
       { description: "C",        priority: 1, effects: [] },
-      { description: "SwapLeft", priority: 1, effects: [{ effect: EffectLabel.SwapLeft, magnitude: 0 }] },
+      { description: "PushLeft", priority: 1, effects: [{ effect: EffectLabel.PushLeft, magnitude: 1 }] },
       { description: "E",        priority: 1, effects: [] },
       { description: "F",        priority: 1, effects: [] },
     ]);
@@ -159,7 +159,7 @@ describe('PriorityQueueService', () => {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
         createPriorityQueue(10),
-        actor.baseDie[3], // SwapLeft face
+        actor.baseDie[3], // PushLeft face
         { playerIndex: 0, slot: 0 as SlotIndex },
         actor.id,
         actor.baseSpeed
