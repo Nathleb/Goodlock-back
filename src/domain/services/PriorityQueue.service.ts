@@ -1,8 +1,9 @@
 import PriorityQueue, { QueueEntry, ResolveStep } from "../types/PriorityQueue.type";
-import Position from "../types/Position.type";
+import Position, { PlayerIndex } from "../types/Position.type";
 import DieFace from "../types/DieFace.type";
 import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
+import { validateTarget } from "./TargetValidator";
 
 export function createPriorityQueue(length: number): PriorityQueue {
     return Array.from({ length }, () => []);
@@ -50,6 +51,13 @@ function findCharacter(gameState: GameState, characterId: string): Character | u
     return undefined;
 }
 
+function findActorPlayerIndex(state: GameState, characterId: string): PlayerIndex | undefined {
+    for (let pi = 0; pi < state.players.length; pi++) {
+        if (state.players[pi].team.some(c => c.id === characterId)) return pi as PlayerIndex;
+    }
+    return undefined;
+}
+
 function shuffled<T>(arr: readonly T[]): T[] {
     const out = [...arr];
     for (let i = out.length - 1; i > 0; i--) {
@@ -69,6 +77,13 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
                 log.push({ characterId, skipped: true, changes: [] });
                 continue;
             }
+
+            const actorPlayerIndex = findActorPlayerIndex(state, characterId);
+            if (actorPlayerIndex === undefined) {
+                log.push({ characterId, skipped: true, changes: [] });
+                continue;
+            }
+            validateTarget(face.targetConstraint, actorPlayerIndex, targetedPosition);
 
             const affectedIds = new Set<string>();
             for (const effect of face.effects) {

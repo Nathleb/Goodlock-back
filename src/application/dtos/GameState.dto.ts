@@ -1,6 +1,7 @@
 export type DieFaceDTO = {
     description: string;
     priority: number;
+    targetConstraint: string;
 };
 
 export type CharacterDTO = {

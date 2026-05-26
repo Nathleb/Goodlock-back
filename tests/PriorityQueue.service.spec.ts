@@ -4,6 +4,11 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { loseHp } from "@domain/services/Character.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
 import { createPriorityQueue, addEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
+import { createPlayer } from "@domain/services/Player.service";
+import { beginResolvePhase } from "@domain/services/Phase.service";
+import TargetConstraint from "@domain/types/TargetConstraint.type";
+import DieFace from "@domain/types/DieFace.type";
+import Position from "@domain/types/Position.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import GameState from "@domain/types/GameState.type";
 import { Player } from "@domain/types/Player.type";
@@ -199,6 +204,65 @@ describe('PriorityQueueService', () => {
     expect(log).toHaveLength(2);
     expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining([actor1.id, actor2.id]));
     expect(log.every(s => !s.skipped)).toBe(true);
+  });
+
+  it('throws when a queued face has a violated targetConstraint', () => {
+    initializeEffects();
+    const face: DieFace = {
+        priority: 1,
+        effects: [],
+        description: 'ally-only',
+        targetConstraint: TargetConstraint.ALLY_ONLY,
+    };
+    const makeFaceChar = (name: string, pi: number, slot: number) =>
+        createCharacter(name, 100, 5, [face, face, face, face, face, face], { playerIndex: pi as 0 | 1, slot: slot as SlotIndex });
+
+    const team1 = [0, 1, 2, 3, 4].map(i => makeFaceChar(`T${i}`, 0, i));
+    const team2 = [0, 1, 2, 3, 4].map(i => makeFaceChar(`E${i}`, 1, i));
+    const player1 = createPlayer(team1, 0);
+    const player2 = createPlayer(team2, 1);
+    let gs = createGameState(player1, player2);
+    gs = beginResolvePhase(gs);
+
+    // Manually inject a bad entry: ALLY_ONLY face targeting enemy team
+    const enemyPos: Position = { playerIndex: 1, slot: 0 as SlotIndex };
+    let queue = createPriorityQueue(10);
+    queue = addEffectsToPriorityQueue(queue, face, enemyPos, team1[0].id, team1[0].baseSpeed);
+    gs = { ...gs, priorityQueue: queue };
+
+    expect(() => unstackPriorityQueueWithLog(gs)).toThrow('ALLY_ONLY');
+  });
+
+  it('skips entry if character is not found in any team', () => {
+    initializeEffects();
+    const face: DieFace = {
+        priority: 1,
+        effects: [],
+        description: 'test',
+        targetConstraint: TargetConstraint.ANY,
+    };
+
+    const team1 = [0, 1, 2, 3, 4].map(i =>
+        createCharacter(`T${i}`, 100, 5, [face, face, face, face, face, face], { playerIndex: 0 as 0 | 1, slot: i as SlotIndex })
+    );
+    const team2 = [0, 1, 2, 3, 4].map(i =>
+        createCharacter(`E${i}`, 100, 5, [face, face, face, face, face, face], { playerIndex: 1 as 0 | 1, slot: i as SlotIndex })
+    );
+    const player1 = createPlayer(team1, 0);
+    const player2 = createPlayer(team2, 1);
+    let gs = createGameState(player1, player2);
+    gs = beginResolvePhase(gs);
+
+    // Inject entry with non-existent character ID
+    let queue = createPriorityQueue(10);
+    queue = addEffectsToPriorityQueue(queue, face, { playerIndex: 1, slot: 0 as SlotIndex }, 'NON_EXISTENT_ID', 1);
+    gs = { ...gs, priorityQueue: queue };
+
+    const { log } = unstackPriorityQueueWithLog(gs);
+
+    expect(log).toHaveLength(1);
+    expect(log[0].characterId).toBe('NON_EXISTENT_ID');
+    expect(log[0].skipped).toBe(true);
   });
 
   it('an actor killed during resolution by a higher-priority action is marked skipped', () => {

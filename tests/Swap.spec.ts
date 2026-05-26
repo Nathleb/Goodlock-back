@@ -1,20 +1,21 @@
-import { SlotIndex } from "@domain/types/Position.type";
+import Position, { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
-import { createPlayer } from "@domain/services/Player.service";
+import { selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import GameState from "@domain/types/GameState.type";
 import { PlayerIndex } from "@domain/types/Position.type";
+import TargetConstraint from "@domain/types/TargetConstraint.type";
 
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage",      priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
-    { description: "SwapAlly",    priority: 1, effects: [{ effect: EffectLabel.SwapAlly,           magnitude: 0 }] },
-    { description: "PushLeft1",   priority: 1, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 1 }] },
-    { description: "PushRight1",  priority: 1, effects: [{ effect: EffectLabel.PushRight,           magnitude: 1 }] },
-    { description: "MoveToSlot2", priority: 1, effects: [{ effect: EffectLabel.MoveToSlot,          magnitude: 2 }] },
-    { description: "PushLeft2",   priority: 2, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 2 }] },
+    { description: "Damage",      priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], targetConstraint: TargetConstraint.ENEMY_ONLY },
+    { description: "SwapAlly",    priority: 1, effects: [{ effect: EffectLabel.SwapAlly,           magnitude: 0 }], targetConstraint: TargetConstraint.ALLY_ONLY },
+    { description: "PushLeft1",   priority: 1, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 1 }], targetConstraint: TargetConstraint.ANY },
+    { description: "PushRight1",  priority: 1, effects: [{ effect: EffectLabel.PushRight,           magnitude: 1 }], targetConstraint: TargetConstraint.ANY },
+    { description: "MoveToSlot2", priority: 1, effects: [{ effect: EffectLabel.MoveToSlot,          magnitude: 2 }], targetConstraint: TargetConstraint.ANY },
+    { description: "PushLeft2",   priority: 2, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 2 }], targetConstraint: TargetConstraint.ANY },
 ];
 
 initializeEffects();
@@ -96,14 +97,12 @@ describe('SwapAlly', () => {
         expect(result.players[0].team[1].position.slot).toBe(1);
     });
 
-    it('is a no-op when actor targets an opponent slot', () => {
-        const gs = createGameState(player1, player2);
-        const charA = gs.players[0].team[0];
-        const before = gs.players[0].team.map(c => c.id);
-
-        const result = resolve(gs, charA.id, 1, 1, 0); // targets opponent team
-
-        expect(result.players[0].team.map(c => c.id)).toEqual(before);
+    it('throws ALLY_ONLY error when attempting to assign enemy target to SwapAlly face', () => {
+        const swapAllyFace = die[1]; // face index 1 is SwapAlly
+        const withSwapFace = { ...team1[0], face: swapAllyFace };
+        const player = { ...player1, team: player1.team.map((c, i) => i === 0 ? withSwapFace : c) };
+        const enemyPos: Position = { playerIndex: 1, slot: 2 };
+        expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos)).toThrow('ALLY_ONLY');
     });
 
     it('is a no-op when actor targets their own slot', () => {

@@ -53,6 +53,7 @@ export class GameStateMapper {
         return {
             description: face.description,
             priority: face.priority,
+            targetConstraint: face.targetConstraint,
         };
     }
 }

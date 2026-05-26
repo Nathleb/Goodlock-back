@@ -2,6 +2,7 @@ import Character from "../types/Character.type";
 import { isDead, rollForTurn, setTarget, toggleIsFaceLocked, rollDie } from "./Character.service";
 import { Player } from "../types/Player.type";
 import Position, { SlotIndex, PlayerIndex } from "../types/Position.type";
+import { validateTarget } from "./TargetValidator";
 
 export function toggleDieLockForCharacter(player: Player, position: Position): Player {
     const newTeam = player.team.map(char =>
@@ -11,8 +12,11 @@ export function toggleDieLockForCharacter(player: Player, position: Position): P
 }
 
 export function selectTargetOfCharacter(player: Player, slot: SlotIndex, target: Position): Player {
-    const newTeam = player.team.map((char) =>
-        char.position.slot === slot ? setTarget(char, target) : char
+    const char = player.team.find(c => c.position.slot === slot);
+    if (!char) return player;
+    validateTarget(char.face.targetConstraint, player.playerIndex, target);
+    const newTeam = player.team.map((c) =>
+        c.position.slot === slot ? setTarget(c, target) : c
     );
     return { ...player, team: newTeam };
 }

@@ -1,10 +1,14 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { hasLost, rollDiceForTurn, toggleDieLockForCharacter } from "@domain/services/Player.service";
+import { hasLost, rollDiceForTurn, toggleDieLockForCharacter, selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
 import { initializeEffects } from "@domain/services/GameInit.service";
+import TargetConstraint from "@domain/types/TargetConstraint.type";
+import DieFace from "@domain/types/DieFace.type";
+import Die from "@domain/types/Die.type";
+import Position, { SlotIndex } from "@domain/types/Position.type";
 
 describe('PlayerService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -46,5 +50,49 @@ describe('PlayerService', () => {
     const dead = loseHp(makeChar(), 100);
     const bigTeam: Player = { playerIndex: 0, team: [dead, dead, makeChar(), makeChar(), makeChar()] };
     expect(hasLost(bigTeam)).toBe(false);
+  });
+
+  describe('selectTargetOfCharacter', () => {
+    const baseFace = (constraint: TargetConstraint): DieFace => ({
+      priority: 1, effects: [], description: 'test', targetConstraint: constraint,
+    });
+
+    it('throws when enemy target given for ALLY_ONLY face', () => {
+      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ALLY_ONLY)) as Die, { playerIndex: 0, slot: 0 });
+      const player = createPlayer([char], 0);
+      const enemyPos: Position = { playerIndex: 1, slot: 2 };
+      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos))
+        .toThrow('ALLY_ONLY');
+    });
+
+    it('throws when ally target given for ENEMY_ONLY face', () => {
+      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ENEMY_ONLY)) as Die, { playerIndex: 0, slot: 0 });
+      const player = createPlayer([char], 0);
+      const allyPos: Position = { playerIndex: 0, slot: 1 };
+      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, allyPos))
+        .toThrow('ENEMY_ONLY');
+    });
+
+    it('throws when any target given for NONE face', () => {
+      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.NONE)) as Die, { playerIndex: 0, slot: 0 });
+      const player = createPlayer([char], 0);
+      const pos: Position = { playerIndex: 0, slot: 1 };
+      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, pos))
+        .toThrow('NONE');
+    });
+
+    it('accepts ally target for ALLY_ONLY face', () => {
+      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ALLY_ONLY)) as Die, { playerIndex: 0, slot: 0 });
+      const player = createPlayer([char], 0);
+      const allyPos: Position = { playerIndex: 0, slot: 2 };
+      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, allyPos)).not.toThrow();
+    });
+
+    it('accepts enemy target for ANY face', () => {
+      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ANY)) as Die, { playerIndex: 0, slot: 0 });
+      const player = createPlayer([char], 0);
+      const enemyPos: Position = { playerIndex: 1, slot: 2 };
+      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos)).not.toThrow();
+    });
   });
 });

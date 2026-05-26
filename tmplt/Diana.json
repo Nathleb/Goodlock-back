@@ -3,11 +3,11 @@
     "maxHp": 20,
     "baseSpeed": 1,
     "baseDieInstructions": [
-        { "description": "Deal 4 damage to a single target.", "priority": 3, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }] },
-        { "description": "Push a target one step to the left.", "priority": 1, "effects": [{ "effect": "PushLeft", "magnitude": 1 }] },
-        { "description": "Deal 5 damage to a single target.", "priority": 4, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
-        { "description": "Push a target one step to the right.", "priority": 2, "effects": [{ "effect": "PushRight", "magnitude": 1 }] },
-        { "description": "Deal 3 cleave damage.", "priority": 2, "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
-        { "description": "Deal 6 damage and gain 2 shield.", "priority": 5, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }, { "effect": "SelfShield", "magnitude": 2 }] }
+        { "description": "Deal 4 damage to a single target.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }] },
+        { "description": "Push a target one step to the left.", "priority": 1, "targetConstraint": "ANY", "effects": [{ "effect": "PushLeft", "magnitude": 1 }] },
+        { "description": "Deal 5 damage to a single target.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
+        { "description": "Push a target one step to the right.", "priority": 2, "targetConstraint": "ANY", "effects": [{ "effect": "PushRight", "magnitude": 1 }] },
+        { "description": "Deal 3 cleave damage.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
+        { "description": "Deal 6 damage and gain 2 shield.", "priority": 5, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }, { "effect": "SelfShield", "magnitude": 2 }] }
     ]
 }

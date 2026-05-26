@@ -36,7 +36,6 @@ export default class SwapAlly implements Effect {
         }
 
         if (actorSlot === undefined || actorPlayerIndex === undefined) return { state: gameState, affected: [] };
-        if (target.playerIndex !== actorPlayerIndex) return { state: gameState, affected: [] };
 
         return swapSlotsOnSameTeam(gameState, actorPlayerIndex, actorSlot, target.slot);
     }

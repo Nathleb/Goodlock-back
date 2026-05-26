@@ -6,6 +6,7 @@ import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.t
 import EffectLabel from "../types/EffectLabels.type";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
+import TargetConstraint from "../types/TargetConstraint.type";
 
 export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): Character {
     let template: CharacterTemplate;
@@ -44,7 +45,12 @@ export function setDieFace(character: Character, faceIndex: number, dieFace: Die
 export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
     return baseDieInstructions.map(faceData =>
         generateFaceFromEffectEntries(
-            { description: faceData.description, priority: faceData.priority, effects: [] },
+            {
+                description: faceData.description,
+                priority: faceData.priority,
+                effects: [],
+                targetConstraint: faceData.targetConstraint ?? TargetConstraint.ANY,
+            },
             faceData.effects
         )
     ) as Die;

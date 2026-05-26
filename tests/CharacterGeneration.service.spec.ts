@@ -2,6 +2,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, createCharacterFromJsonTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { initializeEffects } from "@domain/services/GameInit.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
+import TargetConstraint from "@domain/types/TargetConstraint.type";
 
 describe('CharacterGenerationService', () => {
   const jsonTemplate = JSON.stringify({
@@ -33,5 +34,32 @@ describe('CharacterGenerationService', () => {
     expect(character.name).toBe("TestCharacter");
     expect(character.maxHp).toBe(100);
     expect(character.baseSpeed).toBe(5);
+  });
+
+  it('defaults targetConstraint to ANY when not specified in template', () => {
+    const instructions: BaseDieInstructions = [
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+    ];
+    const die = generateFullDie(instructions);
+    expect(die[0].targetConstraint).toBe(TargetConstraint.ANY);
+  });
+
+  it('preserves explicit targetConstraint from template', () => {
+    const instructions: BaseDieInstructions = [
+        { description: 'f', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+        { description: 'f', priority: 1, effects: [] },
+    ];
+    const die = generateFullDie(instructions);
+    expect(die[0].targetConstraint).toBe(TargetConstraint.ALLY_ONLY);
+    expect(die[1].targetConstraint).toBe(TargetConstraint.ANY);
   });
 });
