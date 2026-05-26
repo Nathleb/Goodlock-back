@@ -58,4 +58,9 @@ describe('Roll.service', () => {
             expect(char.face).toBe(p2teamBefore[i])
         );
     });
+
+    it('should throw when no rolls remain', () => {
+        const gs = { ...createGameState(createPlayer(makeTeam(), 0), createPlayer(makeTeam(), 1)), rollsLeft: 0 };
+        expect(() => reroll(gs, 0)).toThrow('No rolls left');
+    });
 });

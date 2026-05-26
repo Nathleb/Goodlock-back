@@ -3,11 +3,11 @@
     "maxHp": 10,
     "baseSpeed": 4,
     "baseDieInstructions": [
-        { "description": "Deal 5 damage to a single target.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
-        { "description": "Deal 7 damage to a single target.", "priority": 4, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 7 }] },
-        { "description": "Deal 3 damage to a single target.", "priority": 1, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }] },
-        { "description": "Deal 4 cleave damage.", "priority": 3, "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
-        { "description": "Sacrifice 3 HP to deal 9 damage.", "priority": 5, "effects": [{ "effect": "SelfDamage", "magnitude": 3 }, { "effect": "SingleTargetDamage", "magnitude": 9 }] },
-        { "description": "Deal 6 damage and gain 2 shield.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }, { "effect": "SelfShield", "magnitude": 2 }] }
+        { "description": "Deal 5 damage to a single target.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
+        { "description": "Deal 7 damage to a single target.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 7 }] },
+        { "description": "Deal 3 damage to a single target.", "priority": 1, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }] },
+        { "description": "Deal 4 cleave damage.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
+        { "description": "Sacrifice 3 HP to deal 9 damage.", "priority": 5, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SelfDamage", "magnitude": 3 }, { "effect": "SingleTargetDamage", "magnitude": 9 }] },
+        { "description": "Deal 6 damage and gain 2 shield.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }, { "effect": "SelfShield", "magnitude": 2 }] }
     ]
 }

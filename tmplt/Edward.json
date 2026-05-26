@@ -3,11 +3,11 @@
     "maxHp": 18,
     "baseSpeed": 2,
     "baseDieInstructions": [
-        { "description": "Deal 4 damage and gain 2 shield.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }, { "effect": "SelfShield", "magnitude": 2 }] },
-        { "description": "Deal 5 damage and gain 3 shield.", "priority": 4, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }, { "effect": "SelfShield", "magnitude": 3 }] },
-        { "description": "Deal 3 cleave damage.", "priority": 1, "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
-        { "description": "Deal 3 damage and gain 1 shield.", "priority": 3, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }, { "effect": "SelfShield", "magnitude": 1 }] },
-        { "description": "Deal 4 cleave damage.", "priority": 5, "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
-        { "description": "Gain 4 shield.", "priority": 1, "effects": [{ "effect": "SelfShield", "magnitude": 4 }] }
+        { "description": "Deal 4 damage and gain 2 shield.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }, { "effect": "SelfShield", "magnitude": 2 }] },
+        { "description": "Deal 5 damage and gain 3 shield.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }, { "effect": "SelfShield", "magnitude": 3 }] },
+        { "description": "Deal 3 cleave damage.", "priority": 1, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
+        { "description": "Deal 3 damage and gain 1 shield.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }, { "effect": "SelfShield", "magnitude": 1 }] },
+        { "description": "Deal 4 cleave damage.", "priority": 5, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
+        { "description": "Gain 4 shield.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "SelfShield", "magnitude": 4 }] }
     ]
 }

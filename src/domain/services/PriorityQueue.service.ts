@@ -4,6 +4,7 @@ import DieFace from "../types/DieFace.type";
 import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
 import { validateTarget } from "./TargetValidator";
+import TargetConstraint from "../types/TargetConstraint.type";
 
 export function createPriorityQueue(length: number): PriorityQueue {
     return Array.from({ length }, () => []);
@@ -26,8 +27,11 @@ export function addEffectsToPriorityQueue(
 export function addAllEffectsToPriorityQueue(gameState: GameState): GameState {
     let queue = gameState.priorityQueue;
     gameState.players.forEach(player => player.team.forEach(char => {
-        if (char.target !== null) {
-            queue = addEffectsToPriorityQueue(queue, char.face, char.target, char.id, char.baseSpeed);
+        const target = char.face.targetConstraint === TargetConstraint.NONE
+            ? char.position
+            : char.target;
+        if (target !== null) {
+            queue = addEffectsToPriorityQueue(queue, char.face, target, char.id, char.baseSpeed);
         }
     }));
     return { ...gameState, priorityQueue: queue };
@@ -83,7 +87,9 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
                 log.push({ characterId, skipped: true, changes: [] });
                 continue;
             }
-            validateTarget(face.targetConstraint, actorPlayerIndex, targetedPosition);
+            if (face.targetConstraint !== TargetConstraint.NONE) {
+                validateTarget(face.targetConstraint, actorPlayerIndex, targetedPosition);
+            }
 
             const affectedIds = new Set<string>();
             for (const effect of face.effects) {

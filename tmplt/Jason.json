@@ -3,11 +3,11 @@
     "maxHp": 15,
     "baseSpeed": 2,
     "baseDieInstructions": [
-        { "description": "Deal 4 damage to a single target.", "priority": 3, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }] },
-        { "description": "Deal 3 damage and heal self for 2 HP.", "priority": 2, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }, { "effect": "SelfHeal", "magnitude": 2 }] },
-        { "description": "Deal 3 cleave damage.", "priority": 4, "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
-        { "description": "Heal a single target for 3 HP.", "priority": 1, "effects": [{ "effect": "SingleTargetHeal", "magnitude": 3 }] },
-        { "description": "Deal 5 damage and heal self for 3 HP.", "priority": 3, "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }, { "effect": "SelfHeal", "magnitude": 3 }] },
-        { "description": "Cleave heal for 2 HP.", "priority": 2, "effects": [{ "effect": "CleaveHeal", "magnitude": 2 }] }
+        { "description": "Deal 4 damage to a single target.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }] },
+        { "description": "Deal 3 damage and heal self for 2 HP.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }, { "effect": "SelfHeal", "magnitude": 2 }] },
+        { "description": "Deal 3 cleave damage.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
+        { "description": "Heal a single target for 3 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 3 }] },
+        { "description": "Deal 5 damage and heal self for 3 HP.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }, { "effect": "SelfHeal", "magnitude": 3 }] },
+        { "description": "Cleave heal for 2 HP.", "priority": 2, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveHeal", "magnitude": 2 }] }
     ]
 }

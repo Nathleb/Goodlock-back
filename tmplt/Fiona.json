@@ -3,11 +3,11 @@
     "maxHp": 15,
     "baseSpeed": 2,
     "baseDieInstructions": [
-        { "description": "Heal a single target for 5 HP.", "priority": 1, "effects": [{ "effect": "SingleTargetHeal", "magnitude": 5 }] },
-        { "description": "Heal a single target for 4 HP and grant 2 shield.", "priority": 2, "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }, { "effect": "SingleTargetShield", "magnitude": 2 }] },
-        { "description": "Heal a single target for 6 HP.", "priority": 3, "effects": [{ "effect": "SingleTargetHeal", "magnitude": 6 }] },
-        { "description": "Heal self for 4 HP.", "priority": 1, "effects": [{ "effect": "SelfHeal", "magnitude": 4 }] },
-        { "description": "Grant 4 shield to a single target.", "priority": 4, "effects": [{ "effect": "SingleTargetShield", "magnitude": 4 }] },
-        { "description": "Cleave heal for 3 HP.", "priority": 2, "effects": [{ "effect": "CleaveHeal", "magnitude": 3 }] }
+        { "description": "Heal a single target for 5 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 5 }] },
+        { "description": "Heal a single target for 4 HP and grant 2 shield.", "priority": 2, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }, { "effect": "SingleTargetShield", "magnitude": 2 }] },
+        { "description": "Heal a single target for 6 HP.", "priority": 3, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 6 }] },
+        { "description": "Heal self for 4 HP.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "SelfHeal", "magnitude": 4 }] },
+        { "description": "Grant 4 shield to a single target.", "priority": 4, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetShield", "magnitude": 4 }] },
+        { "description": "Cleave heal for 3 HP.", "priority": 2, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveHeal", "magnitude": 3 }] }
     ]
 }

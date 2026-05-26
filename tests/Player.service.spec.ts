@@ -94,5 +94,13 @@ describe('PlayerService', () => {
       const enemyPos: Position = { playerIndex: 1, slot: 2 };
       expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos)).not.toThrow();
     });
+
+    it('returns player unchanged when slot does not exist', () => {
+      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ANY)) as Die, { playerIndex: 0, slot: 0 });
+      const player = createPlayer([char], 0);
+      const anyPos: Position = { playerIndex: 1, slot: 0 };
+      const result = selectTargetOfCharacter(player, 9 as SlotIndex, anyPos);
+      expect(result).toBe(player);
+    });
   });
 });

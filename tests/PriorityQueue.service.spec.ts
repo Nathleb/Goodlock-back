@@ -3,7 +3,7 @@ import { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { loseHp } from "@domain/services/Character.service";
 import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
-import { createPriorityQueue, addEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
+import { createPriorityQueue, addEffectsToPriorityQueue, addAllEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { beginResolvePhase } from "@domain/services/Phase.service";
 import TargetConstraint from "@domain/types/TargetConstraint.type";
@@ -296,6 +296,60 @@ describe('PriorityQueueService', () => {
     expect(killerStep.changes[0].character.hp).toBe(0);
     expect(victimStep.skipped).toBe(true);
     expect(victimStep.changes).toHaveLength(0);
+  });
+
+  it('NONE-constraint face is queued using actor position when no target is assigned', () => {
+    initializeEffects();
+    const noneFace: DieFace = {
+        priority: 1,
+        effects: [],
+        description: 'self-only',
+        targetConstraint: TargetConstraint.NONE,
+    };
+    const actor = createCharacter('SelfActor', 100, 0,
+        [noneFace, noneFace, noneFace, noneFace, noneFace, noneFace],
+        { playerIndex: 0, slot: 2 as SlotIndex }
+    );
+    const teammate = createCharacter('Teammate', 100, 0, die, { playerIndex: 0, slot: 1 as SlotIndex });
+    const enemy = createCharacter('Enemy', 100, 0, die, { playerIndex: 1, slot: 0 as SlotIndex });
+    // actor has no target assigned (char.target === null)
+    const gs = createGameState(
+        { playerIndex: 0, team: [actor, teammate] },
+        { playerIndex: 1, team: [enemy] },
+    );
+    // addAllEffectsToPriorityQueue should auto-inject actor.position for NONE faces
+    const gs2 = addAllEffectsToPriorityQueue(gs);
+    expect(gs2.priorityQueue[1].length).toBe(1);
+    expect(gs2.priorityQueue[1][0][2]).toBe(actor.id);
+  });
+
+  it('NONE-constraint face resolves without throwing during unstacking', () => {
+    initializeEffects();
+    const noneFace: DieFace = {
+        priority: 1,
+        effects: [],
+        description: 'self-only',
+        targetConstraint: TargetConstraint.NONE,
+    };
+    const actor = createCharacter('SelfActor', 100, 0,
+        [noneFace, noneFace, noneFace, noneFace, noneFace, noneFace],
+        { playerIndex: 0, slot: 0 as SlotIndex }
+    );
+    const enemy = createCharacter('Enemy', 100, 0, die, { playerIndex: 1, slot: 0 as SlotIndex });
+    // Queue the NONE face using actor's own position (as addAllEffectsToPriorityQueue would)
+    const stateWithQueue: GameState = {
+        ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [enemy] }),
+        priorityQueue: addEffectsToPriorityQueue(
+            createPriorityQueue(10),
+            noneFace,
+            actor.position,
+            actor.id,
+            actor.baseSpeed,
+        ),
+    };
+    expect(() => unstackPriorityQueueWithLog(stateWithQueue)).not.toThrow();
+    const { log } = unstackPriorityQueueWithLog(stateWithQueue);
+    expect(log[0].skipped).toBe(false);
   });
 
   it('a face with multiple effects resolves atomically in one log step', () => {
