@@ -57,4 +57,8 @@ export class RoomManager implements RoomPort {
         if (!room) return;
         this.rooms.set(roomId, { ...room, gameState });
     }
+
+    listOpenRooms(): Room[] {
+        return [...this.rooms.values()].filter(room => !room.isStarted);
+    }
 }

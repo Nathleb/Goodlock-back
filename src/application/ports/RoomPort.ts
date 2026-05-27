@@ -8,4 +8,5 @@ export interface RoomPort {
     getRoom(roomId: string): Room | undefined;
     startGame(roomId: string, gameState: GameState): Room;
     updateGameState(roomId: string, gameState: GameState): void;
+    listOpenRooms(): Room[];
 }

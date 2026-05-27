@@ -14,7 +14,7 @@ const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], i
 const OLD_ROOM: Room = { roomId: 'old-room', ownerId: 'p0', playersId: ['p0'], isStarted: false };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
-const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn() };
+const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), listOpenRooms: jest.fn() };
 const mockWs = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn() };
 
 let coordinator: RoomCoordinatorService;
@@ -100,6 +100,18 @@ describe('joinRoom', () => {
         mockRoom.joinRoom.mockImplementation(() => { throw new Error('Room not found'); });
         coordinator.joinRoom(SOCKET, 'bad-room');
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { message: 'Room not found' });
+    });
+});
+
+describe('getRooms', () => {
+    it('emits roomList with all open rooms to the requesting socket', () => {
+        const openRoom:   Room = { roomId: 'r1', ownerId: 'p0', playersId: ['p0'], isStarted: false };
+        const startedRoom: Room = { roomId: 'r2', ownerId: 'p1', playersId: ['p1'], isStarted: true };
+        mockRoom.listOpenRooms.mockReturnValue([openRoom, startedRoom]);
+        coordinator.getRooms(SOCKET);
+        const [, event, payload] = mockWs.emitToSocket.mock.calls[0];
+        expect(event).toBe('roomList');
+        expect(payload).toHaveLength(2);
     });
 });
 

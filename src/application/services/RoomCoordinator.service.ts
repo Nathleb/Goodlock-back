@@ -56,6 +56,11 @@ export class RoomCoordinatorService {
         }
     }
 
+    getRooms(socketId: string): void {
+        const rooms = this.roomPort.listOpenRooms();
+        this.wsPort.emitToSocket(socketId, 'roomList', rooms.map(RoomMapper.toDTO));
+    }
+
     quitRoom(socketId: string): void {
         const session = this.sessionPort.getSession(socketId);
         if (!session || !session.roomId) return;
