@@ -61,11 +61,6 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         this.roomCoordinator.createRoom(client.id);
     }
 
-    @SubscribeMessage('getRooms')
-    handleGetRooms(@ConnectedSocket() client: Socket): void {
-        this.roomCoordinator.getRooms(client.id);
-    }
-
     @SubscribeMessage('joinRoom')
     handleJoinRoom(
         @ConnectedSocket() client: Socket,
