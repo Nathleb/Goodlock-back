@@ -12,7 +12,7 @@ import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase, beginAssignPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
 import { UserId } from '@shared/branded.types';
-import EffectFactory from '@domain/factories/EffectFactory.class';
+import { EFFECT_FACTORY } from '@application/ports/tokens';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ beforeEach(async () => {
             { provide: SESSION_PORT, useValue: mockSession },
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
-            { provide: EffectFactory, useValue: factory },
+            { provide: EFFECT_FACTORY, useValue: factory },
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);
