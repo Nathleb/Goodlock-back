@@ -2,15 +2,15 @@ import EffectLabel from "./EffectLabels.type";
 import TargetConstraint from "./TargetConstraint.type";
 
 export type EffectEntry = {
-    effect: EffectLabel;
-    magnitude: number;
+    readonly effect: EffectLabel;
+    readonly magnitude: number;
 };
 
 export type FaceTemplate = {
-    description: string;
-    priority: number;
-    effects: EffectEntry[];
-    targetConstraint?: TargetConstraint;
+    readonly description: string;
+    readonly priority: number;
+    readonly effects: readonly EffectEntry[];
+    readonly targetConstraint?: TargetConstraint;
 };
 
-export type BaseDieInstructions = [FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate];
+export type BaseDieInstructions = readonly [FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate, FaceTemplate];

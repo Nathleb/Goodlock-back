@@ -3,12 +3,12 @@ import PriorityQueue from "./PriorityQueue.type";
 import { Player } from "./Player.type";
 
 type GameState = {
-    phase: GamePhase;
-    currentRound: number;
-    rollsLeft: number;
-    playersReady: [boolean, boolean];
-    priorityQueue: PriorityQueue;
-    players: [Player, Player];
+    readonly phase: GamePhase;
+    readonly currentRound: number;
+    readonly rollsLeft: number;
+    readonly playersReady: readonly [boolean, boolean];
+    readonly priorityQueue: PriorityQueue;
+    readonly players: readonly [Player, Player];
 };
 
 export default GameState;

@@ -1,10 +1,10 @@
 import { BaseDieInstructions } from "./BaseDieInstructions.type";
 
 type CharacterTemplate = {
-    name: string;
-    maxHp: number;
-    baseSpeed: number;
-    baseDieInstructions: BaseDieInstructions;
+    readonly name: string;
+    readonly maxHp: number;
+    readonly baseSpeed: number;
+    readonly baseDieInstructions: BaseDieInstructions;
 };
 
 export default CharacterTemplate;

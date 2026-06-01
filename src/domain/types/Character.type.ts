@@ -4,20 +4,20 @@ import Modifier from "./Modifier.type";
 import Position from "./Position.type";
 
 type Character = {
-    id: string;
-    name: string;
-    maxHp: number;
-    baseSpeed: number;
-    baseDie: Die;
+    readonly id: string;
+    readonly name: string;
+    readonly maxHp: number;
+    readonly baseSpeed: number;
+    readonly baseDie: Die;
 
-    hp: number;
-    shield: number;
-    position: Position;
-    modifiers: Modifier[];
+    readonly hp: number;
+    readonly shield: number;
+    readonly position: Position;
+    readonly modifiers: readonly Modifier[];
 
-    face: DieFace;
-    isFaceLocked: boolean;
-    target: Position | null;
+    readonly face: DieFace;
+    readonly isFaceLocked: boolean;
+    readonly target: Position | null;
 };
 
 export default Character;

@@ -2,10 +2,10 @@ import Effect from "./Effect.type";
 import TargetConstraint from "./TargetConstraint.type";
 
 type DieFace = {
-    priority: number;
-    effects: Effect[];
-    description: string;
-    targetConstraint: TargetConstraint;
+    readonly priority: number;
+    readonly effects: readonly Effect[];
+    readonly description: string;
+    readonly targetConstraint: TargetConstraint;
 };
 
 export default DieFace;

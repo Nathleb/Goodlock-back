@@ -1,5 +1,5 @@
 import DieFace from "./DieFace.type";
 
-type Die = DieFace[];
+type Die = readonly DieFace[];
 
 export default Die;

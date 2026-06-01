@@ -22,7 +22,7 @@
 
 Un jeu PvP tactique tour par tour où chaque personnage est représenté par un dé à 6 faces. Le combat se déroule sur deux lignes de 5 slots qui se font face. Les joueurs voient l'équipe adverse, puis positionnent leurs personnages sur leurs slots. Chaque round, les joueurs lancent leurs dés, choisissent quoi garder/relancer, puis programment secrètement leurs actions : soit jouer l'effet d'une face sur un slot cible, soit se décaler d'un cran dans une direction (swap avec le voisin). Toutes les actions sont ensuite résolues séquentiellement par ordre de priorité, créant des moments de lecture adverse, de bluff et de chaos maîtrisé.
 
-Inspiration principale : Colt Express (programmation d'actions puis résolution séquentielle).
+Inspiration principale : Colt Express (programmation d'actions puis résolution séquentielle) slice and dice.
 
 ### 1.2 Pitch
 
@@ -34,8 +34,7 @@ Inspiration principale : Colt Express (programmation d'actions puis résolution 
 
 ### 1.4 Plateformes cibles
 
-- Application web responsive (desktop + mobile via navigateur)
-- Possibilité future d'encapsulation native (PWA ou Capacitor/Ionic)
+- Application mobile
 
 ### 1.5 Glossaire
 
@@ -71,7 +70,7 @@ Ce placement réactif crée une première couche stratégique : le joueur positi
 
 ### 2.2 Composition d'équipe
 
-Chaque joueur entre en match avec une équipe de 5 personnages. La partie se termine quand un joueur a perdu 3 personnages.
+Chaque joueur entre en match avec une équipe de 5 personnages. La partie se termine quand un joueur a perdu 2 personnages.
 
 Tous les personnages vivants lancent leur dé à chaque round.
 
@@ -101,14 +100,7 @@ Pour chaque personnage vivant, le joueur choisit **une** des deux options :
 - Choisir un slot cible (adverse pour dégâts/debuff, allié pour heal/shield/buff)
 - L'effet résoudra à la priorité finale de la face (priority_modifier + vitesse du perso)
 
-**Option B — Swap :**
-- Se décaler d'un cran vers la gauche ou la droite (échange de position avec le voisin dans cette direction)
-- Pas d'effet joué — la face est sacrifiée
-- Le swap résout à la **vitesse de base du personnage** (pas de priority_modifier)
-- **Aucune contrainte de swap** : un personnage peut être impliqué dans plusieurs swaps dans le même round (s'il est la cible du swap d'un voisin ET choisit lui-même de swap). Les swaps se résolvent par ordre de priorité et changent l'état du board au fur et à mesure
-- Un perso en bout de ligne (slot 1 ou slot 5) ne peut swap que dans une direction
-
-**Timing :** timer de 25-30 secondes. Auto-assignation aléatoire si timeout (chaque dé joue sa face sur un slot adverse aléatoire, pas de swap).
+**Timing :** libre, ou swiss clock si demande d'un des joueurs
 
 #### Phase 4 — Résolution
 
@@ -116,7 +108,6 @@ Toutes les actions des deux joueurs sont mélangées et résolues une par une, *
 
 ```
 Priorité finale d'une face jouée = priority_modifier(face) + vitesse(personnage)
-Priorité d'un swap = vitesse de base du personnage (pas de modifier)
 ```
 
 - En cas d'égalité de priorité : ordre aléatoire
@@ -135,23 +126,9 @@ Priorité d'un swap = vitesse de base du personnage (pas de modifier)
 
 | Condition | Résultat |
 |---|---|
-| Un joueur a perdu 3 personnages | L'autre joueur gagne |
-| Les deux joueurs perdent leur 3e personnage dans le même round | Égalité ou sudden death |
+| Un joueur a perdu 2 personnages | L'autre joueur gagne instantanément|
 | Nombre maximum de rounds atteint (ex : 20) | Le joueur avec le plus de personnages restants gagne ; si égalité, total de PV restants |
 | Déconnexion d'un joueur | Timer de reconnexion (60s), puis forfait |
-
-### 2.5 Timers et rythme
-
-| Phase | Timer suggéré |
-|---|---|
-| Révélation des équipes | 5 secondes (automatique) |
-| Placement (après avoir vu l'équipe adverse) | 30 secondes |
-| Keep/Reroll | 15-20 secondes |
-| Assignation secrète | 30-40 secondes (plus de persos = plus de décisions) |
-| Résolution (animation) | Variable (automatique, ~15-20 secondes) |
-| Reconnexion | 60 secondes |
-
-Un round complet dure environ 90-120 secondes. Un match de 5-10 rounds = 8-20 minutes.
 
 ### 2.6 Matchmaking
 
@@ -174,7 +151,7 @@ Un round complet dure environ 90-120 secondes. Un match de 5-10 rounds = 8-20 mi
 
 ### 3.1 Philosophie du roster
 
-Le roster est fixe et conçu par l'équipe de développement. Chaque personnage a une identité visuelle forte, un rôle spatial clair, et un dé unique. Le roster vise 15-25 personnages à terme, avec un launch roster plus réduit (8-12).
+Le roster est fixe et conçu par l'équipe de développement. Chaque personnage a une identité visuelle forte, un rôle spatial clair, et un dé unique.
 
 Les personnages sont **reconnaissables en un coup d'œil** en match. Le joueur adverse voit l'équipe adverse et sait immédiatement à quoi s'attendre (archétype, tendance de mobilité, type d'effets dominants).
 
@@ -199,7 +176,7 @@ avec pour chacun
 - **Valeur d'effet** : puissance de l'effet
 - **Priorité** : bonus de priorité spécifique à cette face (ajouté à la vitesse du perso pour la priorité finale)
 
-L'équilibrage est fait manuellement au niveau du personnage dans son ensemble (pas de contrainte de budget par face). L'objectif est que chaque personnage soit viable et que le roster soit équilibré par le playtesting itératif.
+L'équilibrage est fait manuellement au niveau du personnage dans son ensemble. L'objectif est que chaque personnage soit viable et que le roster soit équilibré par le playtesting itératif.
 
 ### 3.4 Effets possibles
 
@@ -270,8 +247,8 @@ L'équilibrage est fait manuellement au niveau du personnage dans son ensemble (
 ```
 ┌──────────────────────────────────────────────────────┐
 │                    CLIENT (SPA)                       │
-│              React + Canvas (combat)                  │
-│      Socket.io (combat) + REST (collection/auth)      │
+│                                                       │
+│                                                       │
 └────────────┬──────────────────┬───────────────────────┘
              │ HTTPS/REST       │ WSS (Socket.io)
              ▼                  ▼
@@ -318,16 +295,6 @@ L'équilibrage est fait manuellement au niveau du personnage dans son ensemble (
 └────────────────┘  └──────────────────┘
 ```
 
-### 5.2 Pourquoi NestJS
-
-- Socket.io natif avec rooms et events — modèle idéal pour le PvP tour par tour (une room par match)
-- TypeScript full-stack : types partagés front/back pour les payloads WebSocket
-- Architecture modulaire alignée avec le découpage métier
-- Passport.js pour l'auth JWT/OAuth2
-- Prisma pour PostgreSQL, type-safe
-- Écosystème npm pour les outils annexes
-
-Le combat est tour par tour avec des timers de 15-30 secondes. Le modèle event loop de Node.js est parfaitement adapté. La résolution d'un round (10-15 effets à calculer séquentiellement) est triviale en CPU.
 
 ### 5.3 Stack détaillée
 
@@ -340,27 +307,8 @@ Le combat est tour par tour avec des timers de 15-30 secondes. Le modèle event 
 | **ORM** | Prisma |
 | **DB** | PostgreSQL |
 | **Cache & state** | Redis (ioredis) |
-| **Frontend** | React 18+ (Vite) |
-| **State client** | Zustand |
-| **WS client** | socket.io-client |
-| **Types partagés** | Package `shared/` TS |
-| **Deploy** | Docker + Docker Compose |
-| **CI/CD** | GitHub Actions |
-| **Monitoring** | Prometheus + Grafana + pino |
 
 ### 5.4 Communication client-serveur
-
-#### REST API
-
-| Domaine | Endpoints principaux |
-|---|---|
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/oauth/{provider}` |
-| Profil | `GET/PUT /profile`, `DELETE /profile` |
-| Roster | `GET /roster` (tous les persos), `GET /roster/{id}` (détail + faces du dé) |
-| Decks | `GET/POST/PUT/DELETE /decks` |
-| Matchmaking | `POST /matchmaking/queue`, `DELETE /matchmaking/queue` |
-| Leaderboard | `GET /leaderboard?season={id}&page={n}` |
-| Social | `GET/POST/DELETE /friends`, `POST /match/invite` |
 
 #### WebSocket Socket.io (combat PvP)
 
@@ -427,23 +375,8 @@ CHECK_END ─────────────── Vérifier conditions de 
     └── Match continue → ROLL_PHASE (nouveau round)
 ```
 
-État du match dans Redis pendant le combat, persisté en PostgreSQL à la fin.
-
-### 5.6 Scaling
-
-**Phase de lancement (< 1000 joueurs simultanés) :**
-- Un seul serveur NestJS
-- PostgreSQL + Redis (managed ou même machine)
-
-**Phase de croissance (1000–50 000) :**
-- Multiples instances NestJS + `@socket.io/redis-adapter` (sync rooms, pas de sticky sessions)
-- Redis Cluster, PostgreSQL read replicas
-
-**Phase scale (50 000+) :**
-- Combat engine en worker threads ou microservice dédié
-- BullMQ/Redis Streams entre services
-
----
+Une sorte d'upkeep de début de tour pour les dots etc..
+État du match dans Redis pendant le combat? persisté en PostgreSQL à la fin.
 
 ## 6. Modèle de données
 
@@ -662,10 +595,6 @@ PV et vitesse sont des stats fixes par personnage, définies par l'équipe de de
 
 1. **Système de collection & économie** : modèle économique, monétisation, progression — à définir entièrement
 2. **Catalogue de buffs/debuffs** : liste des effets, durées, stackabilité
-3. **Formule ELO** : K-factor, placement matches, floors, élargissement progressif
-4. **Onboarding / tutoriel** : combat scripté contre IA, introduction progressive des mécaniques
-5. **Valeurs de balancing** : PV et vitesse par personnage, effets et priorités de chaque face
-6. **Roster complet** : design de chaque personnage (stats, faces, identité visuelle)
 
 ## Annexe C — Règles de résolution confirmées
 

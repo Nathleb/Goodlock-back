@@ -1,6 +1,6 @@
 type Modifier = {
-    label: string;
-    value: number;
+    readonly label: string;
+    readonly value: number;
 };
 
 export default Modifier;

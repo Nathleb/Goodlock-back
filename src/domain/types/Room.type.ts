@@ -1,9 +1,9 @@
 import GameState from "./GameState.type";
 
 export type Room = {
-    roomId: string;
-    playersId: string[];
-    ownerId: string;
-    isStarted: boolean;
-    gameState?: GameState;
+    readonly roomId: string;
+    readonly playersId: readonly string[];
+    readonly ownerId: string;
+    readonly isStarted: boolean;
+    readonly gameState?: GameState;
 };
