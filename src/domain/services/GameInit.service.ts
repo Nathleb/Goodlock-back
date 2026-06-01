@@ -33,25 +33,27 @@ export function createGameState(player1: Player, player2: Player): GameState {
     };
 }
 
-export function createTeamsFromTemplates(templateContents: string[]): Character[] {
-    return templateContents.map(createCharacterFromJsonTemplate);
+export function createTeamsFromTemplates(templateContents: string[], factory: EffectFactory): Character[] {
+    return templateContents.map(t => createCharacterFromJsonTemplate(t, factory));
 }
 
-export function initializeEffects() {
-    EffectFactory.registerEffect(EffectLabel.SingleTargetDamage,  (amount) => new SingleTargetDamage(amount));
-    EffectFactory.registerEffect(EffectLabel.SingleTargetHeal,    (amount) => new SingleTargetHeal(amount));
-    EffectFactory.registerEffect(EffectLabel.SingleTargetShield,  (amount) => new SingleTargetShield(amount));
-    EffectFactory.registerEffect(EffectLabel.CleaveDamage,        (amount) => new CleaveDamage(amount));
-    EffectFactory.registerEffect(EffectLabel.CleaveHeal,          (amount) => new CleaveHeal(amount));
-    EffectFactory.registerEffect(EffectLabel.CleaveShield,        (amount) => new CleaveShield(amount));
-    EffectFactory.registerEffect(EffectLabel.FullTeamDamage,      (amount) => new FullTeamDamage(amount));
-    EffectFactory.registerEffect(EffectLabel.FullTeamHeal,        (amount) => new FullTeamHeal(amount));
-    EffectFactory.registerEffect(EffectLabel.FullTeamShield,      (amount) => new FullTeamShield(amount));
-    EffectFactory.registerEffect(EffectLabel.SwapAlly,    () => new SwapAlly());
-    EffectFactory.registerEffect(EffectLabel.PushLeft,    (magnitude) => new Push(-magnitude));
-    EffectFactory.registerEffect(EffectLabel.PushRight,   (magnitude) => new Push(magnitude));
-    EffectFactory.registerEffect(EffectLabel.MoveToSlot,  (slot) => new MoveToSlot(slot));
-    EffectFactory.registerEffect(EffectLabel.SelfDamage,  (amount) => new SelfDamage(amount));
-    EffectFactory.registerEffect(EffectLabel.SelfHeal,    (amount) => new SelfHeal(amount));
-    EffectFactory.registerEffect(EffectLabel.SelfShield,  (amount) => new SelfShield(amount));
+export function buildEffectFactory(): EffectFactory {
+    const factory = new EffectFactory();
+    factory.registerEffect(EffectLabel.SingleTargetDamage,  (amount) => new SingleTargetDamage(amount));
+    factory.registerEffect(EffectLabel.SingleTargetHeal,    (amount) => new SingleTargetHeal(amount));
+    factory.registerEffect(EffectLabel.SingleTargetShield,  (amount) => new SingleTargetShield(amount));
+    factory.registerEffect(EffectLabel.CleaveDamage,        (amount) => new CleaveDamage(amount));
+    factory.registerEffect(EffectLabel.CleaveHeal,          (amount) => new CleaveHeal(amount));
+    factory.registerEffect(EffectLabel.CleaveShield,        (amount) => new CleaveShield(amount));
+    factory.registerEffect(EffectLabel.FullTeamDamage,      (amount) => new FullTeamDamage(amount));
+    factory.registerEffect(EffectLabel.FullTeamHeal,        (amount) => new FullTeamHeal(amount));
+    factory.registerEffect(EffectLabel.FullTeamShield,      (amount) => new FullTeamShield(amount));
+    factory.registerEffect(EffectLabel.SwapAlly,    () => new SwapAlly());
+    factory.registerEffect(EffectLabel.PushLeft,    (magnitude) => new Push(-magnitude));
+    factory.registerEffect(EffectLabel.PushRight,   (magnitude) => new Push(magnitude));
+    factory.registerEffect(EffectLabel.MoveToSlot,  (slot) => new MoveToSlot(slot));
+    factory.registerEffect(EffectLabel.SelfDamage,  (amount) => new SelfDamage(amount));
+    factory.registerEffect(EffectLabel.SelfHeal,    (amount) => new SelfHeal(amount));
+    factory.registerEffect(EffectLabel.SelfShield,  (amount) => new SelfShield(amount));
+    return factory;
 }

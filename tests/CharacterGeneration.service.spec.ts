@@ -1,10 +1,12 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, createCharacterFromJsonTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { initializeEffects } from "@domain/services/GameInit.service";
+import { buildEffectFactory } from "@domain/services/GameInit.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import TargetConstraint from "@domain/types/TargetConstraint.type";
 
 describe('CharacterGenerationService', () => {
+  const factory = buildEffectFactory();
+
   const jsonTemplate = JSON.stringify({
     name: "TestCharacter",
     maxHp: 100,
@@ -19,17 +21,15 @@ describe('CharacterGenerationService', () => {
     ],
   });
 
-  initializeEffects();
-
   it('should create a character from JSON template', () => {
-    const character = createCharacterFromJsonTemplate(jsonTemplate);
+    const character = createCharacterFromJsonTemplate(jsonTemplate, factory);
     expect(character.name).toBe("TestCharacter");
     expect(character.maxHp).toBe(100);
     expect(character.baseSpeed).toBe(5);
   });
 
   it('should create a character with specified attributes', () => {
-    const die = generateFullDie(JSON.parse(jsonTemplate).baseDieInstructions);
+    const die = generateFullDie(JSON.parse(jsonTemplate).baseDieInstructions, factory);
     const character = createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
     expect(character.name).toBe("TestCharacter");
     expect(character.maxHp).toBe(100);
@@ -45,7 +45,7 @@ describe('CharacterGenerationService', () => {
         { description: 'f', priority: 1, effects: [] },
         { description: 'f', priority: 1, effects: [] },
     ];
-    const die = generateFullDie(instructions);
+    const die = generateFullDie(instructions, factory);
     expect(die[0].targetConstraint).toBe(TargetConstraint.ANY);
   });
 
@@ -58,7 +58,7 @@ describe('CharacterGenerationService', () => {
         { description: 'f', priority: 1, effects: [] },
         { description: 'f', priority: 1, effects: [] },
     ];
-    const die = generateFullDie(instructions);
+    const die = generateFullDie(instructions, factory);
     expect(die[0].targetConstraint).toBe(TargetConstraint.ALLY_ONLY);
     expect(die[1].targetConstraint).toBe(TargetConstraint.ANY);
   });

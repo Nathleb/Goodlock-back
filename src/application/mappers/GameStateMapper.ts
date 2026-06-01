@@ -11,7 +11,7 @@ export class GameStateMapper {
             phase: gameState.phase,
             currentRound: gameState.currentRound,
             rollsLeft: gameState.rollsLeft,
-            playersReady: gameState.playersReady,
+            playersReady: [...gameState.playersReady] as [boolean, boolean],
             players: gameState.players.map(GameStateMapper.playerToDTO) as [PlayerGameStateDTO, PlayerGameStateDTO],
         };
     }

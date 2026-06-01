@@ -3,7 +3,7 @@ import { describe } from "node:test";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead, toggleIsFaceLocked, setTarget } from "@domain/services/Character.service";
-import { initializeEffects } from "@domain/services/GameInit.service";
+import { buildEffectFactory } from "@domain/services/GameInit.service";
 
 describe('CharacterService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -15,8 +15,8 @@ describe('CharacterService', () => {
     { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 6 }] },
   ];
 
-  initializeEffects();
-  const die = generateFullDie(baseDieInstructions);
+  const factory = buildEffectFactory();
+  const die = generateFullDie(baseDieInstructions, factory);
   const character = createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
 
   it('should roll a die for the character', () => {

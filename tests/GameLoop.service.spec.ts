@@ -3,7 +3,7 @@ import { SlotIndex } from "@domain/types/Position.type";
 import GamePhase from "@domain/types/GamePhase.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
 import { beginKeepPhase, beginRollPhase, beginAssignPhase } from "@domain/services/Phase.service";
 import {
@@ -13,7 +13,7 @@ import {
 import { Player } from "@domain/types/Player.type";
 import GameState from "@domain/types/GameState.type";
 
-initializeEffects();
+const factory = buildEffectFactory();
 
 const die = generateFullDie([
     { description: "A", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
@@ -22,7 +22,7 @@ const die = generateFullDie([
     { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
     { description: "E", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
     { description: "F", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-] satisfies BaseDieInstructions);
+] satisfies BaseDieInstructions, factory);
 
 const makeTeam = (pi: 0 | 1) =>
     createPlayer([0, 1, 2, 3, 4].map(i => createCharacter("C", 100, 1, die, { playerIndex: pi, slot: i as SlotIndex })), pi);

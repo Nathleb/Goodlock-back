@@ -13,6 +13,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 import Position, { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
 import { assertPhase, assertNotReady, beginRollPhase } from '@domain/services/Phase.service';
+import EffectFactory from '@domain/factories/EffectFactory.class';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer, rearrangeTeam, toggleDieLockForCharacter, selectTargetOfCharacter } from '@domain/services/Player.service';
@@ -36,6 +37,7 @@ export class GameCoordinatorService {
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
+        private readonly effectFactory: EffectFactory,
     ) {}
 
     private getContext(socketId: string): GameContext | null {
@@ -103,8 +105,8 @@ export class GameCoordinatorService {
             const templates = this.shuffle(this.loadTemplates());
             if (templates.length < 10) throw new Error('Not enough character templates');
 
-            const player0 = createPlayer(templates.slice(0, 5).map(createCharacterFromJsonTemplate), 0);
-            const player1 = createPlayer(templates.slice(5, 10).map(createCharacterFromJsonTemplate), 1);
+            const player0 = createPlayer(templates.slice(0, 5).map(t => createCharacterFromJsonTemplate(t, this.effectFactory)), 0);
+            const player1 = createPlayer(templates.slice(5, 10).map(t => createCharacterFromJsonTemplate(t, this.effectFactory)), 1);
             const gameState = createGameState(player0, player1);
 
             this.roomPort.startGame(room.roomId, gameState);

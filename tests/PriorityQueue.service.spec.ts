@@ -2,7 +2,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { loseHp } from "@domain/services/Character.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPriorityQueue, addEffectsToPriorityQueue, addAllEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { beginResolvePhase } from "@domain/services/Phase.service";
@@ -23,8 +23,8 @@ describe('PriorityQueueService', () => {
     { description: "Grants 6 shield",priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 6 }] },
   ];
 
-  initializeEffects();
-  const die = generateFullDie(baseDieInstructions);
+  const factory = buildEffectFactory();
+  const die = generateFullDie(baseDieInstructions, factory);
   // baseSpeed: 0 so finalPriority = face.priority + 0 = face.priority
   const character = createCharacter("TestCharacter", 100, 0, die, { playerIndex: 0, slot: 0 });
   const target = { playerIndex: 1 as const, slot: 0 as SlotIndex };
@@ -92,7 +92,7 @@ describe('PriorityQueueService', () => {
         { description: "D", priority: 1, effects: [] },
         { description: "E", priority: 1, effects: [] },
         { description: "F", priority: 1, effects: [] },
-      ]),
+      ], factory),
       { playerIndex: 0, slot: 0 }
     );
     const victim = createCharacter("Victim", 50, 0, die, { playerIndex: 1, slot: 0 });
@@ -127,7 +127,7 @@ describe('PriorityQueueService', () => {
       { description: "D", priority: 1, effects: [] },
       { description: "E", priority: 1, effects: [] },
       { description: "F", priority: 1, effects: [] },
-    ]);
+    ], factory);
     const actor = createCharacter("Actor", 100, 0, noOpDie, { playerIndex: 0, slot: 0 });
     const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
     const stateWithQueue: GameState = {
@@ -157,7 +157,7 @@ describe('PriorityQueueService', () => {
       { description: "PushLeft", priority: 1, effects: [{ effect: EffectLabel.PushLeft, magnitude: 1 }] },
       { description: "E",        priority: 1, effects: [] },
       { description: "F",        priority: 1, effects: [] },
-    ]);
+    ], factory);
     const actor = createCharacter("Swapper", 100, 0, swapDie, { playerIndex: 0, slot: 0 });
     const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
     const stateWithQueue: GameState = {
@@ -207,7 +207,7 @@ describe('PriorityQueueService', () => {
   });
 
   it('throws when a queued face has a violated targetConstraint', () => {
-    initializeEffects();
+    const factory = buildEffectFactory();
     const face: DieFace = {
         priority: 1,
         effects: [],
@@ -234,7 +234,7 @@ describe('PriorityQueueService', () => {
   });
 
   it('skips entry if character is not found in any team', () => {
-    initializeEffects();
+    const factory = buildEffectFactory();
     const face: DieFace = {
         priority: 1,
         effects: [],
@@ -299,7 +299,7 @@ describe('PriorityQueueService', () => {
   });
 
   it('NONE-constraint face is queued using actor position when no target is assigned', () => {
-    initializeEffects();
+    const factory = buildEffectFactory();
     const noneFace: DieFace = {
         priority: 1,
         effects: [],
@@ -324,7 +324,7 @@ describe('PriorityQueueService', () => {
   });
 
   it('NONE-constraint face resolves without throwing during unstacking', () => {
-    initializeEffects();
+    const factory = buildEffectFactory();
     const noneFace: DieFace = {
         priority: 1,
         effects: [],
@@ -363,7 +363,7 @@ describe('PriorityQueueService', () => {
       { description: "D", priority: 1, effects: [] },
       { description: "E", priority: 1, effects: [] },
       { description: "F", priority: 1, effects: [] },
-    ]);
+    ], factory);
     const actor = createCharacter("Actor", 100, 0, multiDie, { playerIndex: 0, slot: 0 });
     const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
     const stateWithQueue: GameState = {

@@ -6,7 +6,8 @@ import GameState from "@domain/types/GameState.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { ResolveStep } from "@domain/types/PriorityQueue.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
+import { Player } from "@domain/types/Player.type";
 import { createPlayer, selectTargetOfCharacter } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
 import { beginPlacementPhase } from "@domain/services/Phase.service";
@@ -15,7 +16,7 @@ import {
     confirmPlacement, performRoll, confirmKeep, confirmAssignment, performResolve,
 } from "@domain/services/GameLoop.service";
 
-initializeEffects();
+const factory = buildEffectFactory();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ function uniformDie(
     targetConstraint: TargetConstraint,
 ): DieFn {
     const face = { description, priority, effects, targetConstraint };
-    return generateFullDie([face, face, face, face, face, face]);
+    return generateFullDie([face, face, face, face, face, face], factory);
 }
 
 /** Team of 5 characters sharing one die. */
@@ -53,7 +54,7 @@ function advanceToAssign(gameState: GameState): GameState {
         players: state.players.map(player => ({
             ...player,
             team: player.team.map(char => ({ ...char, isFaceLocked: true })),
-        })) as typeof state.players,
+        })) as unknown as typeof state.players,
     };
     state = confirmKeep(state, 0);
     state = confirmKeep(state, 1);
@@ -70,7 +71,7 @@ function setTargets(
     for (const { slot, target } of assignments) {
         player = selectTargetOfCharacter(player, slot, target);
     }
-    const players = [...gameState.players] as typeof gameState.players;
+    const players = [...gameState.players] as [Player, Player];
     players[playerIndex] = player;
     return { ...gameState, players };
 }

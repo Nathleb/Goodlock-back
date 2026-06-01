@@ -4,7 +4,7 @@ import { hasLost, rollDiceForTurn, toggleDieLockForCharacter, selectTargetOfChar
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
-import { initializeEffects } from "@domain/services/GameInit.service";
+import { buildEffectFactory } from "@domain/services/GameInit.service";
 import TargetConstraint from "@domain/types/TargetConstraint.type";
 import DieFace from "@domain/types/DieFace.type";
 import Die from "@domain/types/Die.type";
@@ -20,8 +20,8 @@ describe('PlayerService', () => {
     { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 6 }] },
   ];
 
-  initializeEffects();
-  const die = generateFullDie(baseDieInstructions);
+  const factory = buildEffectFactory();
+  const die = generateFullDie(baseDieInstructions, factory);
   const makeChar = () => createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
   const character = makeChar();
   const player: Player = { playerIndex: 0, team: [character] };

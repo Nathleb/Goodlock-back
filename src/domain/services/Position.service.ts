@@ -16,7 +16,7 @@ export const findFullTeam: TargetingFunction = (players: [Player, Player], posit
     return [...players[position.playerIndex].team];
 };
 
-export function findSelf(players: [Player, Player], actorId: string): Character[] {
+export function findSelf(players: readonly [Player, Player], actorId: string): Character[] {
     for (const player of players) {
         const char = player.team.find(c => c.id === actorId);
         if (char) return [char];

@@ -2,11 +2,11 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { findSingleTarget, findSelf } from "@domain/services/Position.service";
-import { initializeEffects } from "@domain/services/GameInit.service";
+import { buildEffectFactory } from "@domain/services/GameInit.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { SlotIndex } from "@domain/types/Position.type";
 
-initializeEffects();
+const factory = buildEffectFactory();
 
 const baseDieInstructions: BaseDieInstructions = [
     { description: "Damage", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
@@ -17,7 +17,7 @@ const baseDieInstructions: BaseDieInstructions = [
     { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
 ];
 
-const die = generateFullDie(baseDieInstructions);
+const die = generateFullDie(baseDieInstructions, factory);
 const makeChar = (name: string, playerIndex: 0 | 1, slot: SlotIndex) =>
     createCharacter(name, 100, 5, die, { playerIndex, slot });
 

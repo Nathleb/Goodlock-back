@@ -1,6 +1,6 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
 import { canReroll, reroll } from "@domain/services/Roll.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
@@ -14,8 +14,8 @@ const baseDieInstructions: BaseDieInstructions = [
     { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
 ];
 
-initializeEffects();
-const die = generateFullDie(baseDieInstructions);
+const factory = buildEffectFactory();
+const die = generateFullDie(baseDieInstructions, factory);
 const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
 const makeTeam = () => [makeChar(), makeChar(), makeChar(), makeChar(), makeChar()];
 

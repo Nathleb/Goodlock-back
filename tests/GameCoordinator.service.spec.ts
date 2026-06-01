@@ -7,11 +7,12 @@ import { BaseDieInstructions } from '@domain/types/BaseDieInstructions.type';
 import { SlotIndex } from '@domain/types/Position.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import { createCharacter, generateFullDie } from '@domain/services/CharacterGeneration.service';
-import { createGameState, initializeEffects } from '@domain/services/GameInit.service';
+import { createGameState, buildEffectFactory } from '@domain/services/GameInit.service';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase, beginAssignPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
 import { UserId } from '@shared/branded.types';
+import EffectFactory from '@domain/factories/EffectFactory.class';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ const USER_ID_1 = 'user-uuid-1' as UserId;
 const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, userId: USER_ID_0, roomId: 'room-1' };
 const SESSION_1: Session = { sessionId: 'p1', socketId: SOCKET_1, userId: USER_ID_1, roomId: 'room-1' };
 
+const factory = buildEffectFactory();
+
 const die = generateFullDie([
     { description: 'A', priority: 1, effects: [] },
     { description: 'B', priority: 1, effects: [] },
@@ -29,7 +32,7 @@ const die = generateFullDie([
     { description: 'D', priority: 1, effects: [] },
     { description: 'E', priority: 1, effects: [] },
     { description: 'F', priority: 1, effects: [] },
-] satisfies BaseDieInstructions);
+] satisfies BaseDieInstructions, factory);
 
 const makeTeam = (pi: 0 | 1): Player =>
     createPlayer([0, 1, 2, 3, 4].map(i => createCharacter('C', 100, 1, die, { playerIndex: pi, slot: i as SlotIndex })), pi);
@@ -61,8 +64,6 @@ const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: j
 
 let coordinator: GameCoordinatorService;
 
-beforeAll(() => initializeEffects());
-
 beforeEach(async () => {
     jest.clearAllMocks();
     const module = await Test.createTestingModule({
@@ -71,6 +72,7 @@ beforeEach(async () => {
             { provide: SESSION_PORT, useValue: mockSession },
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
+            { provide: EffectFactory, useValue: factory },
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);

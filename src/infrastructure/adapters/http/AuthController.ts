@@ -25,7 +25,7 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    @Throttle({ default: { limit: 5, ttl: 60_000 } })
+    @Throttle({ default: { limit: 10, ttl: 60_000 } })
     login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
         return this.authCoordinator.login(dto);
     }

@@ -1,6 +1,6 @@
 import Position, { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
@@ -18,8 +18,8 @@ const baseDieInstructions: BaseDieInstructions = [
     { description: "PushLeft2",   priority: 2, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 2 }], targetConstraint: TargetConstraint.ANY },
 ];
 
-initializeEffects();
-const die = generateFullDie(baseDieInstructions);
+const factory = buildEffectFactory();
+const die = generateFullDie(baseDieInstructions, factory);
 const makeChar = (name: string) => createCharacter(name, 100, 5, die, { playerIndex: 0, slot: 0 });
 
 const team1 = [makeChar("A"), makeChar("B"), makeChar("C"), makeChar("D"), makeChar("E")];
@@ -61,7 +61,7 @@ function resolveEffect(
     const face = generateFullDie([
         { description: 'test', priority: 1, effects: [{ effect: label, magnitude }] },
         emptyFace, emptyFace, emptyFace, emptyFace, emptyFace,
-    ])[0];
+    ], factory)[0];
     const state = {
         ...gs,
         priorityQueue: addEffectsToPriorityQueue(

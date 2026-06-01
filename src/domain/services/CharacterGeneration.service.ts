@@ -8,14 +8,14 @@ import Character from "../types/Character.type";
 import Position from "../types/Position.type";
 import TargetConstraint from "../types/TargetConstraint.type";
 
-export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): Character {
+export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, factory: EffectFactory): Character {
     let template: CharacterTemplate;
     try {
         template = JSON.parse(jsonCharacterTemplate);
     } catch {
         throw new Error("Invalid JSON template");
     }
-    const die = generateFullDie(template.baseDieInstructions);
+    const die = generateFullDie(template.baseDieInstructions, factory);
     return createCharacter(template.name, template.maxHp, template.baseSpeed, die, { playerIndex: 0, slot: 0 });
 }
 
@@ -42,7 +42,7 @@ export function setDieFace(character: Character, faceIndex: number, dieFace: Die
     return { ...character, baseDie: newBaseDie };
 }
 
-export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
+export function generateFullDie(baseDieInstructions: BaseDieInstructions, factory: EffectFactory): Die {
     return baseDieInstructions.map(faceData =>
         generateFaceFromEffectEntries(
             {
@@ -51,18 +51,19 @@ export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
                 effects: [],
                 targetConstraint: faceData.targetConstraint ?? TargetConstraint.ANY,
             },
-            faceData.effects
+            faceData.effects,
+            factory,
         )
     ) as Die;
 }
 
-export function generateFaceFromEffectEntries(face: DieFace, effectEntries: EffectEntry[]): DieFace {
+export function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly EffectEntry[], factory: EffectFactory): DieFace {
     return effectEntries.reduce(
-        (acc, entry) => addEffectToFace(acc, entry.effect, entry.magnitude),
+        (acc, entry) => addEffectToFace(acc, entry.effect, entry.magnitude, factory),
         face
     );
 }
 
-export function addEffectToFace(dieFace: DieFace, effect: EffectLabel, magnitude: number): DieFace {
-    return { ...dieFace, effects: [...dieFace.effects, EffectFactory.createEffect(effect, magnitude)] };
+export function addEffectToFace(dieFace: DieFace, effect: EffectLabel, magnitude: number, factory: EffectFactory): DieFace {
+    return { ...dieFace, effects: [...dieFace.effects, factory.createEffect(effect, magnitude)] };
 }

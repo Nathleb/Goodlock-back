@@ -1,6 +1,6 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
@@ -8,7 +8,7 @@ import GameState from "@domain/types/GameState.type";
 import Position, { SlotIndex } from "@domain/types/Position.type";
 import DieFace from "@domain/types/DieFace.type";
 
-initializeEffects();
+const factory = buildEffectFactory();
 
 const cleaveInstructions: BaseDieInstructions = [
     { description: "Cleave Damage",    priority: 1, effects: [{ effect: EffectLabel.CleaveDamage,    magnitude: 5 }] },
@@ -19,7 +19,7 @@ const cleaveInstructions: BaseDieInstructions = [
     { description: "Full Team Shield", priority: 1, effects: [{ effect: EffectLabel.FullTeamShield,  magnitude: 3 }] },
 ];
 
-const die = generateFullDie(cleaveInstructions);
+const die = generateFullDie(cleaveInstructions, factory);
 const makeChar = (name: string, playerIndex: 0 | 1, slot: SlotIndex) =>
     createCharacter(name, 100, 0, die, { playerIndex, slot });
 

@@ -8,7 +8,7 @@ import { Player } from "../types/Player.type";
  * @param effectCallback - The callback function to apply the effect.
  * @returns The updated players.
  */
-export function applyEffectToTargets(players: [Player, Player], targetedCharacters: Character[], effectCallback: (character: Character) => Character): [Player, Player] {
+export function applyEffectToTargets(players: readonly [Player, Player], targetedCharacters: Character[], effectCallback: (character: Character) => Character): readonly [Player, Player] {
     const targetedCharacterIds = new Set(targetedCharacters.map(character => character.id));
 
     return players.map((player) => {
@@ -19,5 +19,5 @@ export function applyEffectToTargets(players: [Player, Player], targetedCharacte
             return character;
         });
         return { ...player, team: updatedTeam };
-    }) as [Player, Player];
+    }) as unknown as readonly [Player, Player];
 }

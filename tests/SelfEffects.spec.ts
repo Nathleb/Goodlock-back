@@ -1,6 +1,6 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, initializeEffects } from "@domain/services/GameInit.service";
+import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { findSelf } from "@domain/services/Position.service";
@@ -9,7 +9,7 @@ import GameState from "@domain/types/GameState.type";
 import Position, { SlotIndex } from "@domain/types/Position.type";
 import DieFace from "@domain/types/DieFace.type";
 
-initializeEffects();
+const factory = buildEffectFactory();
 
 // Face index reference:
 // [0] SelfDamage:3
@@ -27,7 +27,7 @@ const selfDieInstructions: BaseDieInstructions = [
     { description: "SelfDmg:2+STDamage:6",  priority: 1, effects: [{ effect: EffectLabel.SelfDamage,  magnitude: 2 }, { effect: EffectLabel.SingleTargetDamage, magnitude: 6 }] },
 ];
 
-const die = generateFullDie(selfDieInstructions);
+const die = generateFullDie(selfDieInstructions, factory);
 const makeChar = (name: string, playerIndex: 0 | 1, slot: SlotIndex) =>
     createCharacter(name, 20, 0, die, { playerIndex, slot });
 
