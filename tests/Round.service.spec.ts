@@ -2,7 +2,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { gainShield, loseHp, setTarget } from "@domain/services/Character.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
-import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
+import { createPlayer } from "@domain/services/Player.service";
 import { endOfRound, checkWinner } from "@domain/services/Round.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
@@ -87,8 +87,8 @@ describe('Round.service', () => {
         const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
         let player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         let player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
-        player1 = toggleDieLockForCharacter(player1, { playerIndex: 0, slot: 0 });
-        player2 = toggleDieLockForCharacter(player2, { playerIndex: 1, slot: 2 });
+        player1 = { ...player1, team: player1.team.map((c, i) => i === 0 ? { ...c, isFaceLocked: true } : c) };
+        player2 = { ...player2, team: player2.team.map((c, i) => i === 2 ? { ...c, isFaceLocked: true } : c) };
         const gameState = createGameState(player1, player2);
 
         const updated = endOfRound(gameState);

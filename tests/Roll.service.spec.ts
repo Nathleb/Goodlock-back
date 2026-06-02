@@ -1,7 +1,7 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
-import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
+import { createPlayer } from "@domain/services/Player.service";
 import { canReroll, reroll } from "@domain/services/Roll.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
@@ -39,7 +39,7 @@ describe('Roll.service', () => {
     it('should not roll locked dice', () => {
         const team = makeTeam();
         let player = createPlayer(team, 0);
-        player = toggleDieLockForCharacter(player, { playerIndex: 0, slot: 0 });
+        player = { ...player, team: player.team.map((c, i) => i === 0 ? { ...c, isFaceLocked: true } : c) };
         const lockedFace = player.team[0].face;
         const gs = createGameState(player, createPlayer(makeTeam(), 1));
 

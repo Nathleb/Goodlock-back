@@ -4,7 +4,7 @@ import GamePhase from "@domain/types/GamePhase.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
-import { createPlayer, toggleDieLockForCharacter } from "@domain/services/Player.service";
+import { createPlayer } from "@domain/services/Player.service";
 import { beginKeepPhase, beginRollPhase, beginAssignPhase } from "@domain/services/Phase.service";
 import {
     confirmPlacement, performRoll, confirmKeep, confirmAssignment, performResolve,
@@ -123,7 +123,7 @@ describe('confirmKeep', () => {
         const withOneLock = {
             ...inKeep,
             players: [
-                toggleDieLockForCharacter(inKeep.players[0], { playerIndex: 0, slot: 0 }),
+                { ...inKeep.players[0], team: inKeep.players[0].team.map((c, i) => i === 0 ? { ...c, isFaceLocked: true } : c) },
                 inKeep.players[1],
             ] as [Player, Player],
         };

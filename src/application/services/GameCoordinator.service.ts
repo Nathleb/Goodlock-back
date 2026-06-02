@@ -16,7 +16,7 @@ import { assertPhase, assertNotReady, beginRollPhase } from '@domain/services/Ph
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
-import { createPlayer, rearrangeTeam, toggleDieLockForCharacter, selectTargetOfCharacter } from '@domain/services/Player.service';
+import { createPlayer, rearrangeTeam, selectTargetOfCharacter } from '@domain/services/Player.service';
 import { isRoomReady } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
 import {
@@ -139,33 +139,27 @@ export class GameCoordinatorService {
             players[playerIndex] = updatedPlayer;
             const updatedGs = { ...room.gameState, players };
             this.roomPort.updateGameState(room.roomId, updatedGs);
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(updatedGs));
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
     }
 
     confirmPlacement(socketId: string): void {
-        this.confirmAction(socketId, confirmPlacement, performRoll);
-    }
-
-    toggleDieLock(socketId: string, characterId: string): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
-            assertPhase(room.gameState, GamePhase.KEEP);
-            assertNotReady(room.gameState, playerIndex);
-            const player = room.gameState.players[playerIndex];
-            const char = player.team.find(c => c.id === characterId);
-            if (!char) throw new Error('Character not found');
-
-            const updatedPlayer = toggleDieLockForCharacter(player, char.position);
-            const players = [...room.gameState.players] as [Player, Player];
-            players[playerIndex] = updatedPlayer;
-            const updatedGs = { ...room.gameState, players };
-            this.roomPort.updateGameState(room.roomId, updatedGs);
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(updatedGs));
+            const otherIndex = (1 - playerIndex) as PlayerIndex;
+            const wasOtherReady = room.gameState.playersReady[otherIndex];
+            let gs = confirmPlacement(room.gameState, playerIndex);
+            if (wasOtherReady) {
+                gs = performRoll(gs);
+                this.roomPort.updateGameState(room.roomId, gs);
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
+            } else {
+                this.roomPort.updateGameState(room.roomId, gs);
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(gs, playerIndex));
+            }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -245,7 +239,10 @@ export class GameCoordinatorService {
         const { room, playerIndex } = ctx;
         try {
             const gs = domainCancelPlacement(room.gameState, playerIndex);
-            if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
+            if (gs !== room.gameState) {
+                this.roomPort.updateGameState(room.roomId, gs);
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(gs, playerIndex));
+            }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }

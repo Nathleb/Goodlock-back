@@ -184,10 +184,10 @@ describe('rearrangeTeam', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('updates game state and emits gameStateUpdated to the socket when valid', () => {
+    it('updates game state without emitting when valid', () => {
         coordinator.rearrangeTeam(SOCKET_0, validIds().reverse());
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
@@ -195,10 +195,10 @@ describe('rearrangeTeam', () => {
 // ── confirmPlacement ─────────────────────────────────────────────────────────
 
 describe('confirmPlacement', () => {
-    it('saves state silently when first to confirm', () => {
+    it('saves state and emits masked gameStateUpdated to socket when first to confirm', () => {
         coordinator.confirmPlacement(SOCKET_0);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -207,30 +207,6 @@ describe('confirmPlacement', () => {
         coordinator.confirmPlacement(SOCKET_0);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
-    });
-});
-
-// ── toggleDieLock ─────────────────────────────────────────────────────────────
-
-describe('toggleDieLock', () => {
-    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(keepGs)));
-
-    it('emits error when not in KEEP phase', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(baseGs));
-        coordinator.toggleDieLock(SOCKET_0, baseGs.players[0].team[0].id);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('emits error when character ID is unknown', () => {
-        coordinator.toggleDieLock(SOCKET_0, 'unknown-id');
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('updates game state and emits gameStateUpdated to the socket when valid', () => {
-        coordinator.toggleDieLock(SOCKET_0, keepGs.players[0].team[0].id);
-        expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
-        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
 
@@ -354,13 +330,6 @@ describe('post-confirm mutation guards', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('emits error when toggleDieLock called after confirmKeep', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
-        coordinator.toggleDieLock(SOCKET_0, 'any-char-id');
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
     it('emits error when selectTarget called after confirmAssignment', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
         coordinator.selectTarget(SOCKET_0, 'any-char-id', { playerIndex: 1, slot: 0 });
@@ -370,11 +339,11 @@ describe('post-confirm mutation guards', () => {
 });
 
 describe('cancelPlacement', () => {
-    it('resets ready state silently when confirmed', () => {
+    it('resets ready state and emits masked gameStateUpdated to socket when confirmed', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.cancelPlacement(SOCKET_0);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 

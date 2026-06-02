@@ -16,7 +16,6 @@ import { RoomCoordinatorService } from '@application/services/RoomCoordinator.se
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { JoinRoomPayload } from './payloads/JoinRoom.payload';
 import { RearrangeTeamPayload } from './payloads/RearrangeTeam.payload';
-import { ToggleDieLockPayload } from './payloads/ToggleDieLock.payload';
 import { SelectTargetPayload } from './payloads/SelectTarget.payload';
 import { SessionGuard } from './guards/Session.guard';
 import { UserId } from '@shared/branded.types';
@@ -92,14 +91,6 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('confirmPlacement')
     handleConfirmPlacement(@ConnectedSocket() client: Socket): void {
         this.gameCoordinator.confirmPlacement(client.id);
-    }
-
-    @SubscribeMessage('toggleDieLock')
-    handleToggleDieLock(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() data: ToggleDieLockPayload,
-    ): void {
-        this.gameCoordinator.toggleDieLock(client.id, data.characterId);
     }
 
     @SubscribeMessage('confirmKeep')

@@ -1,6 +1,6 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { hasLost, rollDiceForTurn, toggleDieLockForCharacter, selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
+import { hasLost, rollDiceForTurn, selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
@@ -25,11 +25,6 @@ describe('PlayerService', () => {
   const makeChar = () => createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
   const character = makeChar();
   const player: Player = { playerIndex: 0, team: [character] };
-
-  it('should toggle die lock for character', () => {
-    const updatedPlayer = toggleDieLockForCharacter(player, { playerIndex: 0, slot: 0 });
-    expect(updatedPlayer.team[0].isFaceLocked).toBe(true);
-  });
 
   it('should roll dice for turn', () => {
     const updatedPlayer = rollDiceForTurn(player);
