@@ -54,22 +54,20 @@ export class GameCoordinatorService {
         this.wsPort.emitToSocket(socketId, 'error', { message });
     }
 
-    private confirmAction(
+    private doConfirm(
         socketId: string,
+        ctx: GameContext,
+        gs: GameState,
         domainFn: (gs: GameState, pi: PlayerIndex) => GameState,
-        autoFn?: (gs: GameState) => GameState,
     ): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
-            const wasOtherReady = room.gameState.playersReady[otherIndex];
-            let gs = domainFn(room.gameState, playerIndex);
-            if (wasOtherReady && autoFn) gs = autoFn(gs);
-            this.roomPort.updateGameState(room.roomId, gs);
+            const wasOtherReady = gs.playersReady[otherIndex];
+            const confirmed = domainFn(gs, playerIndex);
+            this.roomPort.updateGameState(room.roomId, confirmed);
             if (wasOtherReady) {
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(confirmed));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -166,7 +164,9 @@ export class GameCoordinatorService {
     }
 
     confirmKeep(socketId: string): void {
-        this.confirmAction(socketId, confirmKeep);
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        this.doConfirm(socketId, ctx, ctx.room.gameState, confirmKeep);
     }
 
     confirmAssignment(socketId: string): void {
