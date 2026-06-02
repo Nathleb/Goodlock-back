@@ -213,9 +213,10 @@ describe('confirmPlacement', () => {
 // ── confirmKeep ───────────────────────────────────────────────────────────────
 
 describe('confirmKeep', () => {
+    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(keepGs)));
+
     it('saves state silently when first to confirm', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
-        coordinator.confirmKeep(SOCKET_0);
+        coordinator.confirmKeep(SOCKET_0, []);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
         expect(mockWs.emitToSocket).not.toHaveBeenCalled();
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
@@ -223,14 +224,42 @@ describe('confirmKeep', () => {
 
     it('rerolls and emits gameStateUpdated still in KEEP when both confirm with rollsLeft > 0', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(keepGs)));
-        coordinator.confirmKeep(SOCKET_0);
+        coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
     });
 
     it('advances to ASSIGN and emits gameStateUpdated when both confirm with rollsLeft = 0', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
-        coordinator.confirmKeep(SOCKET_0);
+        coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.ASSIGN }));
+    });
+
+    it('emits error when lockedCharacterIds contains unknown id', () => {
+        coordinator.confirmKeep(SOCKET_0, ['unknown-id']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('accepts empty array (no characters locked)', () => {
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
+    it('accepts all 5 characters locked', () => {
+        const allIds = keepGs.players[0].team.map(c => c.id);
+        coordinator.confirmKeep(SOCKET_0, allIds);
+        expect(mockRoom.updateGameState).toHaveBeenCalled();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
+    it('sets isFaceLocked=true only for locked characters and false for the rest', () => {
+        const firstId = keepGs.players[0].team[0].id;
+        coordinator.confirmKeep(SOCKET_0, [firstId]);
+        const savedGs = mockRoom.updateGameState.mock.calls[0][1];
+        expect(savedGs.players[0].team[0].isFaceLocked).toBe(true);
+        expect(savedGs.players[0].team[1].isFaceLocked).toBe(false);
+        expect(savedGs.players[0].team[2].isFaceLocked).toBe(false);
     });
 });
 
@@ -275,7 +304,7 @@ describe('double-confirm guards', () => {
 
     it('emits error on second confirmKeep', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
-        coordinator.confirmKeep(SOCKET_0);
+        coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });

@@ -163,10 +163,24 @@ export class GameCoordinatorService {
         }
     }
 
-    confirmKeep(socketId: string): void {
+    confirmKeep(socketId: string, lockedCharacterIds: string[]): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
-        this.doConfirm(socketId, ctx, ctx.room.gameState, confirmKeep);
+        const { room, playerIndex } = ctx;
+        const player = room.gameState.players[playerIndex];
+        const teamIds = new Set(player.team.map(c => c.id));
+        for (const id of lockedCharacterIds) {
+            if (!teamIds.has(id)) { this.emitError(socketId, `Unknown character id: ${id}`); return; }
+        }
+        const lockedSet = new Set(lockedCharacterIds);
+        const updatedPlayer: Player = {
+            ...player,
+            team: player.team.map(c => ({ ...c, isFaceLocked: lockedSet.has(c.id) })),
+        };
+        const players = [...room.gameState.players] as [Player, Player];
+        players[playerIndex] = updatedPlayer;
+        const gsWithLocks: GameState = { ...room.gameState, players };
+        this.doConfirm(socketId, ctx, gsWithLocks, confirmKeep);
     }
 
     confirmAssignment(socketId: string): void {
