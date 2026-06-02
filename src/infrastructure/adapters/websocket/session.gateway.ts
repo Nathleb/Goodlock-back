@@ -17,6 +17,7 @@ import { GameCoordinatorService } from '@application/services/GameCoordinator.se
 import { JoinRoomPayload } from './payloads/JoinRoom.payload';
 import { RearrangeTeamPayload } from './payloads/RearrangeTeam.payload';
 import { ConfirmKeepPayload } from './payloads/ConfirmKeep.payload';
+import { ConfirmAssignmentPayload } from './payloads/ConfirmAssignment.payload';
 
 import { SessionGuard } from './guards/Session.guard';
 import { UserId } from '@shared/branded.types';
@@ -103,8 +104,11 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     }
 
     @SubscribeMessage('confirmAssignment')
-    handleConfirmAssignment(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.confirmAssignment(client.id);
+    handleConfirmAssignment(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: ConfirmAssignmentPayload,
+    ): void {
+        this.gameCoordinator.confirmAssignment(client.id, data.targets);
     }
 
     @SubscribeMessage('cancelPlacement')

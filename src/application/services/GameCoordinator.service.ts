@@ -183,14 +183,44 @@ export class GameCoordinatorService {
         this.doConfirm(socketId, ctx, gsWithLocks, confirmKeep);
     }
 
-    confirmAssignment(socketId: string): void {
+    confirmAssignment(socketId: string, targets: { characterId: string; target: { playerIndex: number; slot: number } }[]): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
+        const player = room.gameState.players[playerIndex];
+        const teamIds = new Set(player.team.map(c => c.id));
+
+        // Validate: 5 unique IDs covering exactly the player's team, valid target positions
+        const payloadIds = new Set(targets.map(t => t.characterId));
+        if (targets.length !== 5 || payloadIds.size !== 5) {
+            this.emitError(socketId, 'Payload must contain exactly one entry per character');
+            return;
+        }
+        for (const entry of targets) {
+            if (!teamIds.has(entry.characterId)) { this.emitError(socketId, `Unknown character id: ${entry.characterId}`); return; }
+            if (entry.target.playerIndex !== 0 && entry.target.playerIndex !== 1) { this.emitError(socketId, 'Invalid target playerIndex'); return; }
+            if (entry.target.slot < 0 || entry.target.slot > 4) { this.emitError(socketId, 'Invalid target slot'); return; }
+        }
+
         try {
+            // Apply targets
+            let updatedPlayer = player;
+            for (const entry of targets) {
+                const target: Position = {
+                    playerIndex: entry.target.playerIndex as PlayerIndex,
+                    slot: entry.target.slot as SlotIndex,
+                };
+                const charSlot = updatedPlayer.team.find(c => c.id === entry.characterId)!.position.slot;
+                updatedPlayer = selectTargetOfCharacter(updatedPlayer, charSlot, target);
+            }
+            const players = [...room.gameState.players] as [Player, Player];
+            players[playerIndex] = updatedPlayer;
+            const gsWithTargets: GameState = { ...room.gameState, players };
+
+            // Confirm and resolve
             const otherIndex = (1 - playerIndex) as PlayerIndex;
-            const wasOtherReady = room.gameState.playersReady[otherIndex];
-            let gs = domainConfirmAssignment(room.gameState, playerIndex);
+            const wasOtherReady = gsWithTargets.playersReady[otherIndex];
+            let gs = domainConfirmAssignment(gsWithTargets, playerIndex);
 
             if (!wasOtherReady) {
                 this.roomPort.updateGameState(room.roomId, gs);

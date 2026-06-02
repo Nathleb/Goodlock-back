@@ -56,6 +56,13 @@ const makeRoom = (gameState: typeof baseGs): Room => ({
 const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
 const singlePlayerRoom: Room = { ...lobbyRoom, playersId: ['p0'] };
 
+// Builds a valid 5-entry targets payload: player 0 targets all enemies at matching slot indices
+const makeTargets = (gs: typeof assignGs) =>
+    gs.players[0].team.map(c => ({
+        characterId: c.id,
+        target: { playerIndex: 1 as const, slot: c.position.slot as number },
+    }));
+
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
@@ -266,9 +273,10 @@ describe('confirmKeep', () => {
 // ── confirmAssignment ─────────────────────────────────────────────────────────
 
 describe('confirmAssignment', () => {
+    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(assignGs)));
+
     it('saves state silently when first to confirm', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(assignGs));
-        coordinator.confirmAssignment(SOCKET_0);
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockRoom.updateGameState).toHaveBeenCalled();
         expect(mockWs.emitToSocket).not.toHaveBeenCalled();
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
@@ -276,7 +284,7 @@ describe('confirmAssignment', () => {
 
     it('emits roundResolved then gameStateUpdated for a new round when no winner', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(assignGs)));
-        coordinator.confirmAssignment(SOCKET_0);
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.objectContaining({ resolveLog: expect.any(Array) }));
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
     });
@@ -284,11 +292,46 @@ describe('confirmAssignment', () => {
     it('emits roundResolved then gameOver when a winner is found', () => {
         const gameOverGs = withDeadEnemies(p1Ready(assignGs));
         mockRoom.getRoom.mockReturnValue(makeRoom(gameOverGs));
-        coordinator.confirmAssignment(SOCKET_0);
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0 });
         const calls = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
-        expect(calls).not.toContain('gameStateUpdated');
+        expect(calls[calls.length - 1]).toBe('gameOver');
+    });
+
+    it('emits error when payload contains unknown characterId', () => {
+        const bad = makeTargets(assignGs).map((t, i) => i === 0 ? { ...t, characterId: 'unknown-id' } : t);
+        coordinator.confirmAssignment(SOCKET_0, bad);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error when payload has wrong count (4 entries)', () => {
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs).slice(0, 4));
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error when payload has duplicate characterIds', () => {
+        const firstId = assignGs.players[0].team[0].id;
+        const dup = makeTargets(assignGs).map((t, i) => i === 4 ? { ...t, characterId: firstId } : t);
+        coordinator.confirmAssignment(SOCKET_0, dup);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error when target playerIndex is invalid', () => {
+        const bad = makeTargets(assignGs).map((t, i) => i === 0 ? { ...t, target: { playerIndex: 2, slot: 0 } } : t);
+        coordinator.confirmAssignment(SOCKET_0, bad);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error when target slot is out of bounds', () => {
+        const bad = makeTargets(assignGs).map((t, i) => i === 0 ? { ...t, target: { playerIndex: 1, slot: 5 } } : t);
+        coordinator.confirmAssignment(SOCKET_0, bad);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });
 
@@ -311,7 +354,7 @@ describe('double-confirm guards', () => {
 
     it('emits error on second confirmAssignment', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
-        coordinator.confirmAssignment(SOCKET_0);
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
