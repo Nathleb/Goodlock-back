@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsDefined, IsInt, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class AssignmentTargetPosition {
@@ -13,6 +13,7 @@ class AssignmentTarget {
     @IsString()
     characterId: string;
 
+    @IsDefined()
     @ValidateNested()
     @Type(() => AssignmentTargetPosition)
     target: AssignmentTargetPosition;
