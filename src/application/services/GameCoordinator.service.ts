@@ -169,34 +169,6 @@ export class GameCoordinatorService {
         this.confirmAction(socketId, confirmKeep);
     }
 
-    selectTarget(socketId: string, characterId: string, rawTarget: { playerIndex: number; slot: number }): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
-        const { room, playerIndex } = ctx;
-        try {
-            assertPhase(room.gameState, GamePhase.ASSIGN);
-            assertNotReady(room.gameState, playerIndex);
-            const player = room.gameState.players[playerIndex];
-            const char = player.team.find(c => c.id === characterId);
-            if (!char) throw new Error('Character not found');
-            if (rawTarget.playerIndex !== 0 && rawTarget.playerIndex !== 1) throw new Error('Invalid target playerIndex');
-            if (rawTarget.slot < 0 || rawTarget.slot > 4) throw new Error('Invalid target slot');
-
-            const target: Position = {
-                playerIndex: rawTarget.playerIndex as PlayerIndex,
-                slot: rawTarget.slot as SlotIndex,
-            };
-            const updatedPlayer = selectTargetOfCharacter(player, char.position.slot, target);
-            const players = [...room.gameState.players] as [Player, Player];
-            players[playerIndex] = updatedPlayer;
-            const updatedGs = { ...room.gameState, players };
-            this.roomPort.updateGameState(room.roomId, updatedGs);
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTO(updatedGs));
-        } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
-        }
-    }
-
     confirmAssignment(socketId: string): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }

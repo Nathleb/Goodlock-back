@@ -16,7 +16,7 @@ import { RoomCoordinatorService } from '@application/services/RoomCoordinator.se
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { JoinRoomPayload } from './payloads/JoinRoom.payload';
 import { RearrangeTeamPayload } from './payloads/RearrangeTeam.payload';
-import { SelectTargetPayload } from './payloads/SelectTarget.payload';
+
 import { SessionGuard } from './guards/Session.guard';
 import { UserId } from '@shared/branded.types';
 
@@ -96,14 +96,6 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @SubscribeMessage('confirmKeep')
     handleConfirmKeep(@ConnectedSocket() client: Socket): void {
         this.gameCoordinator.confirmKeep(client.id);
-    }
-
-    @SubscribeMessage('selectTarget')
-    handleSelectTarget(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() data: SelectTargetPayload,
-    ): void {
-        this.gameCoordinator.selectTarget(client.id, data.characterId, data.target);
     }
 
     @SubscribeMessage('confirmAssignment')

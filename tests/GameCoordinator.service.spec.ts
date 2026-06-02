@@ -234,40 +234,6 @@ describe('confirmKeep', () => {
     });
 });
 
-// ── selectTarget ──────────────────────────────────────────────────────────────
-
-describe('selectTarget', () => {
-    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(assignGs)));
-
-    it('emits error when not in ASSIGN phase', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
-        coordinator.selectTarget(SOCKET_0, assignGs.players[0].team[0].id, { playerIndex: 1, slot: 0 });
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('emits error when character ID is unknown', () => {
-        coordinator.selectTarget(SOCKET_0, 'unknown-id', { playerIndex: 1, slot: 0 });
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('emits error when target playerIndex is invalid', () => {
-        coordinator.selectTarget(SOCKET_0, assignGs.players[0].team[0].id, { playerIndex: 2, slot: 0 });
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('emits error when target slot is out of bounds', () => {
-        coordinator.selectTarget(SOCKET_0, assignGs.players[0].team[0].id, { playerIndex: 1, slot: 5 });
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('updates game state and emits gameStateUpdated to the socket when valid', () => {
-        coordinator.selectTarget(SOCKET_0, assignGs.players[0].team[0].id, { playerIndex: 1, slot: 0 });
-        expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
-        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
-    });
-});
-
 // ── confirmAssignment ─────────────────────────────────────────────────────────
 
 describe('confirmAssignment', () => {
@@ -330,12 +296,7 @@ describe('post-confirm mutation guards', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('emits error when selectTarget called after confirmAssignment', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
-        coordinator.selectTarget(SOCKET_0, 'any-char-id', { playerIndex: 1, slot: 0 });
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
+
 });
 
 describe('cancelPlacement', () => {
