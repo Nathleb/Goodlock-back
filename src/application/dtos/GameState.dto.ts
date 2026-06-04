@@ -10,6 +10,7 @@ export type CharacterDTO = {
     hp: number;
     maxHp: number;
     shield: number;
+    baseSpeed: number;
     baseDie: DieFaceDTO[];
     face: DieFaceDTO;
     isFaceLocked: boolean;
