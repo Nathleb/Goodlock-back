@@ -13,6 +13,8 @@ import GamePhase from '@domain/types/GamePhase.type';
 import Position, { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
 import { assertPhase, assertNotReady, beginRollPhase } from '@domain/services/Phase.service';
+import { validateTarget } from '@domain/services/TargetValidator';
+import TargetConstraint from '@domain/types/TargetConstraint.type';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
@@ -200,6 +202,22 @@ export class GameCoordinatorService {
             if (!teamIds.has(entry.characterId)) { this.emitError(socketId, `Unknown character id: ${entry.characterId}`); return; }
             if (entry.target.playerIndex !== 0 && entry.target.playerIndex !== 1) { this.emitError(socketId, 'Invalid target playerIndex'); return; }
             if (entry.target.slot < 0 || entry.target.slot > 4) { this.emitError(socketId, 'Invalid target slot'); return; }
+        }
+
+        // Validate each target against the character's face constraint
+        for (const entry of targets) {
+            const char = player.team.find(c => c.id === entry.characterId)!;
+            if (char.face.targetConstraint === TargetConstraint.NONE) continue;
+            try {
+                validateTarget(
+                    char.face.targetConstraint,
+                    playerIndex,
+                    { playerIndex: entry.target.playerIndex as PlayerIndex, slot: entry.target.slot as SlotIndex },
+                );
+            } catch (e: unknown) {
+                this.emitError(socketId, (e as Error).message);
+                return;
+            }
         }
 
         try {

@@ -10,6 +10,7 @@ import { createCharacter, generateFullDie } from '@domain/services/CharacterGene
 import { createGameState, buildEffectFactory } from '@domain/services/GameInit.service';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase, beginAssignPhase } from '@domain/services/Phase.service';
+import TargetConstraint from '@domain/types/TargetConstraint.type';
 import { Player } from '@domain/types/Player.type';
 import { UserId } from '@shared/branded.types';
 import { EFFECT_FACTORY } from '@application/ports/tokens';
@@ -332,6 +333,28 @@ describe('confirmAssignment', () => {
         coordinator.confirmAssignment(SOCKET_0, bad);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('emits error (not roundResolved) when an enemy target violates ALLY_ONLY constraint and both players confirm', () => {
+        const allyDie = generateFullDie([
+            { description: 'AllyHeal', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
+            { description: 'B', priority: 1, effects: [] },
+            { description: 'C', priority: 1, effects: [] },
+            { description: 'D', priority: 1, effects: [] },
+            { description: 'E', priority: 1, effects: [] },
+            { description: 'F', priority: 1, effects: [] },
+        ] satisfies BaseDieInstructions, factory);
+        const mixedTeam = createPlayer(
+            [0, 1, 2, 3, 4].map(i => createCharacter('C', 100, 1, i === 0 ? allyDie : die, { playerIndex: 0, slot: i as SlotIndex })),
+            0,
+        );
+        const constraintGs = beginAssignPhase(createGameState(mixedTeam, makeTeam(1)));
+        // player 1 already ready — player 0 confirms second, triggering resolution
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(constraintGs)));
+        // char[0] has ALLY_ONLY; default enemy target violates it → resolve must not run
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(constraintGs));
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
     });
 });
 
