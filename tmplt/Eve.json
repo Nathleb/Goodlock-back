@@ -3,11 +3,11 @@
     "maxHp": 20,
     "baseSpeed": 1,
     "baseDieInstructions": [
-        { "description": "Deal 2 damage to all enemies.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
-        { "description": "Deal 1 damage to all enemies.", "priority": 1, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "FullTeamDamage", "magnitude": 1 }] },
+        { "description": "Deal 2 damage to all enemies.", "priority": 2, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
+        { "description": "Deal 1 damage to all enemies.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 1 }] },
         { "description": "Deal 6 damage to a single target.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }] },
-        { "description": "Grant 2 shield to all allies.", "priority": 3, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "FullTeamShield", "magnitude": 2 }] },
+        { "description": "Grant 2 shield to all allies.", "priority": 3, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamShield", "magnitude": 2 }] },
         { "description": "Gain 5 shield.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "SelfShield", "magnitude": 5 }] },
-        { "description": "Deal 3 damage to all enemies.", "priority": 5, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "FullTeamDamage", "magnitude": 3 }] }
+        { "description": "Deal 3 damage to all enemies.", "priority": 5, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 3 }] }
     ]
 }

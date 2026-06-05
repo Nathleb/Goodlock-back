@@ -5,7 +5,7 @@
     "baseDieInstructions": [
         { "description": "Cleave shield for 2.", "priority": 4, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveShield", "magnitude": 2 }] },
         { "description": "Grant 3 shield to a single target.", "priority": 2, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetShield", "magnitude": 3 }] },
-        { "description": "Grant 2 shield to all allies.", "priority": 5, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "FullTeamShield", "magnitude": 2 }] },
+        { "description": "Grant 2 shield to all allies.", "priority": 5, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamShield", "magnitude": 2 }] },
         { "description": "Cleave heal for 3 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveHeal", "magnitude": 3 }] },
         { "description": "Cleave shield for 3.", "priority": 3, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveShield", "magnitude": 3 }] },
         { "description": "Heal a single target for 4 HP.", "priority": 2, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }] }

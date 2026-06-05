@@ -6,7 +6,7 @@
         { "description": "Deal 3 damage to a single target.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }] },
         { "description": "Deal 2 cleave damage.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 2 }] },
         { "description": "Heal a single target for 4 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }] },
-        { "description": "Deal 2 damage to all enemies.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
+        { "description": "Deal 2 damage to all enemies.", "priority": 4, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
         { "description": "Cleave shield for 2.", "priority": 2, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveShield", "magnitude": 2 }] },
         { "description": "Deal 4 damage and gain 2 shield.", "priority": 1, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }, { "effect": "SelfShield", "magnitude": 2 }] }
     ]

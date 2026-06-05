@@ -93,6 +93,16 @@ describe('FullTeam effects', () => {
         updated.players[0].team.forEach(c => expect(c.hp).toBe(100));
     });
 
+    it('FullTeamDamage hits the ENEMY team even when resolved against the actor\'s own position (NONE face)', () => {
+        const gs = makeGameState();
+        const actor = gs.players[0].team[0];
+        // NONE-constraint resolution passes the actor's OWN position as the target.
+        const { state: updated } = unstackPriorityQueueWithLog(withEffect(gs, actor.baseDie[3], { playerIndex: 0, slot: 0 }, actor.id, actor.baseSpeed));
+
+        updated.players[1].team.forEach(c => expect(c.hp).toBe(97));
+        updated.players[0].team.forEach(c => expect(c.hp).toBe(100));
+    });
+
     it('FullTeamHeal heals all 5 characters on the target team', () => {
         const gs = makeGameState();
         const damagedTeam = gs.players[0].team.map(c => ({ ...c, hp: 90 }));

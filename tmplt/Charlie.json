@@ -5,9 +5,9 @@
     "baseDieInstructions": [
         { "description": "Deal 4 cleave damage.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
         { "description": "Deal 3 cleave damage.", "priority": 2, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
-        { "description": "Deal 2 damage to all enemies.", "priority": 4, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
+        { "description": "Deal 2 damage to all enemies.", "priority": 4, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
         { "description": "Deal 5 damage to a single target.", "priority": 1, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
         { "description": "Deal 3 cleave damage and take 2 self damage.", "priority": 3, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }, { "effect": "SelfDamage", "magnitude": 2 }] },
-        { "description": "Deal 3 damage to all enemies.", "priority": 5, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "FullTeamDamage", "magnitude": 3 }] }
+        { "description": "Deal 3 damage to all enemies.", "priority": 5, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 3 }] }
     ]
 }
