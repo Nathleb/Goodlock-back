@@ -59,7 +59,13 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): GameState 
         return resetReady(beginAssignPhase(updated));
     }
 
-    return resetReady({ ...rerollBothPlayers(updated), rollsLeft: updated.rollsLeft - 1 });
+    const rerolled = { ...rerollBothPlayers(updated), rollsLeft: updated.rollsLeft - 1 };
+    // After the final reroll there are no rerolls left, so locking is moot —
+    // skip the dead keep round and go straight to assign with the final dice.
+    if (rerolled.rollsLeft === 0) {
+        return resetReady(beginAssignPhase(rerolled));
+    }
+    return resetReady(rerolled);
 }
 
 export function confirmAssignment(gs: GameState, playerIndex: PlayerIndex): GameState {

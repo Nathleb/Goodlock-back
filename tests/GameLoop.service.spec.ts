@@ -110,6 +110,15 @@ describe('confirmKeep', () => {
         expect(result.playersReady).toEqual([false, false]);
     });
 
+    it('transitions straight to ASSIGN when the final reroll exhausts rollsLeft (no dead keep round)', () => {
+        const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
+        const after0 = confirmKeep(inKeep, 0);
+        const result = confirmKeep(after0, 1);
+        expect(result.phase).toBe(GamePhase.ASSIGN);
+        expect(result.rollsLeft).toBe(0);
+        expect(result.playersReady).toEqual([false, false]);
+    });
+
     it('skips rerolls and transitions to ASSIGN when all dice are locked', () => {
         const inKeep = lockAllPlayers(beginKeepPhase(gs)); // rollsLeft: 2 but all locked
         const after0 = confirmKeep(inKeep, 0);
