@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly assign die face effects each round, then all actions resolve in priority order. Built with NestJS + Socket.io; no database yet (all state in-memory).
+Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly assign die face effects each round, then all actions resolve in priority order. Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** is used only for authentication — persisting `User` accounts and `RefreshToken`s. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
 
 ## Active plugins
 
@@ -67,15 +67,19 @@ Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneratio
 ### Application layer (`src/application/`)
 
 - `ports/` interfaces `RoomPort`, `SessionPort`, `WebSocketPort` (tokens in `tokens.ts`)
-- `services/` `RoomCoordinatorService`, `SessionCoordinatorService`: bridge domain services with WebSocket handlers
+- `services/` `RoomCoordinatorService`, `SessionCoordinatorService`, `AuthCoordinatorService`: bridge domain services with WebSocket/HTTP handlers
 - `mappers/` `RoomMapper`: domain `Room` -> `RoomDTO`
 - `dtos/` `RoomDTO`, `PlayerDTO`, `GameStateDTO`
 
 ### Infrastructure layer (`src/infrastructure/adapters/`)
 
-- `managers/` `SessionManager`, `RoomManager`: in-memory `Map`-based state stores
+- `managers/` `SessionManager`, `RoomManager`: in-memory `Map`-based state stores (the source of truth for all game state)
+- `prisma/` `PrismaModule` + `PrismaService`: the Prisma client wrapper used by the auth repositories
+- `adapters/repositories/` `UserRepository`, `RefreshTokenRepository`: Postgres-backed persistence for auth (the only DB-backed code)
+- `adapters/http/` `AuthController`, `RoomController`: REST endpoints (auth + room management)
 - `websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: `createRoom`, `joinRoom`, `quitRoom`
 - `websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
+- `websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
 - `websocket/services/` `WebSocketService` (emit helpers), `RoomWebSocketHandlerService`, `SessionWebSocketHandlerService`, `ErrorWebSocketHandlerService`
 
 ### Shared utilities (`src/shared/`)
@@ -167,7 +171,7 @@ Observations are captured automatically. Respect these conventions to maximize t
 
 **Test colocation**: tests live in `tests/` mirroring `src/` structure. One spec file per service or strategy. Domain specs must not import NestJS.
 
-**No database, in-memory only**: do not introduce TypeORM, Prisma, or any persistence layer without explicit discussion. The `Manager` classes in `infrastructure/adapters/managers/` are the single source of truth for state.
+**Game state stays in-memory**: the `Manager` classes in `infrastructure/adapters/managers/` are the single source of truth for all game state (rooms, sessions, live games) and must never be persisted to the database. Persistence (Prisma/Postgres) is reserved for **auth only** — `User` and `RefreshToken`, accessed via the repositories in `adapters/repositories/`. Do not introduce a new DB-backed entity, a different ORM, or persist game state without explicit discussion.
 
 **Conventional commits**: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`. One commit per logical change.
 
