@@ -19,6 +19,7 @@ import EffectFactory from '@domain/factories/EffectFactory.class';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer, rearrangeTeam, selectTargetOfCharacter } from '@domain/services/Player.service';
+import { isDead } from '@domain/services/Character.service';
 import { isRoomReady } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
 import {
@@ -207,7 +208,7 @@ export class GameCoordinatorService {
         // Validate each target against the character's face constraint
         for (const entry of targets) {
             const char = player.team.find(c => c.id === entry.characterId)!;
-            if (char.face.targetConstraint === TargetConstraint.NONE) continue;
+            if (char.face.targetConstraint === TargetConstraint.NONE || isDead(char)) continue;
             try {
                 validateTarget(
                     char.face.targetConstraint,
@@ -226,7 +227,7 @@ export class GameCoordinatorService {
             let updatedPlayer = player;
             for (const entry of targets) {
                 const char = updatedPlayer.team.find(c => c.id === entry.characterId)!;
-                if (char.face.targetConstraint === TargetConstraint.NONE) continue;
+                if (char.face.targetConstraint === TargetConstraint.NONE || isDead(char)) continue;
                 const target: Position = {
                     playerIndex: entry.target.playerIndex as PlayerIndex,
                     slot: entry.target.slot as SlotIndex,

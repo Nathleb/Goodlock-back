@@ -357,6 +357,31 @@ describe('confirmAssignment', () => {
         expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
+    it('resolves (does not get stuck) when a dead character would otherwise fail target validation', () => {
+        const allyDie = generateFullDie([
+            { description: 'AllyHeal', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
+            { description: 'B', priority: 1, effects: [] },
+            { description: 'C', priority: 1, effects: [] },
+            { description: 'D', priority: 1, effects: [] },
+            { description: 'E', priority: 1, effects: [] },
+            { description: 'F', priority: 1, effects: [] },
+        ] satisfies BaseDieInstructions, factory);
+        // char[0] is dead (hp 0) and has an ALLY_ONLY face; the frontend default targets an enemy,
+        // which would violate ALLY_ONLY for a living actor. A dead actor must be skipped instead.
+        const team = createPlayer(
+            [0, 1, 2, 3, 4].map(i =>
+                createCharacter('C', i === 0 ? 0 : 100, 1, i === 0 ? allyDie : die, { playerIndex: 0, slot: i as SlotIndex }),
+            ),
+            0,
+        );
+        const deadGs = beginAssignPhase(createGameState(team, makeTeam(1)));
+        // player 1 already ready — player 0 confirms second, triggering resolution.
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(deadGs)));
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(deadGs));
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+    });
+
     it('emits error (not roundResolved) when an enemy target violates ALLY_ONLY constraint and both players confirm', () => {
         const allyDie = generateFullDie([
             { description: 'AllyHeal', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
