@@ -221,15 +221,17 @@ export class GameCoordinatorService {
         }
 
         try {
-            // Apply targets
+            // Apply targets. NONE-constraint faces carry a frontend-supplied default
+            // target that must not be persisted — they resolve via their own position.
             let updatedPlayer = player;
             for (const entry of targets) {
+                const char = updatedPlayer.team.find(c => c.id === entry.characterId)!;
+                if (char.face.targetConstraint === TargetConstraint.NONE) continue;
                 const target: Position = {
                     playerIndex: entry.target.playerIndex as PlayerIndex,
                     slot: entry.target.slot as SlotIndex,
                 };
-                const charSlot = updatedPlayer.team.find(c => c.id === entry.characterId)!.position.slot;
-                updatedPlayer = selectTargetOfCharacter(updatedPlayer, charSlot, target);
+                updatedPlayer = selectTargetOfCharacter(updatedPlayer, char.position.slot, target);
             }
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;

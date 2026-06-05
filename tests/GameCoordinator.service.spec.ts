@@ -335,6 +335,28 @@ describe('confirmAssignment', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
+    it('resolves (does not get stuck) when a NONE-constraint face receives the frontend default target and both players confirm', () => {
+        const noneDie = generateFullDie([
+            { description: 'SelfThing', priority: 1, effects: [], targetConstraint: TargetConstraint.NONE },
+            { description: 'B', priority: 1, effects: [] },
+            { description: 'C', priority: 1, effects: [] },
+            { description: 'D', priority: 1, effects: [] },
+            { description: 'E', priority: 1, effects: [] },
+            { description: 'F', priority: 1, effects: [] },
+        ] satisfies BaseDieInstructions, factory);
+        const mixedTeam = createPlayer(
+            [0, 1, 2, 3, 4].map(i => createCharacter('C', 100, 1, i === 0 ? noneDie : die, { playerIndex: 0, slot: i as SlotIndex })),
+            0,
+        );
+        const noneGs = beginAssignPhase(createGameState(mixedTeam, makeTeam(1)));
+        // player 1 already ready — player 0 confirms second, triggering resolution.
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(noneGs)));
+        // char[0] is NONE; the frontend sends it a default enemy target — must be ignored, not rejected.
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(noneGs));
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+    });
+
     it('emits error (not roundResolved) when an enemy target violates ALLY_ONLY constraint and both players confirm', () => {
         const allyDie = generateFullDie([
             { description: 'AllyHeal', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
