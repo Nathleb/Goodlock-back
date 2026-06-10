@@ -1,5 +1,8 @@
 import { Room } from '../types/Room.type';
 import GameState from '../types/GameState.type';
+import { PlayerPresence } from '../types/Presence.type';
+
+const CONNECTED: PlayerPresence = { connected: true, disconnectedAt: null };
 
 export function createRoom(ownerId: string): Room {
     return {
@@ -22,7 +25,13 @@ export function isRoomReady(room: Room): boolean {
 
 export function startRoom(room: Room, gameState: GameState): Room {
     if (!isRoomReady(room)) throw new Error('Room is not ready to start');
-    return { ...room, isStarted: true, gameState };
+    return {
+        ...room,
+        isStarted: true,
+        gameState,
+        playerOrder: [room.playersId[0], room.playersId[1]],
+        presence: [CONNECTED, CONNECTED],
+    };
 }
 
 export function removePlayerFromRoom(room: Room, playerId: string): Room | null {
@@ -33,4 +42,17 @@ export function removePlayerFromRoom(room: Room, playerId: string): Room | null 
         playersId: remaining,
         ownerId: room.ownerId === playerId ? remaining[0] : room.ownerId,
     };
+}
+
+export function resolvePlayerIndex(room: Room, sessionId: string): number {
+    if (room.playerOrder) return room.playerOrder.indexOf(sessionId);
+    return room.playersId.indexOf(sessionId);
+}
+
+export function setPresenceInRoom(room: Room, playerIndex: number, connected: boolean, now: number): Room {
+    if (!room.presence) return room;
+    const presence = room.presence.map((p, i) =>
+        i === playerIndex ? { connected, disconnectedAt: connected ? null : now } : p
+    ) as unknown as readonly [PlayerPresence, PlayerPresence];
+    return { ...room, presence };
 }
