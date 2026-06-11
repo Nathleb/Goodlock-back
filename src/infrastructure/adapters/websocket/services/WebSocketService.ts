@@ -21,4 +21,8 @@ export class WebSocketService implements WebSocketPort {
     emitToRoom(roomId: string, event: string, data: unknown): void {
         this.shared.getServer().to(roomId).emit(event, data);
     }
+
+    disconnectSocket(socketId: string): void {
+        this.shared.getServer().in(socketId).disconnectSockets(true);
+    }
 }

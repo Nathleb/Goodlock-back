@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, EFFECT_FACTORY } from '@application/ports/tokens';
+import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG } from '@application/ports/tokens';
 import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
@@ -28,6 +28,7 @@ import { RoomController } from '@infrastructure/adapters/http/RoomController';
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
         { provide: EFFECT_FACTORY, useValue: buildEffectFactory() },
+        { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
         { provide: ROOM_PORT, useClass: RoomManager },
         { provide: SESSION_PORT, useClass: SessionManager },
         { provide: WEBSOCKET_PORT, useClass: WebSocketService },
