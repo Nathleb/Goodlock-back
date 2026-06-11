@@ -1,4 +1,5 @@
 import GameState from '@domain/types/GameState.type';
+import GamePhase from '@domain/types/GamePhase.type';
 import Character from '@domain/types/Character.type';
 import DieFace from '@domain/types/DieFace.type';
 import { Player } from '@domain/types/Player.type';
@@ -26,6 +27,23 @@ export class GameStateMapper {
             .map((char, i) => ({ ...char, position: { ...char.position, slot: i } }));
         const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
         players[enemyIndex] = { ...enemyPlayer, team: sortedTeam };
+        return { ...dto, players };
+    }
+
+    static toDTOForViewer(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
+        if (gameState.phase === GamePhase.PLACEMENT) {
+            return GameStateMapper.toDTOForPlacement(gameState, viewerIndex);
+        }
+        const dto = GameStateMapper.toDTO(gameState);
+        const enemyIndex = (1 - viewerIndex) as 0 | 1;
+        const maskLocks = gameState.phase === GamePhase.KEEP && gameState.playersReady[enemyIndex];
+        const enemyTeam = dto.players[enemyIndex].team.map(char => ({
+            ...char,
+            target: null,
+            isFaceLocked: maskLocks ? false : char.isFaceLocked,
+        }));
+        const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
+        players[enemyIndex] = { ...players[enemyIndex], team: enemyTeam };
         return { ...dto, players };
     }
 

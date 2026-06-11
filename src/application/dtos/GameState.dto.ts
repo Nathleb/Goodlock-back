@@ -41,3 +41,20 @@ export type GameStateDTO = {
     playersReady: [boolean, boolean];
     players: [PlayerGameStateDTO, PlayerGameStateDTO];
 };
+
+export type GameStateUpdatePayload = GameStateDTO & {
+    /** Remaining ms until an AFK claim becomes valid against the non-ready player; null when not applicable. Computed server-side at emit time. */
+    afkClaimInMs: number | null;
+};
+
+export type PresenceChangedDTO = {
+    playerIndex: 0 | 1;
+    connected: boolean;
+    /** Remaining ms until a forfeit claim becomes valid; null when connected. */
+    claimInMs: number | null;
+};
+
+export type GameOverDTO = {
+    winner: 0 | 1 | 'draw';
+    reason: 'elimination' | 'forfeit' | 'afk' | 'concede';
+};
