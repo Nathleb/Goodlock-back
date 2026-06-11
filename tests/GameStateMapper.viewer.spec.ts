@@ -49,4 +49,10 @@ describe('toDTOForViewer', () => {
         expect(viewer.players[1].team.map(c => c.position.slot))
             .toEqual(placement.players[1].team.map(c => c.position.slot));
     });
+
+    it('masks player 0 when the viewer is player 1', () => {
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.ASSIGN, [true, false]), 1);
+        expect(dto.players[0].team.every(c => c.target === null)).toBe(true);
+        expect(dto.players[1].team.every(c => c.target !== null)).toBe(true);
+    });
 });
