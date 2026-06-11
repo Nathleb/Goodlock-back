@@ -30,6 +30,12 @@ export function evaluateClaim(
     return { valid: false, error: 'No valid claim: opponent is neither forfeited nor AFK' };
 }
 
+/**
+ * Viewer-agnostic countdown until the AFK window opens against the non-ready player.
+ * Deliberately looser than evaluateClaim's AFK ground (no claimantIndex): the same value
+ * is broadcast to the whole room; whether a specific player may actually claim is
+ * enforced per-claimant by evaluateClaim at claim time.
+ */
 export function computeAfkClaimInMs(
     gs: GameState,
     phaseStartedAt: number | undefined,

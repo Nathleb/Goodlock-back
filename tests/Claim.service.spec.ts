@@ -49,6 +49,15 @@ describe('evaluateClaim — AFK ground', () => {
     it('invalid when phaseStartedAt is unknown', () => {
         expect(evaluateClaim(gs(GamePhase.ASSIGN, [true, false]), 0, ONLINE, undefined, NOW, CONFIG).valid).toBe(false);
     });
+
+    it('valid from player 1 seat when roles are mirrored', () => {
+        expect(evaluateClaim(gs(GamePhase.ASSIGN, [false, true]), 1, ONLINE, NOW - 120_000, NOW, CONFIG))
+            .toEqual({ valid: true, reason: 'afk' });
+    });
+
+    it('invalid for player 1 when only player 0 is ready', () => {
+        expect(evaluateClaim(gs(GamePhase.ASSIGN, [true, false]), 1, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
+    });
 });
 
 describe('countdown helpers', () => {
