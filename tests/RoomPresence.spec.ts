@@ -53,4 +53,16 @@ describe('setPresenceInRoom', () => {
         const lobby = createRoom('p0');
         expect(setPresenceInRoom(lobby, 0, false, 5000)).toBe(lobby);
     });
+
+    it('is a no-op for out-of-range player indices', () => {
+        const room = startedRoom();
+        expect(setPresenceInRoom(room, -1, false, 5000)).toBe(room);
+        expect(setPresenceInRoom(room, 2, false, 5000)).toBe(room);
+    });
+
+    it('does not mutate the input room', () => {
+        const room = startedRoom();
+        setPresenceInRoom(room, 1, false, 5000);
+        expect(room.presence![1]).toEqual({ connected: true, disconnectedAt: null });
+    });
 });

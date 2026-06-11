@@ -51,8 +51,8 @@ export function resolvePlayerIndex(room: Room, sessionId: string): number {
 
 export function setPresenceInRoom(room: Room, playerIndex: number, connected: boolean, now: number): Room {
     if (!room.presence) return room;
-    const presence = room.presence.map((p, i) =>
-        i === playerIndex ? { connected, disconnectedAt: connected ? null : now } : p
-    ) as unknown as readonly [PlayerPresence, PlayerPresence];
+    if (playerIndex < 0 || playerIndex >= room.presence.length) return room;
+    const presence: [PlayerPresence, PlayerPresence] = [...room.presence];
+    presence[playerIndex] = { connected, disconnectedAt: connected ? null : now };
     return { ...room, presence };
 }
