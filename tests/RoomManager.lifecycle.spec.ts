@@ -13,6 +13,8 @@ function startedRoom(manager: RoomManager): string {
     return room.roomId;
 }
 
+afterEach(() => jest.restoreAllMocks());
+
 describe('phaseStartedAt stamping', () => {
     it('stamps on startGame', () => {
         const manager = new RoomManager();
@@ -28,7 +30,6 @@ describe('phaseStartedAt stamping', () => {
         expect(manager.getRoom(roomId)!.phaseStartedAt).not.toBe(111_111);
         manager.updateGameState(roomId, gs(GamePhase.KEEP, 2));
         expect(manager.getRoom(roomId)!.phaseStartedAt).toBe(111_111);
-        jest.restoreAllMocks();
     });
 
     it('re-stamps on rollsLeft change within KEEP (reroll sub-round)', () => {
@@ -38,7 +39,14 @@ describe('phaseStartedAt stamping', () => {
         jest.spyOn(Date, 'now').mockReturnValue(222_222);
         manager.updateGameState(roomId, gs(GamePhase.KEEP, 1));
         expect(manager.getRoom(roomId)!.phaseStartedAt).toBe(222_222);
-        jest.restoreAllMocks();
+    });
+
+    it('ignores updateGameState for lobby rooms', () => {
+        const manager = new RoomManager();
+        const room = manager.createRoom('p0');
+        manager.updateGameState(room.roomId, gs(GamePhase.KEEP, 2));
+        expect(manager.getRoom(room.roomId)!.gameState).toBeUndefined();
+        expect(manager.getRoom(room.roomId)!.phaseStartedAt).toBeUndefined();
     });
 });
 
@@ -78,5 +86,15 @@ describe('sweepAbandonedRooms', () => {
         const manager = new RoomManager();
         manager.createRoom('p0');
         expect(manager.sweepAbandonedRooms(Number.MAX_SAFE_INTEGER, 0)).toEqual([]);
+    });
+
+    it('clears playerToRoom mappings for swept rooms', () => {
+        const manager = new RoomManager();
+        const roomId = startedRoom(manager);
+        manager.setPresence(roomId, 0, false, 1000);
+        manager.setPresence(roomId, 1, false, 2000);
+        manager.sweepAbandonedRooms(2000 + 600_000, 600_000);
+        // quitRoom resolves via playerToRoom; null proves the mapping is gone
+        expect(manager.quitRoom('p0')).toBeNull();
     });
 });

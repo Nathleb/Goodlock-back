@@ -18,6 +18,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
             () => this.sweepAbandonedRooms(Date.now(), ABANDONED_ROOM_TTL_MS),
             SWEEP_INTERVAL_MS,
         );
+        this.sweepInterval.unref?.();
     }
 
     onModuleDestroy(): void {
@@ -69,7 +70,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
 
     updateGameState(roomId: string, gameState: GameState): void {
         const room = this.rooms.get(roomId);
-        if (!room) return;
+        if (!room || !room.isStarted) return;
         // A new confirmation sub-round starts on phase change OR on a KEEP reroll (rollsLeft change).
         const isNewSubRound =
             room.gameState?.phase !== gameState.phase || room.gameState?.rollsLeft !== gameState.rollsLeft;
@@ -85,6 +86,8 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         return updated;
     }
 
+    // A player who quits a started game is marked disconnected by the concession flow
+    // (RoomCoordinator), so quit rooms still satisfy the "all players disconnected" rule here.
     sweepAbandonedRooms(now: number, thresholdMs: number): string[] {
         const deletedRoomIds: string[] = [];
         for (const room of this.rooms.values()) {
