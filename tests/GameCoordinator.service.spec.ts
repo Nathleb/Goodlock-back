@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
@@ -67,8 +67,8 @@ const makeTargets = (gs: typeof assignGs) =>
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
-const mockRoom    = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn() };
-const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn() };
+const mockRoom    = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setPresence: jest.fn(), listOpenRooms: jest.fn() };
+const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
 let coordinator: GameCoordinatorService;
 
@@ -81,6 +81,7 @@ beforeEach(async () => {
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: EFFECT_FACTORY, useValue: factory },
+            { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);
@@ -295,7 +296,7 @@ describe('confirmAssignment', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(gameOverGs));
         coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0 });
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'elimination' });
         const calls = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
         expect(calls[calls.length - 1]).toBe('gameOver');
     });

@@ -1,18 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Injectable, Inject } from '@nestjs/common';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { Session } from '@application/dtos/Session.dto';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
+import { GameStateDTO, GameStateUpdatePayload } from '@application/dtos/GameState.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import Position, { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
-import { assertPhase, assertNotReady, beginRollPhase } from '@domain/services/Phase.service';
+import { ClaimConfig } from '@domain/types/Claim.type';
+import { assertPhase, assertNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
 import { validateTarget } from '@domain/services/TargetValidator';
 import TargetConstraint from '@domain/types/TargetConstraint.type';
 import EffectFactory from '@domain/factories/EffectFactory.class';
@@ -20,8 +22,9 @@ import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGener
 import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer, rearrangeTeam, selectTargetOfCharacter } from '@domain/services/Player.service';
 import { isDead } from '@domain/services/Character.service';
-import { isRoomReady } from '@domain/services/Room.service';
+import { isRoomReady, resolvePlayerIndex } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
+import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
 import {
     confirmPlacement, performRoll,
     confirmKeep,
@@ -41,6 +44,7 @@ export class GameCoordinatorService {
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
         @Inject(EFFECT_FACTORY) private readonly effectFactory: EffectFactory,
+        @Inject(CLAIM_CONFIG) private readonly claimConfig: ClaimConfig,
     ) {}
 
     private getContext(socketId: string): GameContext | null {
@@ -48,13 +52,21 @@ export class GameCoordinatorService {
         if (!session?.roomId) return null;
         const room = this.roomPort.getRoom(session.roomId);
         if (!room?.gameState) return null;
-        const idx = room.playersId.indexOf(session.sessionId);
+        const idx = resolvePlayerIndex(room, session.sessionId);
         if (idx === -1) return null;
         return { session, room, playerIndex: idx as PlayerIndex };
     }
 
     private emitError(socketId: string, message: string): void {
         this.wsPort.emitToSocket(socketId, 'error', { message });
+    }
+
+    private withTimers(roomId: string, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
+        const room = this.roomPort.getRoom(roomId);
+        return {
+            ...dto,
+            afkClaimInMs: computeAfkClaimInMs(gs, room?.phaseStartedAt, Date.now(), this.claimConfig.afkLimitMs),
+        };
     }
 
     private doConfirm(
@@ -70,7 +82,7 @@ export class GameCoordinatorService {
             const confirmed = domainFn(gs, playerIndex);
             this.roomPort.updateGameState(room.roomId, confirmed);
             if (wasOtherReady) {
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(confirmed));
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(confirmed), confirmed));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -111,7 +123,7 @@ export class GameCoordinatorService {
             const gameState = createGameState(player0, player1);
 
             this.roomPort.startGame(room.roomId, gameState);
-            this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gameState));
+            this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gameState), gameState));
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -156,10 +168,10 @@ export class GameCoordinatorService {
             if (wasOtherReady) {
                 gs = performRoll(gs);
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gs), gs));
             } else {
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(gs, playerIndex));
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -259,11 +271,11 @@ export class GameCoordinatorService {
             });
 
             if (winner !== null) {
-                this.wsPort.emitToRoom(room.roomId, 'gameOver', { winner });
+                this.wsPort.emitToRoom(room.roomId, 'gameOver', { winner, reason: 'elimination' });
             } else {
                 gs = performRoll(beginRollPhase(endOfRound(gs)));
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gs), gs));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -278,7 +290,7 @@ export class GameCoordinatorService {
             const gs = domainCancelPlacement(room.gameState, playerIndex);
             if (gs !== room.gameState) {
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(gs, playerIndex));
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -307,5 +319,22 @@ export class GameCoordinatorService {
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
+    }
+
+    claimVictory(socketId: string): void {
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const { room, playerIndex } = ctx;
+        const opponentIndex = (1 - playerIndex) as PlayerIndex;
+        const opponentPresence = room.presence?.[opponentIndex];
+        if (!opponentPresence) { this.emitError(socketId, 'Action not available'); return; }
+
+        const verdict = evaluateClaim(
+            room.gameState, playerIndex, opponentPresence, room.phaseStartedAt, Date.now(), this.claimConfig,
+        );
+        if (verdict.valid === false) { this.emitError(socketId, verdict.error); return; }
+
+        this.roomPort.updateGameState(room.roomId, beginResultPhase(room.gameState));
+        this.wsPort.emitToRoom(room.roomId, 'gameOver', { winner: playerIndex, reason: verdict.reason });
     }
 }
