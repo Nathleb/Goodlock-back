@@ -7,7 +7,7 @@ import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { Session } from '@application/dtos/Session.dto';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
-import { GameStateDTO, GameStateUpdatePayload } from '@application/dtos/GameState.dto';
+import { GameStateDTO, GameStateUpdatePayload, GameOverDTO } from '@application/dtos/GameState.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
@@ -271,7 +271,8 @@ export class GameCoordinatorService {
             });
 
             if (winner !== null) {
-                this.wsPort.emitToRoom(room.roomId, 'gameOver', { winner, reason: 'elimination' });
+                const payload: GameOverDTO = { winner, reason: 'elimination' };
+                this.wsPort.emitToRoom(room.roomId, 'gameOver', payload);
             } else {
                 gs = performRoll(beginRollPhase(endOfRound(gs)));
                 this.roomPort.updateGameState(room.roomId, gs);
@@ -325,16 +326,21 @@ export class GameCoordinatorService {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
-        const opponentIndex = (1 - playerIndex) as PlayerIndex;
-        const opponentPresence = room.presence?.[opponentIndex];
-        if (!opponentPresence) { this.emitError(socketId, 'Action not available'); return; }
+        try {
+            const opponentIndex = (1 - playerIndex) as PlayerIndex;
+            const opponentPresence = room.presence?.[opponentIndex];
+            if (!opponentPresence) { this.emitError(socketId, 'Action not available'); return; }
 
-        const verdict = evaluateClaim(
-            room.gameState, playerIndex, opponentPresence, room.phaseStartedAt, Date.now(), this.claimConfig,
-        );
-        if (verdict.valid === false) { this.emitError(socketId, verdict.error); return; }
+            const verdict = evaluateClaim(
+                room.gameState, playerIndex, opponentPresence, room.phaseStartedAt, Date.now(), this.claimConfig,
+            );
+            if (verdict.valid === false) { this.emitError(socketId, verdict.error); return; }
 
-        this.roomPort.updateGameState(room.roomId, beginResultPhase(room.gameState));
-        this.wsPort.emitToRoom(room.roomId, 'gameOver', { winner: playerIndex, reason: verdict.reason });
+            this.roomPort.updateGameState(room.roomId, beginResultPhase(room.gameState));
+            const payload: GameOverDTO = { winner: playerIndex, reason: verdict.reason };
+            this.wsPort.emitToRoom(room.roomId, 'gameOver', payload);
+        } catch (e: unknown) {
+            this.emitError(socketId, (e as Error).message);
+        }
     }
 }

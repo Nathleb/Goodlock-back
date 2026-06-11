@@ -14,6 +14,9 @@ export function evaluateClaim(
     now: number,
     config: ClaimConfig,
 ): ClaimVerdict {
+    if (gs.phase === GamePhase.RESULT) {
+        return { valid: false, error: 'Game is already over' };
+    }
     if (!opponentPresence.connected
         && opponentPresence.disconnectedAt !== null
         && now - opponentPresence.disconnectedAt >= config.graceMs) {

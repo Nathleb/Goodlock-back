@@ -72,6 +72,18 @@ describe('claimVictory', () => {
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
+
+    it('rejects a claim after the game already ended', () => {
+        const r = room({
+            gameState: gs(GamePhase.RESULT, [false, false]),
+            presence: [{ connected: true, disconnectedAt: null }, { connected: false, disconnectedAt: NOW - 999_999 }],
+        });
+        mockRoom.getRoom.mockReturnValue(r);
+        coordinator.claimVictory(SOCKET);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.anything());
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
 });
 
 describe('stable player identity', () => {

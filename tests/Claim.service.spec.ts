@@ -30,6 +30,11 @@ describe('evaluateClaim — forfeit ground', () => {
     it('invalid when opponent is connected', () => {
         expect(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 10, NOW, CONFIG).valid).toBe(false);
     });
+
+    it('invalid on a finished game even when the opponent is long gone', () => {
+        const longGone: PlayerPresence = { connected: false, disconnectedAt: NOW - 999_999 };
+        expect(evaluateClaim(gs(GamePhase.RESULT, [false, false]), 0, longGone, NOW - 10, NOW, CONFIG).valid).toBe(false);
+    });
 });
 
 describe('evaluateClaim — AFK ground', () => {
