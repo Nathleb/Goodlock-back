@@ -9,4 +9,5 @@ export interface RoomPort {
     startGame(roomId: string, gameState: GameState): Room;
     updateGameState(roomId: string, gameState: GameState): void;
     listOpenRooms(): Room[];
+    setPresence(roomId: string, playerIndex: number, connected: boolean, now: number): Room | undefined;
 }
