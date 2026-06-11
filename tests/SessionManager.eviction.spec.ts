@@ -36,4 +36,12 @@ describe('createOrReconnectSession eviction reporting', () => {
         expect(second.sessionId).toBe(first.sessionId);
         expect(second.roomId).toBe('room-1');
     });
+
+    it('does not evict itself when called twice with the same socket', () => {
+        const manager = new SessionManager();
+        manager.createOrReconnectSession('sock-a', USER);
+        const { session, evictedSocketId } = manager.createOrReconnectSession('sock-a', USER);
+        expect(evictedSocketId).toBeNull();
+        expect(session.socketId).toBe('sock-a');
+    });
 });

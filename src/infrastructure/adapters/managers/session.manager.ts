@@ -14,7 +14,9 @@ export class SessionManager implements SessionPort {
     createOrReconnectSession(socketId: string, userId: UserId): ConnectResult {
         const existing = this.byUserId.get(userId);
         if (existing) {
-            const evictedSocketId = this.bySockId.has(existing.socketId) ? existing.socketId : null;
+            const evictedSocketId = existing.socketId !== socketId && this.bySockId.has(existing.socketId)
+                ? existing.socketId
+                : null;
             this.bySockId.delete(existing.socketId);
             const reconnected: Session = { ...existing, socketId };
             this.bySockId.set(socketId, reconnected);

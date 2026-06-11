@@ -93,6 +93,17 @@ describe('handleConnect — started game reconnect', () => {
     });
 });
 
+describe('handleConnect — non-participant', () => {
+    it('does not send a game state snapshot to sessions outside playerOrder', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({
+            session: { ...SESSION_WITH_ROOM, sessionId: 'stranger' }, evictedSocketId: null,
+        });
+        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
+        coordinator.handleConnect(SOCKET, USER_ID);
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET, 'gameStateUpdated', expect.anything());
+    });
+});
+
 describe('handleDisconnect', () => {
     it('does nothing when session is not found', () => {
         mockSession.getSession.mockReturnValue(undefined);
@@ -139,5 +150,6 @@ describe('handleDisconnect — started game', () => {
         expect(mockRoom.setPresence).toHaveBeenCalledWith('room-1', 0, false, expect.any(Number));
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'presenceChanged', { playerIndex: 0, connected: false, claimInMs: 60_000 });
         expect(mockSession.disconnectSession).toHaveBeenCalledWith(SOCKET);
+        expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
     });
 });

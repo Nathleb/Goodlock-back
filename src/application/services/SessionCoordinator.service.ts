@@ -5,6 +5,7 @@ import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomMapper } from '@application/mappers/RoomMapper';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
+import { PresenceChangedDTO, GameStateUpdatePayload } from '@application/dtos/GameState.dto';
 import { UserId } from '@shared/branded.types';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
@@ -34,18 +35,17 @@ export class SessionCoordinatorService {
         const playerIndex = resolvePlayerIndex(room, session.sessionId);
         if (room.isStarted && playerIndex !== -1) {
             room = this.roomPort.setPresence(room.roomId, playerIndex, true, Date.now()) ?? room;
-            this.wsPort.emitToRoom(room.roomId, 'presenceChanged', { playerIndex, connected: true, claimInMs: null });
+            const presence: PresenceChangedDTO = { playerIndex: playerIndex as PlayerIndex, connected: true, claimInMs: null };
+            this.wsPort.emitToRoom(room.roomId, 'presenceChanged', presence);
         }
 
         this.wsPort.emitToSocket(socketId, 'roomUpdated', RoomMapper.toDTO(room));
-        if (room.gameState) {
-            const dto = playerIndex !== -1
-                ? GameStateMapper.toDTOForViewer(room.gameState, playerIndex as PlayerIndex)
-                : GameStateMapper.toDTO(room.gameState);
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', {
-                ...dto,
+        if (room.gameState && playerIndex !== -1) {
+            const snapshot: GameStateUpdatePayload = {
+                ...GameStateMapper.toDTOForViewer(room.gameState, playerIndex as PlayerIndex),
                 afkClaimInMs: computeAfkClaimInMs(room.gameState, room.phaseStartedAt, Date.now(), this.claimConfig.afkLimitMs),
-            });
+            };
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', snapshot);
         }
     }
 
@@ -58,11 +58,12 @@ export class SessionCoordinatorService {
                 const playerIndex = resolvePlayerIndex(room, session.sessionId);
                 if (playerIndex !== -1) {
                     this.roomPort.setPresence(room.roomId, playerIndex, false, Date.now());
-                    this.wsPort.emitToRoom(room.roomId, 'presenceChanged', {
-                        playerIndex,
+                    const presence: PresenceChangedDTO = {
+                        playerIndex: playerIndex as PlayerIndex,
                         connected: false,
                         claimInMs: this.claimConfig.graceMs,
-                    });
+                    };
+                    this.wsPort.emitToRoom(room.roomId, 'presenceChanged', presence);
                 }
                 this.wsPort.leaveRoom(socketId, session.roomId);
             } else {
