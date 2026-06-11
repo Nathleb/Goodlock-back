@@ -4,6 +4,10 @@ import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomMapper } from '@application/mappers/RoomMapper';
+import GamePhase from '@domain/types/GamePhase.type';
+import { beginResultPhase } from '@domain/services/Phase.service';
+import { resolvePlayerIndex } from '@domain/services/Room.service';
+import { GameOverDTO } from '@application/dtos/GameState.dto';
 
 @Injectable()
 export class RoomCoordinatorService {
@@ -14,6 +18,18 @@ export class RoomCoordinatorService {
     ) {}
 
     private leaveCurrentRoom(socketId: string, sessionId: string, roomId: string): void {
+        const room = this.roomPort.getRoom(roomId);
+        if (room?.isStarted && room.gameState && room.gameState.phase !== GamePhase.RESULT) {
+            const quitterIndex = resolvePlayerIndex(room, sessionId);
+            if (quitterIndex !== -1) {
+                const winner = (1 - quitterIndex) as 0 | 1;
+                this.roomPort.updateGameState(roomId, beginResultPhase(room.gameState));
+                // Mark the quitter gone so the janitor's "all players disconnected" rule can fire.
+                this.roomPort.setPresence(roomId, quitterIndex, false, Date.now());
+                const payload: GameOverDTO = { winner, reason: 'concede' };
+                this.wsPort.emitToRoom(roomId, 'gameOver', payload);
+            }
+        }
         const updatedRoom = this.roomPort.quitRoom(sessionId);
         this.sessionPort.setSessionRoom(socketId, undefined);
         this.wsPort.leaveRoom(socketId, roomId);
