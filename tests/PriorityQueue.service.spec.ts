@@ -45,6 +45,16 @@ describe('PriorityQueueService', () => {
     expect(queue[1].length).toBe(1);
   });
 
+  it('should reject a finalPriority outside the queue bounds with a descriptive error', () => {
+    // queue length 10, face.priority 1 → baseSpeed 9 lands at index 10 (out of range)
+    expect(() =>
+      addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, 9),
+    ).toThrow(/out of range/i);
+    expect(() =>
+      addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, -2),
+    ).toThrow(/out of range/i);
+  });
+
   it('should reset priority queue', () => {
     const withEffect = { ...gameState, priorityQueue: addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, character.baseSpeed) };
     const reset = resetPriorityQueue(withEffect);

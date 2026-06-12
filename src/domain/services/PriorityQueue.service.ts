@@ -18,6 +18,12 @@ export function addEffectsToPriorityQueue(
     baseSpeed: number
 ): PriorityQueue {
     const finalPriority = dieFace.priority + baseSpeed;
+    if (finalPriority < 0 || finalPriority >= priorityQueue.length) {
+        throw new Error(
+            `finalPriority ${finalPriority} (face priority ${dieFace.priority} + baseSpeed ${baseSpeed}) ` +
+            `is out of range for a queue of length ${priorityQueue.length} — check the character template values`
+        );
+    }
     const newEntry: QueueEntry = [dieFace, target, characterId];
     const newQueue = [...priorityQueue];
     newQueue[finalPriority] = [...newQueue[finalPriority], newEntry];
