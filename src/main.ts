@@ -1,3 +1,6 @@
+// Load .env before any module import: @WebSocketGateway evaluates its CORS
+// options at decorator time, before Nest's ConfigModule runs.
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
