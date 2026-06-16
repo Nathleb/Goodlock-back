@@ -66,7 +66,7 @@ const makeTargets = (gs: typeof assignGs) =>
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
-const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
+const mockSession = { getSession: jest.fn(), getSessionById: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom    = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setPresence: jest.fn(), listOpenRooms: jest.fn() };
 const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
@@ -155,11 +155,17 @@ describe('startGame', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('starts the game and emits gameStateUpdated to the room', () => {
+    it('starts the game and emits a per-viewer masked state to each player socket', () => {
         mockRoom.startGame.mockReturnValue({ ...lobbyRoom, isStarted: true });
+        mockSession.getSessionById.mockImplementation((id: string) =>
+            id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
         expect(mockRoom.startGame).toHaveBeenCalledWith('room-1', expect.anything());
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.anything());
+        // Each player gets their own placement view (own team real, enemy masked).
+        // No room-wide broadcast — that would leak the opponent's real order.
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'gameStateUpdated', expect.anything());
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
 
@@ -193,10 +199,13 @@ describe('rearrangeTeam', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('updates game state without emitting when valid', () => {
+    it('saves state and echoes masked gameStateUpdated to the acting socket only', () => {
         coordinator.rearrangeTeam(SOCKET_0, validIds().reverse());
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        // The actor must receive the persisted order back, otherwise the
+        // prop-controlled client reverts the drag. Opponent gets nothing —
+        // placement arrangement stays secret.
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
@@ -224,10 +233,12 @@ describe('confirmPlacement', () => {
 describe('confirmKeep', () => {
     beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(keepGs)));
 
-    it('saves state silently when first to confirm', () => {
+    it('echoes the confirming player\'s own ready state to their socket when first to confirm', () => {
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(
+            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ playersReady: [true, false] }),
+        );
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -252,14 +263,14 @@ describe('confirmKeep', () => {
     it('accepts empty array (no characters locked)', () => {
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalled();
     });
 
     it('accepts all 5 characters locked', () => {
         const allIds = keepGs.players[0].team.map(c => c.id);
         coordinator.confirmKeep(SOCKET_0, allIds);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalled();
     });
 
     it('sets isFaceLocked=true only for locked characters and false for the rest', () => {
@@ -277,11 +288,21 @@ describe('confirmKeep', () => {
 describe('confirmAssignment', () => {
     beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(assignGs)));
 
-    it('saves state silently when first to confirm', () => {
+    it('echoes the confirming player\'s own ready state to their socket when first to confirm', () => {
         coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(
+            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ playersReady: [true, false] }),
+        );
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
+    it('masks the opponent (no targets leaked) in the first-confirm echo', () => {
+        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
+        const call = mockWs.emitToSocket.mock.calls.find(([, ev]) => ev === 'gameStateUpdated');
+        expect(call).toBeDefined();
+        const dto = call![2];
+        expect(dto.players[1].team.every((c: { target: unknown }) => c.target === null)).toBe(true);
     });
 
     it('emits roundResolved then gameStateUpdated for a new round when no winner', () => {

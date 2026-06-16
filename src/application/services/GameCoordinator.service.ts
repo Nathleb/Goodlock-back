@@ -83,6 +83,12 @@ export class GameCoordinatorService {
             this.roomPort.updateGameState(room.roomId, confirmed);
             if (wasOtherReady) {
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(confirmed), confirmed));
+            } else {
+                // First to confirm: echo the player's own (opponent-masked) state
+                // back to their socket so the client learns playersReady[self]=true
+                // and flips the button to WAITING. The opponent is not notified,
+                // keeping this confirm secret.
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForViewer(confirmed, playerIndex), confirmed));
             }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
@@ -123,7 +129,15 @@ export class GameCoordinatorService {
             const gameState = createGameState(player0, player1);
 
             this.roomPort.startGame(room.roomId, gameState);
-            this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gameState), gameState));
+            // Placement is secret: each player must receive their own team in real
+            // order with the enemy masked. A room-wide broadcast can't differ per
+            // viewer, so emit a per-viewer placement view to each player's socket.
+            room.playersId.forEach((playerSessionId, idx) => {
+                const playerSession = this.sessionPort.getSessionById(playerSessionId);
+                if (!playerSession) return;
+                const viewerIndex = idx as PlayerIndex;
+                this.wsPort.emitToSocket(playerSession.socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gameState, viewerIndex), gameState));
+            });
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -152,6 +166,10 @@ export class GameCoordinatorService {
             players[playerIndex] = updatedPlayer;
             const updatedGs = { ...room.gameState, players };
             this.roomPort.updateGameState(room.roomId, updatedGs);
+            // Echo the persisted order back to the actor only: the client is
+            // prop-controlled and would otherwise snap the drag back. The
+            // opponent is not notified, so the arrangement stays secret.
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(updatedGs, playerIndex), updatedGs));
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
@@ -257,6 +275,10 @@ export class GameCoordinatorService {
 
             if (!wasOtherReady) {
                 this.roomPort.updateGameState(room.roomId, gs);
+                // First to confirm: echo the opponent-masked state to the actor so
+                // their button flips to WAITING. Opponent is not notified (targets
+                // stay secret until both confirm and the round resolves).
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForViewer(gs, playerIndex), gs));
                 return;
             }
 
