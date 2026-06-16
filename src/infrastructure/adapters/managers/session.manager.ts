@@ -10,6 +10,9 @@ export class SessionManager implements SessionPort {
     // (see ConnectResult.evictedSocketId).
     private readonly bySockId = new Map<string, Session>();
     private readonly byUserId = new Map<UserId, Session>();
+    // sessionId is stable across reconnects; rooms reference players by it, so
+    // this index lets coordinators resolve a player's live socket to emit to.
+    private readonly bySessionId = new Map<string, Session>();
 
     createOrReconnectSession(socketId: string, userId: UserId): ConnectResult {
         const existing = this.byUserId.get(userId);
@@ -21,6 +24,7 @@ export class SessionManager implements SessionPort {
             const reconnected: Session = { ...existing, socketId };
             this.bySockId.set(socketId, reconnected);
             this.byUserId.set(userId, reconnected);
+            this.bySessionId.set(reconnected.sessionId, reconnected);
             return { session: reconnected, evictedSocketId };
         }
         const session: Session = {
@@ -30,11 +34,16 @@ export class SessionManager implements SessionPort {
         };
         this.bySockId.set(socketId, session);
         this.byUserId.set(userId, session);
+        this.bySessionId.set(session.sessionId, session);
         return { session, evictedSocketId: null };
     }
 
     getSession(socketId: string): Session | undefined {
         return this.bySockId.get(socketId);
+    }
+
+    getSessionById(sessionId: string): Session | undefined {
+        return this.bySessionId.get(sessionId);
     }
 
     setSessionRoom(socketId: string, roomId: string | undefined): void {
@@ -43,13 +52,14 @@ export class SessionManager implements SessionPort {
         const updated: Session = { ...session, roomId };
         this.bySockId.set(socketId, updated);
         this.byUserId.set(session.userId, updated);
+        this.bySessionId.set(session.sessionId, updated);
     }
 
     disconnectSession(socketId: string): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         this.bySockId.delete(socketId);
-        // byUserId entry stays — enables reconnection
+        // byUserId / bySessionId entries stay — enables reconnection
     }
 
     deleteSession(socketId: string): void {
@@ -57,5 +67,6 @@ export class SessionManager implements SessionPort {
         if (!session) return;
         this.bySockId.delete(socketId);
         this.byUserId.delete(session.userId);
+        this.bySessionId.delete(session.sessionId);
     }
 }

@@ -10,6 +10,8 @@ export type ConnectResult = {
 export interface SessionPort {
     createOrReconnectSession(socketId: string, userId: UserId): ConnectResult;
     getSession(socketId: string): Session | undefined;
+    /** Resolve a session by its stable sessionId (survives reconnects, unlike socketId). */
+    getSessionById(sessionId: string): Session | undefined;
     setSessionRoom(socketId: string, roomId: string | undefined): void;
     disconnectSession(socketId: string): void;
     deleteSession(socketId: string): void;

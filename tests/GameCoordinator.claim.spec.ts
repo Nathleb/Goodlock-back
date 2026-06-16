@@ -9,7 +9,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 const NOW = 1_000_000;
 const SOCKET = 'sock-0';
 
-const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
+const mockSession = { getSession: jest.fn(), getSessionById: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setPresence: jest.fn(), listOpenRooms: jest.fn() };
 const mockWs = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
@@ -109,8 +109,13 @@ describe('afkClaimInMs in emitted game state', () => {
             mockRoom.getRoom.mockReturnValue(started);
             return started;
         });
+        mockSession.getSessionById.mockImplementation((id: string) =>
+            id === 'p0' ? { sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' }
+            : id === 'p1' ? { sessionId: 'p1', socketId: 'sock-1', userId: 'u2', roomId: 'room-1' }
+            : undefined);
         coordinator.startGame(SOCKET);
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated',
+        // Per-viewer placement emit still carries the timer fields (afkClaimInMs).
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'gameStateUpdated',
             expect.objectContaining({ afkClaimInMs: 120_000 }));
     });
 });

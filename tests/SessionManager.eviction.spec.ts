@@ -45,3 +45,31 @@ describe('createOrReconnectSession eviction reporting', () => {
         expect(session.socketId).toBe('sock-a');
     });
 });
+
+describe('getSessionById', () => {
+    it('resolves a session by its stable sessionId', () => {
+        const manager = new SessionManager();
+        const { session } = manager.createOrReconnectSession('sock-a', USER);
+        expect(manager.getSessionById(session.sessionId)?.socketId).toBe('sock-a');
+    });
+
+    it('points at the current socket after a reconnect', () => {
+        const manager = new SessionManager();
+        const { session } = manager.createOrReconnectSession('sock-a', USER);
+        manager.disconnectSession('sock-a');
+        manager.createOrReconnectSession('sock-b', USER);
+        expect(manager.getSessionById(session.sessionId)?.socketId).toBe('sock-b');
+    });
+
+    it('returns undefined for an unknown sessionId', () => {
+        const manager = new SessionManager();
+        expect(manager.getSessionById('nope')).toBeUndefined();
+    });
+
+    it('returns undefined after the session is deleted', () => {
+        const manager = new SessionManager();
+        const { session } = manager.createOrReconnectSession('sock-a', USER);
+        manager.deleteSession('sock-a');
+        expect(manager.getSessionById(session.sessionId)).toBeUndefined();
+    });
+});
