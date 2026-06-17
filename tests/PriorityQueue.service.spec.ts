@@ -33,37 +33,27 @@ describe('PriorityQueueService', () => {
 
   let gameState: GameState;
   beforeEach(() => {
-    gameState = { ...createGameState(player1, player2), priorityQueue: createPriorityQueue(10) };
+    gameState = { ...createGameState(player1, player2), priorityQueue: createPriorityQueue() };
   });
 
-  it('should create a priority queue', () => {
-    expect(createPriorityQueue(15).length).toBe(15);
+  it('creates an empty priority queue', () => {
+    expect(createPriorityQueue()).toEqual([]);
   });
 
-  it('should add one entry per character at finalPriority = face.priority + baseSpeed', () => {
-    const queue = addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, character.baseSpeed);
-    expect(queue[1].length).toBe(1);
+  it('appends one flat entry per queued action', () => {
+    const queue = addEffectsToPriorityQueue(createPriorityQueue(), character.face, target, character.id, character.baseSpeed);
+    expect(queue.length).toBe(1);
   });
 
-  it('should reject a finalPriority outside the queue bounds with a descriptive error', () => {
-    // queue length 10, face.priority 1 → baseSpeed 9 lands at index 10 (out of range)
-    expect(() =>
-      addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, 9),
-    ).toThrow(/out of range/i);
-    expect(() =>
-      addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, -2),
-    ).toThrow(/out of range/i);
-  });
-
-  it('should reset priority queue', () => {
-    const withEffect = { ...gameState, priorityQueue: addEffectsToPriorityQueue(gameState.priorityQueue, character.face, target, character.id, character.baseSpeed) };
+  it('resets the priority queue to empty', () => {
+    const withEffect = { ...gameState, priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(), character.face, target, character.id, character.baseSpeed) };
     const reset = resetPriorityQueue(withEffect);
-    expect(reset.priorityQueue.every(bucket => bucket.length === 0)).toBe(true);
+    expect(reset.priorityQueue.length).toBe(0);
   });
 
-  it('should unstack priority queue and clear it', () => {
+  it('unstacks the priority queue and clears it', () => {
     const { state } = unstackPriorityQueueWithLog(gameState);
-    expect(state.priorityQueue.every(bucket => bucket.length === 0)).toBe(true);
+    expect(state.priorityQueue.length).toBe(0);
   });
 
   it('should cancel effects from dead actors and mark them skipped in the log', () => {
@@ -77,7 +67,7 @@ describe('PriorityQueueService', () => {
         { playerIndex: 1, team: [targetChar] },
       ],
       priorityQueue: addEffectsToPriorityQueue(
-        createPriorityQueue(10),
+        createPriorityQueue(),
         actor.face,
         { playerIndex: 1, slot: 0 },
         deadActor.id,
@@ -112,7 +102,7 @@ describe('PriorityQueueService', () => {
         { playerIndex: 1, team: [victim] },
       ),
       priorityQueue: addEffectsToPriorityQueue(
-        createPriorityQueue(10),
+        createPriorityQueue(),
         actor.baseDie[0],
         { playerIndex: 1, slot: 0 },
         actor.id,
@@ -143,7 +133,7 @@ describe('PriorityQueueService', () => {
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
-        createPriorityQueue(10),
+        createPriorityQueue(),
         actor.baseDie[0],
         { playerIndex: 1, slot: 0 as SlotIndex },
         actor.id,
@@ -173,7 +163,7 @@ describe('PriorityQueueService', () => {
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
-        createPriorityQueue(10),
+        createPriorityQueue(),
         actor.baseDie[3], // PushLeft face
         { playerIndex: 0, slot: 0 as SlotIndex },
         actor.id,
@@ -196,7 +186,7 @@ describe('PriorityQueueService', () => {
       ...createGameState({ playerIndex: 0, team: [actor1] }, { playerIndex: 1, team: [actor2] }),
       priorityQueue: addEffectsToPriorityQueue(
         addEffectsToPriorityQueue(
-          createPriorityQueue(10),
+          createPriorityQueue(),
           actor1.baseDie[0], // priority 1
           { playerIndex: 1, slot: 0 as SlotIndex },
           actor1.id,
@@ -236,7 +226,7 @@ describe('PriorityQueueService', () => {
 
     // Manually inject a bad entry: ALLY_ONLY face targeting enemy team
     const enemyPos: Position = { playerIndex: 1, slot: 0 as SlotIndex };
-    let queue = createPriorityQueue(10);
+    let queue = createPriorityQueue();
     queue = addEffectsToPriorityQueue(queue, face, enemyPos, team1[0].id, team1[0].baseSpeed);
     gs = { ...gs, priorityQueue: queue };
 
@@ -264,7 +254,7 @@ describe('PriorityQueueService', () => {
     gs = beginResolvePhase(gs);
 
     // Inject entry with non-existent character ID
-    let queue = createPriorityQueue(10);
+    let queue = createPriorityQueue();
     queue = addEffectsToPriorityQueue(queue, face, { playerIndex: 1, slot: 0 as SlotIndex }, 'NON_EXISTENT_ID', 1);
     gs = { ...gs, priorityQueue: queue };
 
@@ -284,7 +274,7 @@ describe('PriorityQueueService', () => {
       ...createGameState({ playerIndex: 0, team: [killer] }, { playerIndex: 1, team: [victim] }),
       priorityQueue: addEffectsToPriorityQueue(
         addEffectsToPriorityQueue(
-          createPriorityQueue(10),
+          createPriorityQueue(),
           killer.baseDie[3], // priority 2, damage 4 → kills victim (hp 1)
           { playerIndex: 1, slot: 0 as SlotIndex },
           killer.id,
@@ -329,8 +319,8 @@ describe('PriorityQueueService', () => {
     );
     // addAllEffectsToPriorityQueue should auto-inject actor.position for NONE faces
     const gs2 = addAllEffectsToPriorityQueue(gs);
-    expect(gs2.priorityQueue[1].length).toBe(1);
-    expect(gs2.priorityQueue[1][0][2]).toBe(actor.id);
+    expect(gs2.priorityQueue.length).toBe(1);
+    expect(gs2.priorityQueue[0][2]).toBe(actor.id);
   });
 
   it('NONE-constraint face resolves without throwing during unstacking', () => {
@@ -350,7 +340,7 @@ describe('PriorityQueueService', () => {
     const stateWithQueue: GameState = {
         ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [enemy] }),
         priorityQueue: addEffectsToPriorityQueue(
-            createPriorityQueue(10),
+            createPriorityQueue(),
             noneFace,
             actor.position,
             actor.id,
@@ -379,7 +369,7 @@ describe('PriorityQueueService', () => {
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
-        createPriorityQueue(10),
+        createPriorityQueue(),
         actor.baseDie[0],
         { playerIndex: 1, slot: 0 },
         actor.id,
@@ -394,5 +384,93 @@ describe('PriorityQueueService', () => {
     expect(log[0].changes).toHaveLength(1);
     expect(log[0].changes[0].character.hp).toBe(90);
     expect(log[0].changes[0].character.shield).toBe(5);
+  });
+
+  describe('Pokemon-style ordering', () => {
+    const noop = (priority: number): DieFace => ({
+      priority,
+      effects: [],
+      description: `noop@${priority}`,
+      targetConstraint: TargetConstraint.NONE,
+    });
+    const dieOf = (f: DieFace) => [f, f, f, f, f, f];
+
+    const buildState = (
+      entries: { face: DieFace; id: string; speed: number; playerIndex: 0 | 1 }[],
+    ): GameState => {
+      const a = createCharacter('A', 100, 0, dieOf(noop(0)), { playerIndex: 0, slot: 0 });
+      const b = createCharacter('B', 100, 0, dieOf(noop(0)), { playerIndex: 1, slot: 0 });
+      const charA = { ...a, id: entries[0].id };
+      const charB = { ...b, id: entries[1].id };
+      let q = createPriorityQueue();
+      for (const e of entries) {
+        const pos: Position = { playerIndex: e.playerIndex, slot: 0 as SlotIndex };
+        q = addEffectsToPriorityQueue(q, e.face, pos, e.id, e.speed);
+      }
+      return {
+        ...createGameState({ playerIndex: 0, team: [charA] }, { playerIndex: 1, team: [charB] }),
+        priorityQueue: q,
+      };
+    };
+
+    it('a higher bracket resolves before a lower bracket, regardless of speed', () => {
+      const state = buildState([
+        { face: noop(0), id: 'fast-low', speed: 100, playerIndex: 0 },
+        { face: noop(1), id: 'slow-high', speed: 0, playerIndex: 1 },
+      ]);
+      const { log } = unstackPriorityQueueWithLog(state);
+      expect(log[0].characterId).toBe('slow-high');
+      expect(log[1].characterId).toBe('fast-low');
+    });
+
+    it('within the same bracket, the faster character resolves first', () => {
+      const state = buildState([
+        { face: noop(1), id: 'fast', speed: 9, playerIndex: 0 },
+        { face: noop(1), id: 'slow', speed: 1, playerIndex: 1 },
+      ]);
+      const { log } = unstackPriorityQueueWithLog(state);
+      expect(log[0].characterId).toBe('fast');
+      expect(log[1].characterId).toBe('slow');
+    });
+
+    it('a negative bracket resolves last', () => {
+      const state = buildState([
+        { face: noop(-1), id: 'last', speed: 100, playerIndex: 0 },
+        { face: noop(0), id: 'first', speed: 0, playerIndex: 1 },
+      ]);
+      const { log } = unstackPriorityQueueWithLog(state);
+      expect(log[0].characterId).toBe('first');
+      expect(log[1].characterId).toBe('last');
+    });
+
+    it('equal bracket and equal speed both resolve (order not asserted)', () => {
+      const state = buildState([
+        { face: noop(0), id: 'x', speed: 5, playerIndex: 0 },
+        { face: noop(0), id: 'y', speed: 5, playerIndex: 1 },
+      ]);
+      const { log } = unstackPriorityQueueWithLog(state);
+      expect(log).toHaveLength(2);
+      expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining(['x', 'y']));
+    });
+
+    it('a dead high-bracket actor is skipped but keeps its place in the ordering', () => {
+      const deadHigh = loseHp(createCharacter('DeadHigh', 100, 0, dieOf(noop(1)), { playerIndex: 0, slot: 0 }), 100);
+      const liveLow = createCharacter('LiveLow', 100, 0, dieOf(noop(0)), { playerIndex: 1, slot: 0 });
+      let q = createPriorityQueue();
+      q = addEffectsToPriorityQueue(q, noop(1), deadHigh.position, deadHigh.id, 0);
+      q = addEffectsToPriorityQueue(q, noop(0), liveLow.position, liveLow.id, 0);
+      const state: GameState = {
+        ...createGameState({ playerIndex: 0, team: [deadHigh] }, { playerIndex: 1, team: [liveLow] }),
+        priorityQueue: q,
+      };
+
+      const { log } = unstackPriorityQueueWithLog(state);
+
+      expect(log).toHaveLength(2);
+      expect(log[0].characterId).toBe(deadHigh.id);
+      expect(log[0].skipped).toBe(true);
+      expect(log[1].characterId).toBe(liveLow.id);
+      expect(log[1].skipped).toBe(false);
+    });
   });
 });

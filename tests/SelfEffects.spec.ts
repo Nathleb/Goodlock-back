@@ -38,7 +38,7 @@ function makeGameState() {
 }
 
 function withEffect(gs: GameState, face: DieFace, target: Position, actorId: string, baseSpeed: number): GameState {
-    return { ...gs, priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(10), face, target, actorId, baseSpeed) };
+    return { ...gs, priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(), face, target, actorId, baseSpeed) };
 }
 
 describe('SelfDamage', () => {
