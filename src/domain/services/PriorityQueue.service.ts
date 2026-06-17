@@ -81,6 +81,8 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
     let state = gameState;
     const log: ResolveStep[] = [];
 
+    // Order is computed once up front. State mutations inside the loop (hp, shield,
+    // positions) never re-order resolution — the bracket/speed sort is fixed here.
     for (const [face, targetedPosition, characterId] of orderedForResolution(state.priorityQueue)) {
         if (!isAlive(state, characterId)) {
             log.push({ characterId, skipped: true, changes: [] });

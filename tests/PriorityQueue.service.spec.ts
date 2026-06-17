@@ -452,5 +452,25 @@ describe('PriorityQueueService', () => {
       expect(log).toHaveLength(2);
       expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining(['x', 'y']));
     });
+
+    it('a dead high-bracket actor is skipped but keeps its place in the ordering', () => {
+      const deadHigh = loseHp(createCharacter('DeadHigh', 100, 0, dieOf(noop(1)), { playerIndex: 0, slot: 0 }), 100);
+      const liveLow = createCharacter('LiveLow', 100, 0, dieOf(noop(0)), { playerIndex: 1, slot: 0 });
+      let q = createPriorityQueue();
+      q = addEffectsToPriorityQueue(q, noop(1), deadHigh.position, deadHigh.id, 0);
+      q = addEffectsToPriorityQueue(q, noop(0), liveLow.position, liveLow.id, 0);
+      const state: GameState = {
+        ...createGameState({ playerIndex: 0, team: [deadHigh] }, { playerIndex: 1, team: [liveLow] }),
+        priorityQueue: q,
+      };
+
+      const { log } = unstackPriorityQueueWithLog(state);
+
+      expect(log).toHaveLength(2);
+      expect(log[0].characterId).toBe(deadHigh.id);
+      expect(log[0].skipped).toBe(true);
+      expect(log[1].characterId).toBe(liveLow.id);
+      expect(log[1].skipped).toBe(false);
+    });
   });
 });
