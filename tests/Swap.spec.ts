@@ -38,7 +38,7 @@ function resolve(
     const state = {
         ...gs,
         priorityQueue: addEffectsToPriorityQueue(
-            createPriorityQueue(10),
+            createPriorityQueue(),
             actor.baseDie[faceIndex],
             { playerIndex: targetPlayerIndex, slot: targetSlot },
             actorId,
@@ -65,7 +65,7 @@ function resolveEffect(
     const state = {
         ...gs,
         priorityQueue: addEffectsToPriorityQueue(
-            createPriorityQueue(10),
+            createPriorityQueue(),
             face,
             { playerIndex: targetPlayerIndex, slot: targetSlot },
             actorId,

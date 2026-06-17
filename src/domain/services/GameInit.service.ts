@@ -28,7 +28,7 @@ export function createGameState(player1: Player, player2: Player): GameState {
         currentRound: 0,
         rollsLeft: 2,
         playersReady: [false, false],
-        priorityQueue: createPriorityQueue(100),
+        priorityQueue: createPriorityQueue(),
         players: [player1, player2],
     };
 }

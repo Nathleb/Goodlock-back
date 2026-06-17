@@ -121,7 +121,7 @@ describe('Domain integration — Phase flow', () => {
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const assignPhaseState = advanceToAssign(gameState);
         const { state } = resolveRound(assignPhaseState, [], []);
-        expect(state.priorityQueue.every(bucket => bucket.length === 0)).toBe(true);
+        expect(state.priorityQueue.length).toBe(0);
     });
 });
 

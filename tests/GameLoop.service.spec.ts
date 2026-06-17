@@ -185,7 +185,7 @@ describe('performResolve', () => {
     it('resets the priority queue after resolving', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
         const { state } = performResolve(inResolve);
-        expect(state.priorityQueue.every(bucket => bucket.length === 0)).toBe(true);
+        expect(state.priorityQueue.length).toBe(0);
     });
 
     it('returns a log array', () => {
