@@ -33,7 +33,8 @@ resolve fastest-first; equal bracket *and* equal speed → random order.
 - **Per-face `priority` stays an explicit, hand-authored field** (full control; a `+2`
   attack or a `-1` heavy attack are both legal).
 - **Tiebreak within equal (bracket, speed): random.**
-- **Scope: engine + full template re-tune** (all 10 `tmplt/*.json`).
+- **Scope: engine is the real work.** Templates are placeholder examples — re-tuned
+  only to stay valid under the new system, no balancing (all 10 `tmplt/*.json`).
 - **baseSpeed: widened a lot** so within-bracket order is decisive and distinct,
   preserving the current relative fast/slow ordering between characters.
 - **Movement bracket: +1** (ties with shield/heal, only beats attacks).
@@ -63,29 +64,19 @@ Type/representation impact:
 The `ResolveStep` log shape is unchanged, so application/infrastructure/frontend are
 untouched.
 
-## Section 2 — Template re-tuning convention
+## Section 2 — Templates (placeholders only)
 
-Baseline bracket by effect family:
+The `tmplt/*.json` characters are **throwaway examples**; real characters with chosen
+values come later. The baseline brackets were only an illustration of the new axis.
+The re-tune therefore has **no balancing goal** — only validity under the new system:
 
-| Family            | Bracket |
-|-------------------|---------|
-| Damage (attack)   | 0       |
-| Heal              | +1      |
-| Shield            | +1      |
-| Movement (push)   | +1      |
-
-Rules:
-
-- A face's bracket reflects its *primary intent*; deviate per-face for interesting
-  speed-vs-priority choices (heavy attack → `-1` "goes last"; quick jab → `+1`; slow
-  fortress shield → `0`).
-- **Mixed faces** take the bracket of their lead/intent effect: "deal 6 dmg + gain
-  2 shield" → attack `0`; "deal 3 dmg + heal self" → `0`. Movement, if present and
-  intended, wins.
-- Each character's 6 faces should vary brackets so face choice is a real decision.
-
-baseSpeed: widen a lot (preserving current relative ordering between characters).
-Exact per-character numbers proposed in the implementation plan.
+- Rewrite each face's `priority` down to small brackets (roughly `-1..+2`), using
+  damage `0` / support `+1` as a loose default, varied a little per character so the
+  ordering is exercised. Exact values do not matter.
+- Widen `baseSpeed` a lot (preserve current relative fast/slow ordering between
+  characters) so within-bracket speed is decisive.
+- Do not agonize over face balance. The integrity test (Section 3) is the only bar:
+  valid JSON, brackets present and in a sane range.
 
 Effect families present in templates:
 
