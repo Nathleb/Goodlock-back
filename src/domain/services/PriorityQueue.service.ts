@@ -6,8 +6,8 @@ import GameState from "../types/GameState.type";
 import { validateTarget } from "./TargetValidator";
 import TargetConstraint from "../types/TargetConstraint.type";
 
-export function createPriorityQueue(length: number): PriorityQueue {
-    return Array.from({ length }, () => []);
+export function createPriorityQueue(): PriorityQueue {
+    return [];
 }
 
 export function addEffectsToPriorityQueue(
@@ -17,17 +17,8 @@ export function addEffectsToPriorityQueue(
     characterId: string,
     baseSpeed: number
 ): PriorityQueue {
-    const finalPriority = dieFace.priority + baseSpeed;
-    if (finalPriority < 0 || finalPriority >= priorityQueue.length) {
-        throw new Error(
-            `finalPriority ${finalPriority} (face priority ${dieFace.priority} + baseSpeed ${baseSpeed}) ` +
-            `is out of range for a queue of length ${priorityQueue.length} — check the character template values`
-        );
-    }
-    const newEntry: QueueEntry = [dieFace, target, characterId];
-    const newQueue = [...priorityQueue];
-    newQueue[finalPriority] = [...newQueue[finalPriority], newEntry];
-    return newQueue as PriorityQueue;
+    const newEntry: QueueEntry = [dieFace, target, characterId, baseSpeed];
+    return [...priorityQueue, newEntry];
 }
 
 export function addAllEffectsToPriorityQueue(gameState: GameState): GameState {
@@ -44,7 +35,7 @@ export function addAllEffectsToPriorityQueue(gameState: GameState): GameState {
 }
 
 export function resetPriorityQueue(gameState: GameState): GameState {
-    return { ...gameState, priorityQueue: createPriorityQueue(gameState.priorityQueue.length) };
+    return { ...gameState, priorityQueue: createPriorityQueue() };
 }
 
 function isAlive(gameState: GameState, characterId: string): boolean {
@@ -77,40 +68,47 @@ function shuffled<T>(arr: readonly T[]): T[] {
     return out;
 }
 
+// Pokemon-style ordering: bracket (face.priority) desc, then speed desc.
+// Array.prototype.sort is stable in Node, so shuffling first gives a random
+// tiebreak among entries that share both bracket and speed.
+function orderedForResolution(queue: PriorityQueue): QueueEntry[] {
+    return shuffled(queue).sort(
+        (a, b) => (b[0].priority - a[0].priority) || (b[3] - a[3])
+    );
+}
+
 export function unstackPriorityQueueWithLog(gameState: GameState): { state: GameState; log: ResolveStep[] } {
     let state = gameState;
     const log: ResolveStep[] = [];
 
-    for (let i = state.priorityQueue.length - 1; i >= 0; i--) {
-        for (const [face, targetedPosition, characterId] of shuffled(state.priorityQueue[i])) {
-            if (!isAlive(state, characterId)) {
-                log.push({ characterId, skipped: true, changes: [] });
-                continue;
-            }
-
-            const actorPlayerIndex = findActorPlayerIndex(state, characterId);
-            if (actorPlayerIndex === undefined) {
-                log.push({ characterId, skipped: true, changes: [] });
-                continue;
-            }
-            if (face.targetConstraint !== TargetConstraint.NONE) {
-                validateTarget(face.targetConstraint, actorPlayerIndex, targetedPosition);
-            }
-
-            const affectedIds = new Set<string>();
-            for (const effect of face.effects) {
-                const { state: newState, affected } = effect.solve(state, targetedPosition, characterId);
-                state = newState;
-                affected.forEach(id => affectedIds.add(id));
-            }
-
-            const changes = [...affectedIds]
-                .map(id => findCharacter(state, id))
-                .filter((c): c is Character => c !== undefined)
-                .map(c => ({ characterId: c.id, character: c }));
-
-            log.push({ characterId, skipped: false, changes });
+    for (const [face, targetedPosition, characterId] of orderedForResolution(state.priorityQueue)) {
+        if (!isAlive(state, characterId)) {
+            log.push({ characterId, skipped: true, changes: [] });
+            continue;
         }
+
+        const actorPlayerIndex = findActorPlayerIndex(state, characterId);
+        if (actorPlayerIndex === undefined) {
+            log.push({ characterId, skipped: true, changes: [] });
+            continue;
+        }
+        if (face.targetConstraint !== TargetConstraint.NONE) {
+            validateTarget(face.targetConstraint, actorPlayerIndex, targetedPosition);
+        }
+
+        const affectedIds = new Set<string>();
+        for (const effect of face.effects) {
+            const { state: newState, affected } = effect.solve(state, targetedPosition, characterId);
+            state = newState;
+            affected.forEach(id => affectedIds.add(id));
+        }
+
+        const changes = [...affectedIds]
+            .map(id => findCharacter(state, id))
+            .filter((c): c is Character => c !== undefined)
+            .map(c => ({ characterId: c.id, character: c }));
+
+        log.push({ characterId, skipped: false, changes });
     }
 
     return { state: resetPriorityQueue(state), log };
