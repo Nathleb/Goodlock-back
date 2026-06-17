@@ -93,7 +93,7 @@ Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneratio
 1. **Coordinator pattern**: Application-layer coordinators (`RoomCoordinatorService`, `SessionCoordinatorService`) call domain services then dispatch WebSocket events. The gateway calls coordinators, never domain services directly.
 2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) + `deviceIdentifier` are persistent. `SessionService.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
-4. **Priority resolution**: `finalPriority(face) = face.priority + character.baseSpeed`.
+4. **Priority resolution (Pokemon-style)**: two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Equal `(bracket, speed)` pairs are shuffled (random tiebreak). Speed never crosses brackets. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
 
 ## Workflow for any non-trivial task
 
