@@ -1,7 +1,7 @@
 import Damage from "@domain/strategies/Damage.class";
 import Heal from "@domain/strategies/Heal.class";
 import Shield from "@domain/strategies/Shield.class";
-import { Swap } from "@domain/strategies/Swap.class";
+import Swap from "@domain/strategies/Swap.class";
 import { applyAtPositions } from "@domain/utils/TargetUtils";
 import { gainShield } from "@domain/services/Character.service";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";

@@ -1,18 +1,7 @@
 import Character from "../types/Character.type";
-import { isDead, rollForTurn, setTarget, rollDie } from "./Character.service";
+import { isDead, rollForTurn, rollDie } from "./Character.service";
 import { Player } from "../types/Player.type";
 import Position, { SlotIndex, PlayerIndex } from "../types/Position.type";
-import { validateTarget } from "./TargetValidator";
-
-export function selectTargetOfCharacter(player: Player, slot: SlotIndex, target: Position): Player {
-    const char = player.team.find(c => c.position.slot === slot);
-    if (!char) return player;
-    validateTarget(char.face.targetConstraint, player.playerIndex, target);
-    const newTeam = player.team.map((c) =>
-        c.position.slot === slot ? setTarget(c, target) : c
-    );
-    return { ...player, team: newTeam };
-}
 
 export function rollDiceForTurn(player: Player): Player {
     const newTeam = player.team.map(char => rollForTurn(char));

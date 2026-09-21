@@ -17,7 +17,6 @@ type Character = {
 
     readonly face: DieFace;
     readonly isFaceLocked: boolean;
-    readonly target: Position | null;
 };
 
 export default Character;

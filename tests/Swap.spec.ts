@@ -1,21 +1,22 @@
-import Position, { SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
-import { selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
+import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import GameState from "@domain/types/GameState.type";
-import { PlayerIndex } from "@domain/types/Position.type";
-import TargetConstraint from "@domain/types/TargetConstraint.type";
+import TargetGroup from "@domain/types/TargetGroup.type";
+import { enemyAbs, allyAbs, allyRel } from "./helpers/targets";
 
+// Each face carries its own cells. Actor-relative faces reproduce the old
+// "actor pushes / moves itself" fixtures; one-off faces cover specific targets.
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage",      priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], targetConstraint: TargetConstraint.ENEMY_ONLY },
-    { description: "SwapAlly",    priority: 1, effects: [{ effect: EffectLabel.SwapAlly,           magnitude: 0 }], targetConstraint: TargetConstraint.ALLY_ONLY },
-    { description: "PushLeft1",   priority: 1, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 1 }], targetConstraint: TargetConstraint.ANY },
-    { description: "PushRight1",  priority: 1, effects: [{ effect: EffectLabel.PushRight,           magnitude: 1 }], targetConstraint: TargetConstraint.ANY },
-    { description: "MoveToSlot2", priority: 1, effects: [{ effect: EffectLabel.MoveToSlot,          magnitude: 2 }], targetConstraint: TargetConstraint.ANY },
-    { description: "PushLeft2",   priority: 2, effects: [{ effect: EffectLabel.PushLeft,            magnitude: 2 }], targetConstraint: TargetConstraint.ANY },
+    { description: "Damage",       priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }] },
+    { description: "Swap with 0",  priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0), allyAbs(0)] }] },
+    { description: "Push left 1",  priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, -1)] }] },
+    { description: "Push right 1", priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, 1)] }] },
+    { description: "Move to 2",    priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0), allyAbs(2)] }] },
+    { description: "Push left 2",  priority: 2, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, -2)] }] },
 ];
 
 const factory = buildEffectFactory();
@@ -27,61 +28,36 @@ const team2 = [makeChar("V"), makeChar("W"), makeChar("X"), makeChar("Y"), makeC
 const player1 = createPlayer(team1, 0);
 const player2 = createPlayer(team2, 1);
 
-function resolve(
-    gs: GameState,
-    actorId: string,
-    faceIndex: number,
-    targetPlayerIndex: PlayerIndex,
-    targetSlot: SlotIndex,
-): GameState {
+function resolve(gs: GameState, actorId: string, faceIndex: number): GameState {
     const actor = gs.players.flatMap(p => p.team).find(c => c.id === actorId)!;
     const state = {
         ...gs,
-        priorityQueue: addEffectsToPriorityQueue(
-            createPriorityQueue(),
-            actor.baseDie[faceIndex],
-            { playerIndex: targetPlayerIndex, slot: targetSlot },
-            actorId,
-            actor.baseSpeed,
-        ),
+        priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(), actor.baseDie[faceIndex], actorId, actor.baseSpeed),
     };
     return unstackPriorityQueueWithLog(state).state;
 }
 
-function resolveEffect(
-    gs: GameState,
-    actorId: string,
-    label: EffectLabel,
-    magnitude: number,
-    targetPlayerIndex: PlayerIndex,
-    targetSlot: SlotIndex,
-): ReturnType<typeof unstackPriorityQueueWithLog> {
+function resolveSwap(gs: GameState, actorId: string, targets: TargetGroup[]): ReturnType<typeof unstackPriorityQueueWithLog> {
     const actor = gs.players.flatMap(p => p.team).find(c => c.id === actorId)!;
     const emptyFace = { description: '-', priority: 1, effects: [] };
     const face = generateFullDie([
-        { description: 'test', priority: 1, effects: [{ effect: label, magnitude }] },
+        { description: 'test', priority: 1, effects: [{ effect: EffectLabel.Swap, magnitude: 0, targets }] },
         emptyFace, emptyFace, emptyFace, emptyFace, emptyFace,
     ], factory)[0];
     const state = {
         ...gs,
-        priorityQueue: addEffectsToPriorityQueue(
-            createPriorityQueue(),
-            face,
-            { playerIndex: targetPlayerIndex, slot: targetSlot },
-            actorId,
-            actor.baseSpeed,
-        ),
+        priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(), face, actorId, actor.baseSpeed),
     };
     return unstackPriorityQueueWithLog(state);
 }
 
-describe('SwapAlly', () => {
+describe('Swap: actor with an ally', () => {
     it('swaps actor with targeted ally', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0
         const charB = gs.players[0].team[1]; // slot 1
 
-        const result = resolve(gs, charB.id, 1, 0, 0); // charB targets slot 0 (charA)
+        const result = resolve(gs, charB.id, 1); // charB swaps with slot 0 (charA)
 
         expect(result.players[0].team[0].id).toBe(charB.id);
         expect(result.players[0].team[1].id).toBe(charA.id);
@@ -91,18 +67,10 @@ describe('SwapAlly', () => {
         const gs = createGameState(player1, player2);
         const charB = gs.players[0].team[1];
 
-        const result = resolve(gs, charB.id, 1, 0, 0);
+        const result = resolve(gs, charB.id, 1);
 
         expect(result.players[0].team[0].position.slot).toBe(0);
         expect(result.players[0].team[1].position.slot).toBe(1);
-    });
-
-    it('throws ALLY_ONLY error when attempting to assign enemy target to SwapAlly face', () => {
-        const swapAllyFace = die[1]; // face index 1 is SwapAlly
-        const withSwapFace = { ...team1[0], face: swapAllyFace };
-        const player = { ...player1, team: player1.team.map((c, i) => i === 0 ? withSwapFace : c) };
-        const enemyPos: Position = { playerIndex: 1, slot: 2 };
-        expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos)).toThrow('ALLY_ONLY');
     });
 
     it('is a no-op when actor targets their own slot', () => {
@@ -110,7 +78,7 @@ describe('SwapAlly', () => {
         const charA = gs.players[0].team[0];
         const before = gs.players[0].team.map(c => c.id);
 
-        const result = resolve(gs, charA.id, 1, 0, 0); // self-target
+        const result = resolve(gs, charA.id, 1); // both cells are slot 0
 
         expect(result.players[0].team.map(c => c.id)).toEqual(before);
     });
@@ -120,7 +88,7 @@ describe('SwapAlly', () => {
         const charB = gs.players[0].team[1];
         const before = gs.players[1].team.map(c => c.id);
 
-        const result = resolve(gs, charB.id, 1, 0, 0);
+        const result = resolve(gs, charB.id, 1);
 
         expect(result.players[1].team.map(c => c.id)).toEqual(before);
     });
@@ -130,7 +98,7 @@ describe('SwapAlly', () => {
         const charA = gs.players[0].team[0];
         const charE = gs.players[0].team[4];
 
-        const result = resolve(gs, charE.id, 1, 0, 0); // charE swaps with charA
+        const result = resolve(gs, charE.id, 1); // charE swaps with charA
 
         expect(result.players[0].team[1].id).toBe(gs.players[0].team[1].id);
         expect(result.players[0].team[2].id).toBe(gs.players[0].team[2].id);
@@ -151,7 +119,7 @@ describe('SwapAlly', () => {
             ] as typeof gs.players,
         };
 
-        const { state } = resolveEffect(gsWithDead, charA.id, EffectLabel.SwapAlly, 0, 0, 1);
+        const { state } = resolveSwap(gsWithDead, charA.id, [allyRel(0), allyAbs(1)]);
 
         expect(state.players[0].team[1].id).toBe(charA.id);
         expect(state.players[0].team[0].id).toBe(deadB.id);
@@ -162,7 +130,7 @@ describe('SwapAlly', () => {
         const charA = gs.players[0].team[0];
         const charB = gs.players[0].team[1];
 
-        const { log } = resolveEffect(gs, charB.id, EffectLabel.SwapAlly, 0, 0, 0);
+        const { log } = resolveSwap(gs, charB.id, [allyRel(0), allyAbs(0)]);
 
         expect(log[0].changes.map(c => c.characterId)).toEqual(
             expect.arrayContaining([charA.id, charB.id])
@@ -170,66 +138,66 @@ describe('SwapAlly', () => {
     });
 });
 
-describe('Push', () => {
-    it('PushLeft moves target one slot to the left', () => {
+describe('Swap: push patterns', () => {
+    it('push-left moves target one slot to the left', () => {
         const gs = createGameState(player1, player2);
         const charB = gs.players[0].team[1]; // slot 1
         const charA = gs.players[0].team[0]; // slot 0
 
-        const result = resolve(gs, charB.id, 2, 0, 1); // push charB (slot 1) left
+        const result = resolve(gs, charB.id, 2); // charB (slot 1) pushes itself left
 
         expect(result.players[0].team[0].id).toBe(charB.id);
         expect(result.players[0].team[1].id).toBe(charA.id);
     });
 
-    it('PushRight moves target one slot to the right', () => {
+    it('push-right moves target one slot to the right', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0
         const charB = gs.players[0].team[1]; // slot 1
 
-        const result = resolve(gs, charA.id, 3, 0, 0); // push charA (slot 0) right
+        const result = resolve(gs, charA.id, 3); // charA (slot 0) pushes itself right
 
         expect(result.players[0].team[1].id).toBe(charA.id);
         expect(result.players[0].team[0].id).toBe(charB.id);
     });
 
-    it('PushLeft is a no-op at slot 0 (boundary)', () => {
+    it('push-left is a no-op at slot 0 (boundary)', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
         const before = gs.players[0].team.map(c => c.id);
 
-        const result = resolve(gs, charA.id, 2, 0, 0); // push slot 0 left
+        const result = resolve(gs, charA.id, 2); // slot -1 is off-board → fizzles
 
         expect(result.players[0].team.map(c => c.id)).toEqual(before);
     });
 
-    it('PushRight is a no-op at last slot (boundary)', () => {
+    it('push-right is a no-op at last slot (boundary)', () => {
         const gs = createGameState(player1, player2);
         const charE = gs.players[0].team[4];
         const before = gs.players[0].team.map(c => c.id);
 
-        const result = resolve(gs, charE.id, 3, 0, 4); // push slot 4 right
+        const result = resolve(gs, charE.id, 3); // slot 5 is off-board → fizzles
 
         expect(result.players[0].team.map(c => c.id)).toEqual(before);
     });
 
-    it('PushLeft with magnitude 2 moves target two slots left', () => {
+    it('push-left by 2 moves target two slots left', () => {
         const gs = createGameState(player1, player2);
         const charC = gs.players[0].team[2]; // slot 2
         const charA = gs.players[0].team[0]; // slot 0
 
-        const result = resolve(gs, charC.id, 5, 0, 2); // face 5: PushLeft magnitude 2
+        const result = resolve(gs, charC.id, 5); // face 5: push left 2
 
         expect(result.players[0].team[0].id).toBe(charC.id);
         expect(result.players[0].team[2].id).toBe(charA.id);
     });
 
-    it('PushLeft magnitude 2 is a no-op when it would exceed boundary', () => {
+    it('push-left by 2 is a no-op when it would exceed boundary', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0 — push by 2 would land at -2
         const before = gs.players[0].team.map(c => c.id);
 
-        const result = resolve(gs, charA.id, 5, 0, 0);
+        const result = resolve(gs, charA.id, 5);
 
         expect(result.players[0].team.map(c => c.id)).toEqual(before);
     });
@@ -240,10 +208,10 @@ describe('Push', () => {
         const enemyB = gs.players[1].team[1]; // slot 1 on opponent team
         const enemyA = gs.players[1].team[0]; // slot 0
 
-        const result = resolve(gs, charA.id, 2, 1, 1); // push enemy slot 1 left
+        const { state } = resolveSwap(gs, charA.id, [enemyAbs(1, 0)]); // push enemy slot 1 left
 
-        expect(result.players[1].team[0].id).toBe(enemyB.id);
-        expect(result.players[1].team[1].id).toBe(enemyA.id);
+        expect(state.players[1].team[0].id).toBe(enemyB.id);
+        expect(state.players[1].team[1].id).toBe(enemyA.id);
     });
 
     it('pushing an enemy does not affect own team', () => {
@@ -251,28 +219,28 @@ describe('Push', () => {
         const charA = gs.players[0].team[0];
         const before = gs.players[0].team.map(c => c.id);
 
-        const result = resolve(gs, charA.id, 2, 1, 1); // push enemy
+        const { state } = resolveSwap(gs, charA.id, [enemyAbs(1, 0)]); // push enemy
 
-        expect(result.players[0].team.map(c => c.id)).toEqual(before);
+        expect(state.players[0].team.map(c => c.id)).toEqual(before);
     });
 
-    it('PushRight with magnitude 2 moves target two slots right', () => {
+    it('push-right by 2 moves target two slots right', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0
         const charC = gs.players[0].team[2]; // slot 2
 
-        const { state } = resolveEffect(gs, charA.id, EffectLabel.PushRight, 2, 0, 0);
+        const { state } = resolveSwap(gs, charA.id, [allyAbs(0, 2)]);
 
         expect(state.players[0].team[2].id).toBe(charA.id);
         expect(state.players[0].team[0].id).toBe(charC.id);
     });
 
-    it('PushRight magnitude 2 is a no-op when it would exceed boundary', () => {
+    it('push-right by 2 is a no-op when it would exceed boundary', () => {
         const gs = createGameState(player1, player2);
         const charE = gs.players[0].team[4]; // slot 4 — push right by 2 would be slot 6
         const before = gs.players[0].team.map(c => c.id);
 
-        const { state } = resolveEffect(gs, charE.id, EffectLabel.PushRight, 2, 0, 4);
+        const { state } = resolveSwap(gs, charE.id, [allyRel(0, 2)]);
 
         expect(state.players[0].team.map(c => c.id)).toEqual(before);
     });
@@ -281,7 +249,7 @@ describe('Push', () => {
         const gs = createGameState(player1, player2);
         const charB = gs.players[0].team[1]; // slot 1 → pushed left to slot 0
 
-        const { state } = resolveEffect(gs, charB.id, EffectLabel.PushLeft, 1, 0, 1);
+        const { state } = resolveSwap(gs, charB.id, [allyAbs(1, 0)]);
 
         expect(state.players[0].team[0].position.slot).toBe(0);
         expect(state.players[0].team[1].position.slot).toBe(1);
@@ -291,7 +259,7 @@ describe('Push', () => {
         const gs = createGameState(player1, player2);
         const charC = gs.players[0].team[2]; // slot 2 — pushed right
 
-        const { state } = resolveEffect(gs, charC.id, EffectLabel.PushRight, 1, 0, 2);
+        const { state } = resolveSwap(gs, charC.id, [allyAbs(2, 3)]);
 
         expect(state.players[0].team[0].id).toBe(gs.players[0].team[0].id);
         expect(state.players[0].team[1].id).toBe(gs.players[0].team[1].id);
@@ -299,13 +267,13 @@ describe('Push', () => {
     });
 });
 
-describe('MoveToSlot', () => {
+describe('Swap: move to a fixed slot', () => {
     it('moves targeted character to the fixed destination slot', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0 — will be moved to slot 2
         const charC = gs.players[0].team[2]; // slot 2 — will be displaced to slot 0
 
-        const result = resolve(gs, charA.id, 4, 0, 0); // face 4: MoveToSlot magnitude 2, target slot 0
+        const result = resolve(gs, charA.id, 4); // face 4: move self to slot 2
 
         expect(result.players[0].team[2].id).toBe(charA.id);
         expect(result.players[0].team[0].id).toBe(charC.id);
@@ -316,7 +284,7 @@ describe('MoveToSlot', () => {
         const charC = gs.players[0].team[2];
         const before = gs.players[0].team.map(c => c.id);
 
-        const result = resolve(gs, charC.id, 4, 0, 2); // target at slot 2, destination is slot 2
+        const result = resolve(gs, charC.id, 4); // actor at slot 2, destination is slot 2
 
         expect(result.players[0].team.map(c => c.id)).toEqual(before);
     });
@@ -327,20 +295,10 @@ describe('MoveToSlot', () => {
         const enemyA = gs.players[1].team[0]; // slot 0 — moved to slot 2
         const enemyC = gs.players[1].team[2]; // slot 2 — displaced
 
-        const result = resolve(gs, charA.id, 4, 1, 0); // target enemy slot 0, move to slot 2
+        const { state } = resolveSwap(gs, charA.id, [enemyAbs(0, 2)]);
 
-        expect(result.players[1].team[2].id).toBe(enemyA.id);
-        expect(result.players[1].team[0].id).toBe(enemyC.id);
-    });
-
-    it('is a no-op when destination slot is out of bounds', () => {
-        const gs = createGameState(player1, player2);
-        const charA = gs.players[0].team[0];
-        const before = gs.players[0].team.map(c => c.id);
-
-        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 5, 0, 0); // slot 5 doesn't exist
-
-        expect(state.players[0].team.map(c => c.id)).toEqual(before);
+        expect(state.players[1].team[2].id).toBe(enemyA.id);
+        expect(state.players[1].team[0].id).toBe(enemyC.id);
     });
 
     it('can move from a high slot to a low slot', () => {
@@ -348,7 +306,7 @@ describe('MoveToSlot', () => {
         const charA = gs.players[0].team[0];
         const charE = gs.players[0].team[4]; // slot 4 — moved to slot 0
 
-        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 0, 0, 4); // target slot 4, destination 0
+        const { state } = resolveSwap(gs, charA.id, [allyAbs(4, 0)]);
 
         expect(state.players[0].team[0].id).toBe(charE.id);
         expect(state.players[0].team[4].id).toBe(charA.id);
@@ -358,7 +316,7 @@ describe('MoveToSlot', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
 
-        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 3, 0, 0); // move slot 0 → slot 3
+        const { state } = resolveSwap(gs, charA.id, [allyAbs(0, 3)]); // move slot 0 → slot 3
 
         expect(state.players[0].team[3].position.slot).toBe(3);
         expect(state.players[0].team[0].position.slot).toBe(0);
@@ -368,7 +326,7 @@ describe('MoveToSlot', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
 
-        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 4, 0, 0); // slot 0 ↔ slot 4
+        const { state } = resolveSwap(gs, charA.id, [allyAbs(0, 4)]); // slot 0 ↔ slot 4
 
         expect(state.players[0].team[1].id).toBe(gs.players[0].team[1].id);
         expect(state.players[0].team[2].id).toBe(gs.players[0].team[2].id);
@@ -380,7 +338,7 @@ describe('MoveToSlot', () => {
         const charA = gs.players[0].team[0];
         const before = gs.players[1].team.map(c => c.id);
 
-        const { state } = resolveEffect(gs, charA.id, EffectLabel.MoveToSlot, 4, 0, 0);
+        const { state } = resolveSwap(gs, charA.id, [allyAbs(0, 4)]);
 
         expect(state.players[1].team.map(c => c.id)).toEqual(before);
     });

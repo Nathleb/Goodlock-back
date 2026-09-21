@@ -1,10 +1,8 @@
-import PriorityQueue, { QueueEntry, ResolveStep } from "../types/PriorityQueue.type";
-import Position, { PlayerIndex } from "../types/Position.type";
+import PriorityQueue, { QueueEntry, ResolveStep, ResolvedEffect } from "../types/PriorityQueue.type";
 import DieFace from "../types/DieFace.type";
 import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
-import { validateTarget } from "./TargetValidator";
-import TargetConstraint from "../types/TargetConstraint.type";
+import { resolveTargets } from "./TargetResolution.service";
 
 export function createPriorityQueue(): PriorityQueue {
     return [];
@@ -13,23 +11,17 @@ export function createPriorityQueue(): PriorityQueue {
 export function addEffectsToPriorityQueue(
     priorityQueue: PriorityQueue,
     dieFace: DieFace,
-    target: Position,
     characterId: string,
     baseSpeed: number
 ): PriorityQueue {
-    const newEntry: QueueEntry = [dieFace, target, characterId, baseSpeed];
+    const newEntry: QueueEntry = [dieFace, characterId, baseSpeed];
     return [...priorityQueue, newEntry];
 }
 
 export function addAllEffectsToPriorityQueue(gameState: GameState): GameState {
     let queue = gameState.priorityQueue;
     gameState.players.forEach(player => player.team.forEach(char => {
-        const target = char.face.targetConstraint === TargetConstraint.NONE
-            ? char.position
-            : char.target;
-        if (target !== null) {
-            queue = addEffectsToPriorityQueue(queue, char.face, target, char.id, char.baseSpeed);
-        }
+        queue = addEffectsToPriorityQueue(queue, char.face, char.id, char.baseSpeed);
     }));
     return { ...gameState, priorityQueue: queue };
 }
@@ -52,13 +44,6 @@ function findCharacter(gameState: GameState, characterId: string): Character | u
     return undefined;
 }
 
-function findActorPlayerIndex(state: GameState, characterId: string): PlayerIndex | undefined {
-    for (let pi = 0; pi < state.players.length; pi++) {
-        if (state.players[pi].team.some(c => c.id === characterId)) return pi as PlayerIndex;
-    }
-    return undefined;
-}
-
 function shuffled<T>(arr: readonly T[]): T[] {
     const out = [...arr];
     for (let i = out.length - 1; i > 0; i--) {
@@ -73,7 +58,7 @@ function shuffled<T>(arr: readonly T[]): T[] {
 // tiebreak among entries that share both bracket and speed.
 function orderedForResolution(queue: PriorityQueue): QueueEntry[] {
     return shuffled(queue).sort(
-        (a, b) => (b[0].priority - a[0].priority) || (b[3] - a[3])
+        (a, b) => (b[0].priority - a[0].priority) || (b[2] - a[2])
     );
 }
 
@@ -83,24 +68,22 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
 
     // Order is computed once up front. State mutations inside the loop (hp, shield,
     // positions) never re-order resolution — the bracket/speed sort is fixed here.
-    for (const [face, targetedPosition, characterId] of orderedForResolution(state.priorityQueue)) {
-        if (!isAlive(state, characterId)) {
-            log.push({ characterId, skipped: true, changes: [] });
+    for (const [face, characterId] of orderedForResolution(state.priorityQueue)) {
+        if (!isAlive(state, characterId) || findCharacter(state, characterId) === undefined) {
+            log.push({ characterId, skipped: true, effects: [], changes: [] });
             continue;
-        }
-
-        const actorPlayerIndex = findActorPlayerIndex(state, characterId);
-        if (actorPlayerIndex === undefined) {
-            log.push({ characterId, skipped: true, changes: [] });
-            continue;
-        }
-        if (face.targetConstraint !== TargetConstraint.NONE) {
-            validateTarget(face.targetConstraint, actorPlayerIndex, targetedPosition);
         }
 
         const affectedIds = new Set<string>();
-        for (const effect of face.effects) {
-            const { state: newState, affected } = effect.solve(state, targetedPosition, characterId);
+        const effects: ResolvedEffect[] = [];
+        for (const faceEffect of face.effects) {
+            // Cells are resolved just before each effect, from the actor's *current*
+            // position — an earlier swap (this face or another actor's) shifts them.
+            const actor = findCharacter(state, characterId)!;
+            const targets = resolveTargets(faceEffect.targets, actor.position);
+            effects.push({ effect: faceEffect.label, targets });
+            if (targets.length === 0) continue;
+            const { state: newState, affected } = faceEffect.impl.solve(state, targets, characterId);
             state = newState;
             affected.forEach(id => affectedIds.add(id));
         }
@@ -110,7 +93,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             .filter((c): c is Character => c !== undefined)
             .map(c => ({ characterId: c.id, character: c }));
 
-        log.push({ characterId, skipped: false, changes });
+        log.push({ characterId, skipped: false, effects, changes });
     }
 
     return { state: resetPriorityQueue(state), log };

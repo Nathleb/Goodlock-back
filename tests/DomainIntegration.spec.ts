@@ -1,20 +1,18 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
-import TargetConstraint from "@domain/types/TargetConstraint.type";
 import GamePhase from "@domain/types/GamePhase.type";
-import Position, { SlotIndex } from "@domain/types/Position.type";
+import { SlotIndex } from "@domain/types/Position.type";
 import GameState from "@domain/types/GameState.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
-import { ResolveStep } from "@domain/types/PriorityQueue.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
-import { Player } from "@domain/types/Player.type";
-import { createPlayer, selectTargetOfCharacter } from "@domain/services/Player.service";
+import { createPlayer } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
 import { beginPlacementPhase } from "@domain/services/Phase.service";
 import { endOfRound, checkWinner } from "@domain/services/Round.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
 } from "@domain/services/GameLoop.service";
+import { enemyAbs, allyAbs, enemyRel, allyRel } from "./helpers/targets";
 
 const factory = buildEffectFactory();
 
@@ -27,9 +25,8 @@ function uniformDie(
     description: string,
     priority: number,
     effects: BaseDieInstructions[0]['effects'],
-    targetConstraint: TargetConstraint,
 ): DieFn {
-    const face = { description, priority, effects, targetConstraint };
+    const face = { description, priority, effects };
     return generateFullDie([face, face, face, face, face, face], factory);
 }
 
@@ -61,49 +58,31 @@ function advanceToResolve(gameState: GameState): GameState {
     return state;
 }
 
-/** Assign targets to specific character slots of one player, chaining correctly. */
-function setTargets(
-    gameState: GameState,
-    playerIndex: 0 | 1,
-    assignments: { slot: SlotIndex; target: Position }[],
-): GameState {
-    let player = gameState.players[playerIndex];
-    for (const { slot, target } of assignments) {
-        player = selectTargetOfCharacter(player, slot, target);
-    }
-    const players = [...gameState.players] as [Player, Player];
-    players[playerIndex] = player;
-    return { ...gameState, players };
-}
+/** No-op die: every character fires, but this face has no effects. */
+const noopDie = uniformDie('No-op', 1, []);
 
-/** Assign all targets and resolve (gameState is already in RESOLVE after the last confirmKeep). */
-function resolveRound(
-    gameState: GameState,
-    p0Targets: { slot: SlotIndex; target: Position }[],
-    p1Targets: { slot: SlotIndex; target: Position }[],
-): { state: GameState; log: ResolveStep[] } {
-    let state = setTargets(gameState, 0, p0Targets);
-    state = setTargets(state, 1, p1Targets);
-    return performResolve(state);
+/**
+ * Team of 5 where only the listed slots carry a real die; every other slot idles.
+ * Everyone fires now (targets live in the face), so this reproduces the old
+ * fixtures where only the characters given a target acted.
+ */
+function makeTeamWith(playerIndex: 0 | 1, dies: Partial<Record<SlotIndex, DieFn>>, maxHp = 50) {
+    return ([0, 1, 2, 3, 4] as SlotIndex[]).map(slot =>
+        createCharacter(`P${playerIndex}S${slot}`, maxHp, 0, dies[slot] ?? noopDie, { playerIndex, slot }),
+    );
 }
-
-/** No-op die: fires automatically (NONE constraint) but has no effects. */
-const noopDie = uniformDie('No-op', 1, [], TargetConstraint.NONE);
 
 // ─── Phase flow ───────────────────────────────────────────────────────────────
 
 describe('Domain integration — Phase flow', () => {
     it('PLACEMENT → ROLL → KEEP → RESOLVE → RESULT completes without error', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(dmgDie, 1), 1));
+        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeamWith(1, { 0: dmgDie }), 1));
 
         const resolvedState = advanceToResolve(gameState);
         expect(resolvedState.phase).toBe(GamePhase.RESOLVE);
 
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.phase).toBe(GamePhase.RESULT);
     });
 
@@ -118,7 +97,7 @@ describe('Domain integration — Phase flow', () => {
     it('priority queue is drained to empty after performResolve', () => {
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState, [], []);
+        const { state } = performResolve(resolvedState);
         expect(state.priorityQueue.length).toBe(0);
     });
 });
@@ -126,73 +105,50 @@ describe('Domain integration — Phase flow', () => {
 // ─── Single-target damage ─────────────────────────────────────────────────────
 
 describe('Domain integration — Single-target damage', () => {
-    const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 10 }], TargetConstraint.ENEMY_ONLY);
+    const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
 
     it('reduces target HP by exact damage amount', () => {
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[1].team[0].hp).toBe(40);
     });
 
     it('both players deal damage to each other in the same round', () => {
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(dmgDie, 1), 1));
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeamWith(1, { 0: dmgDie }), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[0].team[0].hp).toBe(40);
         expect(state.players[1].team[0].hp).toBe(40);
     });
 
     it('overkill damage floors HP at 0', () => {
-        const overkillDie = uniformDie('Overkill', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 999 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(overkillDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const overkillDie = uniformDie('Overkill', 1, [{ effect: EffectLabel.Damage, magnitude: 999, targets: [enemyAbs(0)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: overkillDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[1].team[0].hp).toBe(0);
     });
 
     it('damage hits only the targeted slot — adjacent characters are unaffected', () => {
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const slot2Die = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(2)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: slot2Die }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 2 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[1].team.forEach((char, idx) =>
             expect(char.hp).toBe(idx === 2 ? 40 : 50),
         );
     });
 
-    it('characters without an assigned target do not fire', () => {
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const resolvedState = advanceToResolve(gameState);
-        // Only slot 0 gets a target; slots 1-4 silently skip
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
-        // Only P1 slot 0 was hit
-        expect(state.players[1].team[0].hp).toBe(40);
-        state.players[1].team.slice(1).forEach(char => expect(char.hp).toBe(50));
-    });
 });
 
 // ─── Shield absorption ────────────────────────────────────────────────────────
 
 describe('Domain integration — Shield absorption', () => {
-    const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
+    const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
 
     it('shield absorbs part of the damage before HP is reduced', () => {
-        let gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [gameState.players[0], {
@@ -202,16 +158,13 @@ describe('Domain integration — Shield absorption', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[1].team[0].shield).toBe(0);
         expect(state.players[1].team[0].hp).toBe(48); // 50 - (5 - 3)
     });
 
     it('damage fully absorbed by shield leaves HP unchanged', () => {
-        let gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [gameState.players[0], {
@@ -221,10 +174,7 @@ describe('Domain integration — Shield absorption', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[1].team[0].shield).toBe(5); // 10 - 5
         expect(state.players[1].team[0].hp).toBe(50);
     });
@@ -234,8 +184,8 @@ describe('Domain integration — Shield absorption', () => {
 
 describe('Domain integration — Heal effects', () => {
     it('single-target heal increases damaged target HP', () => {
-        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.SingleTargetHeal, magnitude: 15 }], TargetConstraint.ALLY_ONLY);
-        let gameState = createGameState(createPlayer(makeTeam(healDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.Heal, magnitude: 15, targets: [allyAbs(1)] }]);
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [{
@@ -245,27 +195,21 @@ describe('Domain integration — Heal effects', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 1 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[0].team[1].hp).toBe(45); // 30 + 15
     });
 
     it('heal is capped at maxHp and never overheals', () => {
-        const bigHealDie = uniformDie('BigHeal', 1, [{ effect: EffectLabel.SingleTargetHeal, magnitude: 100 }], TargetConstraint.ALLY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(bigHealDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const bigHealDie = uniformDie('BigHeal', 1, [{ effect: EffectLabel.Heal, magnitude: 100, targets: [allyAbs(1)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: bigHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 1 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[0].team[1].hp).toBe(50);
     });
 
     it('dead character cannot be healed', () => {
-        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.SingleTargetHeal, magnitude: 20 }], TargetConstraint.ALLY_ONLY);
-        let gameState = createGameState(createPlayer(makeTeam(healDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyAbs(1)] }]);
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [{
@@ -275,10 +219,7 @@ describe('Domain integration — Heal effects', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 1 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(state.players[0].team[1].hp).toBe(0);
     });
 });
@@ -287,17 +228,14 @@ describe('Domain integration — Heal effects', () => {
 
 describe('Domain integration — Priority ordering', () => {
     it('higher-priority attacker kills target before lower-priority defender fires', () => {
-        const highPrioDmgDie = uniformDie('HighPrio', 5, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 50 }], TargetConstraint.ENEMY_ONLY);
-        const lowPrioDmgDie  = uniformDie('LowPrio',  1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 10 }], TargetConstraint.ENEMY_ONLY);
+        const highPrioDmgDie = uniformDie('HighPrio', 5, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
+        const lowPrioDmgDie  = uniformDie('LowPrio',  1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
         const player0 = createPlayer([createCharacter('Killer', 50, 0, highPrioDmgDie, { playerIndex: 0, slot: 0 as SlotIndex })], 0);
         const player1 = createPlayer([createCharacter('Victim', 50, 0, lowPrioDmgDie,  { playerIndex: 1, slot: 0 as SlotIndex })], 1);
         const gameState = createGameState(player0, player1);
 
         const resolvedState = advanceToResolve(gameState);
-        const { state, log } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-        );
+        const { state, log } = performResolve(resolvedState);
 
         expect(state.players[1].team[0].hp).toBe(0);   // killed by high-prio
         expect(state.players[0].team[0].hp).toBe(50);  // never hit
@@ -306,16 +244,13 @@ describe('Domain integration — Priority ordering', () => {
     });
 
     it('equal-priority characters both fire — neither is skipped', () => {
-        const dmgDie = uniformDie('Damage', 3, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 10 }], TargetConstraint.ENEMY_ONLY);
+        const dmgDie = uniformDie('Damage', 3, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
         const player0 = createPlayer([createCharacter('A', 50, 0, dmgDie, { playerIndex: 0, slot: 0 as SlotIndex })], 0);
         const player1 = createPlayer([createCharacter('B', 50, 0, dmgDie, { playerIndex: 1, slot: 0 as SlotIndex })], 1);
         const gameState = createGameState(player0, player1);
 
         const resolvedState = advanceToResolve(gameState);
-        const { state, log } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-        );
+        const { state, log } = performResolve(resolvedState);
 
         expect(state.players[0].team[0].hp).toBe(40);
         expect(state.players[1].team[0].hp).toBe(40);
@@ -323,16 +258,13 @@ describe('Domain integration — Priority ordering', () => {
     });
 
     it('resolve log contains a step for every queued character', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
+        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
         const player0 = createPlayer([createCharacter('A', 50, 0, dmgDie, { playerIndex: 0, slot: 0 as SlotIndex })], 0);
         const player1 = createPlayer([createCharacter('B', 50, 0, dmgDie, { playerIndex: 1, slot: 0 as SlotIndex })], 1);
         const gameState = createGameState(player0, player1);
 
         const resolvedState = advanceToResolve(gameState);
-        const { log } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-        );
+        const { log } = performResolve(resolvedState);
 
         expect(log).toHaveLength(2);
         expect(log.every(step => !step.skipped)).toBe(true);
@@ -340,11 +272,11 @@ describe('Domain integration — Priority ordering', () => {
     });
 });
 
-// ─── NONE-constraint (self-effects) ──────────────────────────────────────────
+// ─── Self-targeted effects ──────────────────────────────────────────
 
-describe('Domain integration — NONE-constraint self-effects', () => {
-    it('SelfHeal fires in resolve without any assigned target', () => {
-        const selfHealDie = uniformDie('SelfHeal', 1, [{ effect: EffectLabel.SelfHeal, magnitude: 20 }], TargetConstraint.NONE);
+describe('Domain integration — Self-targeted effects', () => {
+    it('a self-heal fires in resolve with no target assignment', () => {
+        const selfHealDie = uniformDie('Self-heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyRel(0)] }]);
         let gameState = createGameState(createPlayer(makeTeam(selfHealDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
@@ -355,26 +287,26 @@ describe('Domain integration — NONE-constraint self-effects', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState, [], []); // no target assignments at all
+        const { state } = performResolve(resolvedState);
 
         expect(state.players[0].team[0].hp).toBe(50); // 30 + 20
     });
 
-    it('SelfShield grants shield to each character without any assigned target', () => {
-        const selfShieldDie = uniformDie('SelfShield', 1, [{ effect: EffectLabel.SelfShield, magnitude: 5 }], TargetConstraint.NONE);
+    it('a self-shield grants shield to each character with no target assignment', () => {
+        const selfShieldDie = uniformDie('Self-shield', 1, [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }]);
         const gameState = createGameState(createPlayer(makeTeam(selfShieldDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState, [], []);
+        const { state } = performResolve(resolvedState);
 
         state.players[0].team.forEach(char => expect(char.shield).toBe(5));
     });
 
-    it('NONE and ENEMY_ONLY faces coexist and both fire correctly in the same round', () => {
-        const selfHealDie = uniformDie('SelfHeal', 1, [{ effect: EffectLabel.SelfHeal, magnitude: 20 }], TargetConstraint.NONE);
-        const dmgDie      = uniformDie('Damage',   1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 10 }], TargetConstraint.ENEMY_ONLY);
+    it('self-targeted and enemy-targeted faces coexist and both fire correctly in the same round', () => {
+        const selfHealDie = uniformDie('Self-heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyRel(0)] }]);
+        const dmgDie      = uniformDie('Damage',   1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
 
         const player0Team = [
-            createCharacter('SelfHealer', 50, 0, selfHealDie, { playerIndex: 0, slot: 0 as SlotIndex }),
+            createCharacter('Self-healer', 50, 0, selfHealDie, { playerIndex: 0, slot: 0 as SlotIndex }),
             createCharacter('Attacker',   50, 0, dmgDie,      { playerIndex: 0, slot: 1 as SlotIndex }),
             ...[2, 3, 4].map(idx => createCharacter(`P0S${idx}`, 50, 0, noopDie, { playerIndex: 0, slot: idx as SlotIndex })),
         ];
@@ -388,104 +320,40 @@ describe('Domain integration — NONE-constraint self-effects', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        // SelfHealer (slot 0) needs no target; Attacker (slot 1) needs an enemy target
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 1 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        // Self-healer (slot 0) heals itself; Attacker (slot 1) hits the enemy at slot 0
+        const { state } = performResolve(resolvedState);
 
-        expect(state.players[0].team[0].hp).toBe(40); // SelfHeal: 20 + 20
+        expect(state.players[0].team[0].hp).toBe(40); // self-heal: 20 + 20
         expect(state.players[1].team[0].hp).toBe(40); // Took 10 damage
     });
 });
 
-// ─── Target constraint enforcement ───────────────────────────────────────────
+// ─── cleave effects ───────────────────────────────────────────────────────────
 
-describe('Domain integration — Target constraint enforcement', () => {
-    it('ENEMY_ONLY face throws when player targets their own team', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+describe('Domain integration — cleave effects', () => {
+    it('cleave damage around slot 2 hits slots 1, 2 and 3 only', () => {
+        const cleaveDmgDie = uniformDie('cleave', 1, [{ effect: EffectLabel.Damage, magnitude: 8, targets: [enemyAbs(1, 2, 3)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-
-        expect(() =>
-            selectTargetOfCharacter(resolvedState.players[0], 0 as SlotIndex, { playerIndex: 0, slot: 1 as SlotIndex }),
-        ).toThrow('ENEMY_ONLY');
-    });
-
-    it('ALLY_ONLY face throws when player targets the enemy team', () => {
-        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }], TargetConstraint.ALLY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(healDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const resolvedState = advanceToResolve(gameState);
-
-        expect(() =>
-            selectTargetOfCharacter(resolvedState.players[0], 0 as SlotIndex, { playerIndex: 1, slot: 0 as SlotIndex }),
-        ).toThrow('ALLY_ONLY');
-    });
-
-    it('ALLY_ONLY face accepts a target on the actor\'s own team', () => {
-        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }], TargetConstraint.ALLY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(healDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const resolvedState = advanceToResolve(gameState);
-
-        expect(() =>
-            selectTargetOfCharacter(resolvedState.players[0], 0 as SlotIndex, { playerIndex: 0, slot: 1 as SlotIndex }),
-        ).not.toThrow();
-    });
-
-    it('violated constraint at resolve time throws rather than silently miscalculating', () => {
-        // Manually inject a bad queue entry (ALLY_ONLY face targeting the enemy) to verify
-        // the resolution guard catches it as a hard error.
-        const allyOnlyDie = uniformDie('Heal', 1, [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }], TargetConstraint.ALLY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(allyOnlyDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        let resolvedState = advanceToResolve(gameState);
-
-        // Directly manipulate a target to be invalid (bypass selectTargetOfCharacter validation)
-        resolvedState = {
-            ...resolvedState,
-            players: [{
-                ...resolvedState.players[0],
-                team: resolvedState.players[0].team.map((char, idx) =>
-                    idx === 0 ? { ...char, target: { playerIndex: 1 as const, slot: 0 as SlotIndex } } : char,
-                ),
-            }, resolvedState.players[1]] as typeof resolvedState.players,
-        };
-
-        expect(() => performResolve(resolvedState)).toThrow('ALLY_ONLY');
-    });
-});
-
-// ─── Cleave effects ───────────────────────────────────────────────────────────
-
-describe('Domain integration — Cleave effects', () => {
-    it('CleaveDamage targeting slot 2 hits slots 1, 2 and 3 only', () => {
-        const cleaveDmgDie = uniformDie('Cleave', 1, [{ effect: EffectLabel.CleaveDamage, magnitude: 8 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(cleaveDmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 2 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[1].team.forEach((char, idx) =>
             expect(char.hp).toBe([1, 2, 3].includes(idx) ? 42 : 50),
         );
     });
 
-    it('CleaveDamage at edge slot 0 hits only slots 0 and 1', () => {
-        const cleaveDmgDie = uniformDie('Cleave', 1, [{ effect: EffectLabel.CleaveDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(cleaveDmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+    it('cleave damage at edge slot 0 hits only slots 0 and 1', () => {
+        const cleaveDmgDie = uniformDie('cleave', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0, 1)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[1].team.forEach((char, idx) =>
             expect(char.hp).toBe(idx <= 1 ? 45 : 50),
         );
     });
 
-    it('CleaveHeal targeting slot 2 heals allies at slots 1, 2 and 3', () => {
-        const cleaveHealDie = uniformDie('CleaveHeal', 1, [{ effect: EffectLabel.CleaveHeal, magnitude: 10 }], TargetConstraint.ALLY_ONLY);
-        let gameState = createGameState(createPlayer(makeTeam(cleaveHealDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+    it('cleave heal around slot 2 heals allies at slots 1, 2 and 3', () => {
+        const cleaveHealDie = uniformDie('cleave heal', 1, [{ effect: EffectLabel.Heal, magnitude: 10, targets: [allyAbs(1, 2, 3)] }]);
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [{
@@ -495,33 +363,27 @@ describe('Domain integration — Cleave effects', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 2 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[0].team.forEach((char, idx) =>
             expect(char.hp).toBe([1, 2, 3].includes(idx) ? 40 : 30),
         );
     });
 });
 
-// ─── FullTeam effects ─────────────────────────────────────────────────────────
+// ─── Full-team effects ─────────────────────────────────────────────────────────
 
-describe('Domain integration — FullTeam effects', () => {
-    it('FullTeamDamage deals damage to all 5 enemy characters', () => {
-        const fullTeamDmgDie = uniformDie('FullTeamDmg', 1, [{ effect: EffectLabel.FullTeamDamage, magnitude: 6 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(fullTeamDmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+describe('Domain integration — Full-team effects', () => {
+    it('full-team damage deals damage to all 5 enemy characters', () => {
+        const fullTeamDmgDie = uniformDie('Full-team damage', 1, [{ effect: EffectLabel.Damage, magnitude: 6, targets: [enemyAbs(0, 1, 2, 3, 4)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[1].team.forEach(char => expect(char.hp).toBe(44));
     });
 
-    it('FullTeamHeal restores HP to all 5 ally characters including actor', () => {
-        const fullTeamHealDie = uniformDie('FullTeamHeal', 1, [{ effect: EffectLabel.FullTeamHeal, magnitude: 12 }], TargetConstraint.ALLY_ONLY);
-        let gameState = createGameState(createPlayer(makeTeam(fullTeamHealDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+    it('full-team heal restores HP to all 5 ally characters including actor', () => {
+        const fullTeamHealDie = uniformDie('Full-team heal', 1, [{ effect: EffectLabel.Heal, magnitude: 12, targets: [allyAbs(0, 1, 2, 3, 4)] }]);
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [{
@@ -531,21 +393,15 @@ describe('Domain integration — FullTeam effects', () => {
         };
 
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[0].team.forEach(char => expect(char.hp).toBe(42)); // 30 + 12
     });
 
-    it('FullTeamShield grants shield to all 5 ally characters', () => {
-        const fullTeamShieldDie = uniformDie('FullTeamShield', 1, [{ effect: EffectLabel.FullTeamShield, magnitude: 4 }], TargetConstraint.ALLY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(fullTeamShieldDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+    it('full-team shield grants shield to all 5 ally characters', () => {
+        const fullTeamShieldDie = uniformDie('Full-team shield', 1, [{ effect: EffectLabel.Shield, magnitude: 4, targets: [allyAbs(0, 1, 2, 3, 4)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamShieldDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 0, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         state.players[0].team.forEach(char => expect(char.shield).toBe(4));
     });
 });
@@ -553,26 +409,19 @@ describe('Domain integration — FullTeam effects', () => {
 // ─── Win conditions ───────────────────────────────────────────────────────────
 
 describe('Domain integration — Win conditions', () => {
-    const killDie = uniformDie('Kill', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 50 }], TargetConstraint.ENEMY_ONLY);
-    const allSlots = [0, 1, 2, 3, 4] as SlotIndex[];
+    const killDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyRel(0)] }]);
 
     it('checkWinner returns 0 when player 1 loses 3 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(killDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            allSlots.map(slot => ({ slot, target: { playerIndex: 1, slot } })),
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(checkWinner(state)).toBe(0);
     });
 
     it('checkWinner returns 1 when player 0 loses 3 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(killDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [],
-            allSlots.map(slot => ({ slot, target: { playerIndex: 0, slot } })),
-        );
+        const { state } = performResolve(resolvedState);
         expect(checkWinner(state)).toBe(1);
     });
 
@@ -594,13 +443,10 @@ describe('Domain integration — Win conditions', () => {
     });
 
     it('checkWinner returns null when fewer than 3 characters have died', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 10 }], TargetConstraint.ENEMY_ONLY);
-        const gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
-        const { state } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state } = performResolve(resolvedState);
         expect(checkWinner(state)).toBeNull();
     });
 });
@@ -608,9 +454,9 @@ describe('Domain integration — Win conditions', () => {
 // ─── Round cleanup and multi-round ────────────────────────────────────────────
 
 describe('Domain integration — Round cleanup and multi-round', () => {
-    it('endOfRound resets shields, clears targets, unlocks dice, increments round, restores rollsLeft', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
-        let gameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+    it('endOfRound resets shields, unlocks dice, increments round, restores rollsLeft', () => {
+        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
             players: [gameState.players[0], {
@@ -620,24 +466,20 @@ describe('Domain integration — Round cleanup and multi-round', () => {
         };
 
         const postKeepState = advanceToResolve(gameState);
-        const { state: resolvedState } = resolveRound(postKeepState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state: resolvedState } = performResolve(postKeepState);
 
         const nextRoundState = endOfRound(resolvedState);
         expect(nextRoundState.currentRound).toBe(1);
         expect(nextRoundState.rollsLeft).toBe(2);
         nextRoundState.players.forEach(player => player.team.forEach(char => {
             expect(char.shield).toBe(0);
-            expect(char.target).toBeNull();
             expect(char.isFaceLocked).toBe(false);
         }));
     });
 
     it('shield granted in round 1 does not absorb damage in round 2 after endOfRound', () => {
-        const selfShieldDie = uniformDie('SelfShield', 2, [{ effect: EffectLabel.SelfShield, magnitude: 10 }], TargetConstraint.NONE);
-        const dmgDie        = uniformDie('Damage',     1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }], TargetConstraint.ENEMY_ONLY);
+        const selfShieldDie = uniformDie('Self-shield', 2, [{ effect: EffectLabel.Shield, magnitude: 10, targets: [allyRel(0)] }]);
+        const dmgDie        = uniformDie('Damage',     1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
 
         const player0Team = [
             createCharacter('Attacker', 50, 0, dmgDie, { playerIndex: 0, slot: 0 as SlotIndex }),
@@ -651,10 +493,7 @@ describe('Domain integration — Round cleanup and multi-round', () => {
 
         // Round 1: P1 slot 0 self-shields (priority 2 fires first), P0 slot 0 deals 5 damage
         let resolvedState = advanceToResolve(gameState);
-        const { state: round1State } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state: round1State } = performResolve(resolvedState);
         // Shield (10) absorbed 5 damage → HP=50, shield=5 remaining
         expect(round1State.players[1].team[0].hp).toBe(50);
         expect(round1State.players[1].team[0].shield).toBe(5);
@@ -666,13 +505,10 @@ describe('Domain integration — Round cleanup and multi-round', () => {
         // Round 2: same setup. P1 slot 0 self-shields again (priority 2 fires first → shield=10),
         // then P0 deals 5 damage (priority 1) → shield absorbs again
         resolvedState = advanceToResolve(round2GameState);
-        const { state: round2State } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state: round2State } = performResolve(resolvedState);
         expect(round2State.players[1].team[0].hp).toBe(50);  // shield absorbed again
 
-        // If we strip the SelfShield by using a non-shielding P1, HP takes full damage
+        // If we strip the self-shield by using a non-shielding P1, HP takes full damage
         const round3GameState = beginPlacementPhase(endOfRound(round2State));
         const player1NoShield = createPlayer(
             [createCharacter('Target', round3GameState.players[1].team[0].hp, 0, noopDie, { playerIndex: 1, slot: 0 as SlotIndex }),
@@ -681,30 +517,21 @@ describe('Domain integration — Round cleanup and multi-round', () => {
         );
         const round3GameStateNoShield = { ...round3GameState, players: [round3GameState.players[0], player1NoShield] as typeof round3GameState.players };
         resolvedState = advanceToResolve(round3GameStateNoShield);
-        const { state: round3State } = resolveRound(resolvedState,
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state: round3State } = performResolve(resolvedState);
         expect(round3State.players[1].team[0].hp).toBe(round3GameState.players[1].team[0].hp - 5); // no shield → full damage
     });
 
     it('damage accumulates correctly across two consecutive rounds', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.SingleTargetDamage, magnitude: 10 }], TargetConstraint.ENEMY_ONLY);
-        const initialGameState = createGameState(createPlayer(makeTeam(dmgDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+        const initialGameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
 
         // Round 1
-        const { state: round1State } = resolveRound(advanceToResolve(initialGameState),
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state: round1State } = performResolve(advanceToResolve(initialGameState));
         expect(round1State.players[1].team[0].hp).toBe(40);
 
         // Round 2
         const round2GameState = beginPlacementPhase(endOfRound(round1State));
-        const { state: round2State } = resolveRound(advanceToResolve(round2GameState),
-            [{ slot: 0 as SlotIndex, target: { playerIndex: 1, slot: 0 as SlotIndex } }],
-            [],
-        );
+        const { state: round2State } = performResolve(advanceToResolve(round2GameState));
         expect(round2State.players[1].team[0].hp).toBe(30);
         // endOfRound hasn't been called yet; counter was incremented once (after round 1)
         expect(round2State.currentRound).toBe(1);

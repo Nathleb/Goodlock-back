@@ -3,10 +3,9 @@ import EffectFactory from "../factories/EffectFactory.class";
 import Die from "../types/Die.type";
 import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
-import EffectLabel from "../types/EffectLabels.type";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
-import TargetConstraint from "../types/TargetConstraint.type";
+import { validateEffectTargets } from "./TargetResolution.service";
 
 export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, factory: EffectFactory): Character {
     let template: CharacterTemplate;
@@ -31,7 +30,6 @@ export function createCharacter(name: string, maxHp: number, baseSpeed: number, 
         modifiers: [],
         face: baseDie[0],
         isFaceLocked: false,
-        target: null,
         position,
     };
 }
@@ -45,12 +43,7 @@ export function setDieFace(character: Character, faceIndex: number, dieFace: Die
 export function generateFullDie(baseDieInstructions: BaseDieInstructions, factory: EffectFactory): Die {
     return baseDieInstructions.map(faceData =>
         generateFaceFromEffectEntries(
-            {
-                description: faceData.description,
-                priority: faceData.priority,
-                effects: [],
-                targetConstraint: faceData.targetConstraint ?? TargetConstraint.ANY,
-            },
+            { description: faceData.description, priority: faceData.priority, effects: [] },
             faceData.effects,
             factory,
         )
@@ -58,12 +51,18 @@ export function generateFullDie(baseDieInstructions: BaseDieInstructions, factor
 }
 
 export function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly EffectEntry[], factory: EffectFactory): DieFace {
-    return effectEntries.reduce(
-        (acc, entry) => addEffectToFace(acc, entry.effect, entry.magnitude, factory),
-        face
-    );
+    return effectEntries.reduce((acc, entry) => addEffectToFace(acc, entry, factory), face);
 }
 
-export function addEffectToFace(dieFace: DieFace, effect: EffectLabel, magnitude: number, factory: EffectFactory): DieFace {
-    return { ...dieFace, effects: [...dieFace.effects, factory.createEffect(effect, magnitude)] };
+export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: EffectFactory): DieFace {
+    // Template load is a startup boundary: a bad template is a non-recoverable config error.
+    const errors = validateEffectTargets(entry.effect, entry.targets ?? []);
+    if (errors.length > 0) {
+        throw new Error(`Invalid targets for effect "${entry.effect}" on face "${dieFace.description}": ${errors.join('; ')}`);
+    }
+    const impl = factory.createEffect(entry.effect, entry.magnitude);
+    return {
+        ...dieFace,
+        effects: [...dieFace.effects, { label: entry.effect, magnitude: entry.magnitude, targets: entry.targets, impl }],
+    };
 }

@@ -1,23 +1,20 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
+import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { hasLost, rollDiceForTurn, selectTargetOfCharacter, createPlayer } from "@domain/services/Player.service";
+import { hasLost, rollDiceForTurn } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
 import { buildEffectFactory } from "@domain/services/GameInit.service";
-import TargetConstraint from "@domain/types/TargetConstraint.type";
-import DieFace from "@domain/types/DieFace.type";
-import Die from "@domain/types/Die.type";
-import Position, { SlotIndex } from "@domain/types/Position.type";
 
 describe('PlayerService', () => {
   const baseDieInstructions: BaseDieInstructions = [
-    { description: "Deals 1 damage", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "Heals 2 HP", priority: 1, effects: [{ effect: EffectLabel.SingleTargetHeal, magnitude: 2 }] },
-    { description: "Grants 3 shield", priority: 1, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 3 }] },
-    { description: "Deals 4 damage", priority: 2, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 4 }] },
-    { description: "Heals 5 HP", priority: 2, effects: [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }] },
-    { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 6 }] },
+    { description: "Deals 1 damage", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "Heals 2 HP", priority: 1, effects: [{ effect: EffectLabel.Heal, magnitude: 2, targets: [allyRel(0)] }] },
+    { description: "Grants 3 shield", priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 3, targets: [allyRel(0)] }] },
+    { description: "Deals 4 damage", priority: 2, effects: [{ effect: EffectLabel.Damage, magnitude: 4, targets: [enemyRel(0)] }] },
+    { description: "Heals 5 HP", priority: 2, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [allyRel(0)] }] },
+    { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 6, targets: [allyRel(0)] }] },
   ];
 
   const factory = buildEffectFactory();
@@ -45,57 +42,5 @@ describe('PlayerService', () => {
     const dead = loseHp(makeChar(), 100);
     const bigTeam: Player = { playerIndex: 0, team: [dead, dead, makeChar(), makeChar(), makeChar()] };
     expect(hasLost(bigTeam)).toBe(false);
-  });
-
-  describe('selectTargetOfCharacter', () => {
-    const baseFace = (constraint: TargetConstraint): DieFace => ({
-      priority: 1, effects: [], description: 'test', targetConstraint: constraint,
-    });
-
-    it('throws when enemy target given for ALLY_ONLY face', () => {
-      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ALLY_ONLY)) as Die, { playerIndex: 0, slot: 0 });
-      const player = createPlayer([char], 0);
-      const enemyPos: Position = { playerIndex: 1, slot: 2 };
-      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos))
-        .toThrow('ALLY_ONLY');
-    });
-
-    it('throws when ally target given for ENEMY_ONLY face', () => {
-      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ENEMY_ONLY)) as Die, { playerIndex: 0, slot: 0 });
-      const player = createPlayer([char], 0);
-      const allyPos: Position = { playerIndex: 0, slot: 1 };
-      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, allyPos))
-        .toThrow('ENEMY_ONLY');
-    });
-
-    it('throws when any target given for NONE face', () => {
-      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.NONE)) as Die, { playerIndex: 0, slot: 0 });
-      const player = createPlayer([char], 0);
-      const pos: Position = { playerIndex: 0, slot: 1 };
-      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, pos))
-        .toThrow('NONE');
-    });
-
-    it('accepts ally target for ALLY_ONLY face', () => {
-      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ALLY_ONLY)) as Die, { playerIndex: 0, slot: 0 });
-      const player = createPlayer([char], 0);
-      const allyPos: Position = { playerIndex: 0, slot: 2 };
-      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, allyPos)).not.toThrow();
-    });
-
-    it('accepts enemy target for ANY face', () => {
-      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ANY)) as Die, { playerIndex: 0, slot: 0 });
-      const player = createPlayer([char], 0);
-      const enemyPos: Position = { playerIndex: 1, slot: 2 };
-      expect(() => selectTargetOfCharacter(player, 0 as SlotIndex, enemyPos)).not.toThrow();
-    });
-
-    it('returns player unchanged when slot does not exist', () => {
-      const char = createCharacter('A', 100, 5, Array(6).fill(baseFace(TargetConstraint.ANY)) as Die, { playerIndex: 0, slot: 0 });
-      const player = createPlayer([char], 0);
-      const anyPos: Position = { playerIndex: 1, slot: 0 };
-      const result = selectTargetOfCharacter(player, 9 as SlotIndex, anyPos);
-      expect(result).toBe(player);
-    });
   });
 });

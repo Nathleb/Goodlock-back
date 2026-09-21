@@ -1,35 +1,43 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import EffectFactory from "@domain/factories/EffectFactory.class";
-import SingleTargetDamage from "@domain/strategies/SingleTargetDamage.class";
-import SingleTargetHeal from "@domain/strategies/SingleTargetHeal.class";
-import SingleTargetShield from "@domain/strategies/SingleTargetShield.class";
+import Damage from "@domain/strategies/Damage.class";
+import Heal from "@domain/strategies/Heal.class";
+import Shield from "@domain/strategies/Shield.class";
+import Swap from "@domain/strategies/Swap.class";
 
 describe('EffectFactory', () => {
-  it('should register and create SingleTargetDamage effect', () => {
+  it('should register and create Damage effect', () => {
     const factory = new EffectFactory();
-    factory.registerEffect(EffectLabel.SingleTargetDamage, (amount) => new SingleTargetDamage(amount));
-    const effect = factory.createEffect(EffectLabel.SingleTargetDamage, 10);
-    expect(effect).toBeInstanceOf(SingleTargetDamage);
+    factory.registerEffect(EffectLabel.Damage, (amount) => new Damage(amount));
+    const effect = factory.createEffect(EffectLabel.Damage, 10);
+    expect(effect).toBeInstanceOf(Damage);
   });
 
-  it('should register and create SingleTargetHeal effect', () => {
+  it('should register and create Heal effect', () => {
     const factory = new EffectFactory();
-    factory.registerEffect(EffectLabel.SingleTargetHeal, (amount) => new SingleTargetHeal(amount));
-    const effect = factory.createEffect(EffectLabel.SingleTargetHeal, 10);
-    expect(effect).toBeInstanceOf(SingleTargetHeal);
+    factory.registerEffect(EffectLabel.Heal, (amount) => new Heal(amount));
+    const effect = factory.createEffect(EffectLabel.Heal, 10);
+    expect(effect).toBeInstanceOf(Heal);
   });
 
-  it('should register and create SingleTargetShield effect', () => {
+  it('should register and create Shield effect', () => {
     const factory = new EffectFactory();
-    factory.registerEffect(EffectLabel.SingleTargetShield, (amount) => new SingleTargetShield(amount));
-    const effect = factory.createEffect(EffectLabel.SingleTargetShield, 10);
-    expect(effect).toBeInstanceOf(SingleTargetShield);
+    factory.registerEffect(EffectLabel.Shield, (amount) => new Shield(amount));
+    const effect = factory.createEffect(EffectLabel.Shield, 10);
+    expect(effect).toBeInstanceOf(Shield);
+  });
+
+  it('should register and create Swap effect', () => {
+    const factory = new EffectFactory();
+    factory.registerEffect(EffectLabel.Swap, () => new Swap());
+    const effect = factory.createEffect(EffectLabel.Swap, 0);
+    expect(effect).toBeInstanceOf(Swap);
   });
 
   it('should unregister an effect', () => {
     const factory = new EffectFactory();
-    factory.registerEffect(EffectLabel.SingleTargetDamage, (amount) => new SingleTargetDamage(amount));
-    factory.unregisterEffect(EffectLabel.SingleTargetDamage);
-    expect(() => factory.createEffect(EffectLabel.SingleTargetDamage, 10)).toThrow();
+    factory.registerEffect(EffectLabel.Damage, (amount) => new Damage(amount));
+    factory.unregisterEffect(EffectLabel.Damage);
+    expect(() => factory.createEffect(EffectLabel.Damage, 10)).toThrow();
   });
 });

@@ -1,7 +1,11 @@
+export type TargetGroupDTO = { side: string; mode: string; n: number[] };
+
+export type FaceEffectDTO = { effect: string; magnitude: number; targets: TargetGroupDTO[] };
+
 export type DieFaceDTO = {
     description: string;
     priority: number;
-    targetConstraint: string;
+    effects: FaceEffectDTO[];
 };
 
 export type CharacterDTO = {
@@ -14,7 +18,6 @@ export type CharacterDTO = {
     baseDie: DieFaceDTO[];
     face: DieFaceDTO;
     isFaceLocked: boolean;
-    target: { playerIndex: number; slot: number } | null;
     position: { playerIndex: number; slot: number };
 };
 

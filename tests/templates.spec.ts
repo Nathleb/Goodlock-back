@@ -30,4 +30,15 @@ describe("character templates", () => {
     const tmpl = JSON.parse(fs.readFileSync(path.join(tmpltDir, file), "utf-8"));
     expect(tmpl.baseSpeed).toBeGreaterThanOrEqual(2);
   });
+
+  it.each(files)("%s has no targetConstraint and targets on every effect", (file) => {
+    const tmpl = JSON.parse(fs.readFileSync(path.join(tmpltDir, file), "utf-8"));
+    for (const face of tmpl.baseDieInstructions) {
+      expect(face.targetConstraint).toBeUndefined();
+      for (const e of face.effects) {
+        expect(["Damage", "Heal", "Shield", "Swap"]).toContain(e.effect);
+        expect(Array.isArray(e.targets) && e.targets.length > 0).toBe(true);
+      }
+    }
+  });
 });

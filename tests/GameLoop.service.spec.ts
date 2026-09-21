@@ -1,4 +1,5 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
+import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
 import GamePhase from "@domain/types/GamePhase.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
@@ -16,12 +17,12 @@ import GameState from "@domain/types/GameState.type";
 const factory = buildEffectFactory();
 
 const die = generateFullDie([
-    { description: "A", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "B", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "C", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "E", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "F", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "A", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "B", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "C", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "E", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "F", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
 ] satisfies BaseDieInstructions, factory);
 
 const makeTeam = (pi: 0 | 1) =>

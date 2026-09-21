@@ -3,11 +3,11 @@
     "maxHp": 20,
     "baseSpeed": 2,
     "baseDieInstructions": [
-        { "description": "Deal 4 damage to a single target.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }] },
-        { "description": "Push a target one step to the left.", "priority": 1, "targetConstraint": "ANY", "effects": [{ "effect": "PushLeft", "magnitude": 1 }] },
-        { "description": "Deal 5 damage to a single target.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
-        { "description": "Push a target one step to the right.", "priority": 1, "targetConstraint": "ANY", "effects": [{ "effect": "PushRight", "magnitude": 1 }] },
-        { "description": "Deal 3 cleave damage.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
-        { "description": "Deal 6 damage and gain 2 shield.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 6 }, { "effect": "SelfShield", "magnitude": 2 }] }
+        { "description": "Deal 4 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 4, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Swap the enemy in front with its left neighbour.", "priority": 1, "effects": [{ "effect": "Swap", "magnitude": 0, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0,-1] }] }] },
+        { "description": "Deal 5 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 5, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Swap the enemy in front with its right neighbour.", "priority": 1, "effects": [{ "effect": "Swap", "magnitude": 0, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0,1] }] }] },
+        { "description": "Deal 3 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
+        { "description": "Deal 6 damage to the enemy in front and gain 2 shield.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 6, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] },{ "effect": "Shield", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] }
     ]
 }

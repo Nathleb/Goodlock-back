@@ -1,9 +1,9 @@
 import Position, { PlayerIndex, SlotIndex } from "../types/Position.type";
 import TargetGroup from "../types/TargetGroup.type";
+import EffectLabel from "../types/EffectLabels.type";
 
 const MIN_SLOT = 0;
 const MAX_SLOT = 4;
-const SWAP_EFFECT = 'Swap';
 const MIN_OFFSET = -4;
 const MAX_OFFSET = 4;
 
@@ -37,7 +37,7 @@ export function validateEffectTargets(effect: string, groups: readonly TargetGro
         }
     });
 
-    if (effect === SWAP_EFFECT) {
+    if (effect === EffectLabel.Swap) {
         const count = groups.reduce((acc, g) => acc + (Array.isArray(g.n) ? g.n.length : 0), 0);
         if (count !== 2) errors.push(`Swap needs exactly 2 cells, got ${count}`);
         if (new Set(groups.map(g => g.side)).size > 1) errors.push('Swap cells must all be on the same side');

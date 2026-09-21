@@ -4,16 +4,14 @@ import GamePhase from '@domain/types/GamePhase.type';
 import Character from '@domain/types/Character.type';
 import { Player } from '@domain/types/Player.type';
 import { SlotIndex, PlayerIndex } from '@domain/types/Position.type';
-import TargetConstraint from '@domain/types/TargetConstraint.type';
 import DieFace from '@domain/types/DieFace.type';
 
-const FACE: DieFace = { description: 'd', priority: 1, effects: [], targetConstraint: TargetConstraint.ANY };
+const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 
 function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean): Character {
     return {
         id, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [],
         baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked,
-        target: { playerIndex: 0, slot: 0 as SlotIndex },
         position: { playerIndex, slot: slot as SlotIndex },
     };
 }
@@ -27,10 +25,9 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
 }
 
 describe('toDTOForViewer', () => {
-    it('always nulls the opponent targets, keeps own targets', () => {
+    it('exposes no target field on characters', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.RESOLVE, [false, true]), 0);
-        expect(dto.players[1].team.every(c => c.target === null)).toBe(true);
-        expect(dto.players[0].team.every(c => c.target !== null)).toBe(true);
+        expect(dto.players.every(p => p.team.every(c => !('target' in c)))).toBe(true);
     });
 
     it('masks opponent locks during KEEP when the opponent already confirmed', () => {
@@ -51,8 +48,7 @@ describe('toDTOForViewer', () => {
     });
 
     it('masks player 0 when the viewer is player 1', () => {
-        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.RESOLVE, [true, false]), 1);
-        expect(dto.players[0].team.every(c => c.target === null)).toBe(true);
-        expect(dto.players[1].team.every(c => c.target !== null)).toBe(true);
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [true, false]), 1);
+        expect(dto.players[0].team.every(c => c.isFaceLocked === false)).toBe(true);
     });
 });
