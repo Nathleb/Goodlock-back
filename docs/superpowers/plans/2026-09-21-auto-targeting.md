@@ -15,7 +15,7 @@
 - Backend only. Do not touch `Goodlock-frontend`.
 - Board: 5 slots per side, `SlotIndex` 0..4, `PlayerIndex` 0..1. `ENEMY` relative offset 0 = enemy with the same slot index as the actor.
 - `TargetGroup = { side: 'ALLY' | 'ENEMY'; mode: 'ABSOLUTE' | 'RELATIVE'; n: number[] }`. ABSOLUTE `n` ∈ 0..4, RELATIVE `n` ∈ -4..4.
-- Out-of-board relative cells are dropped; an effect with 0 resolved cells fizzles (no-op, logged with `targets: []`). A cell reached twice is hit once.
+- Out-of-board relative cells are dropped; an effect with 0 resolved cells fizzles (no-op, logged with `targets: []`). A cell reached several times is **kept every time** and hit once per occurrence (no dedup anywhere: not in `resolveTargets`, not in validation, not in the effects).
 - `Swap`: exactly 2 numbers in total across its groups, all groups the same `side`; fizzles unless exactly 2 distinct cells resolve.
 - Dead characters stay targetable (damage wasted); `gainHp` already refuses to heal the dead — keep it.
 - Domain tests never import NestJS. Tests live in `tests/`.
@@ -28,7 +28,8 @@
 |---|---|
 | `src/domain/types/TargetGroup.type.ts` | **new** — `Side`, `TargetMode`, `TargetGroup` |
 | `src/domain/services/TargetResolution.service.ts` | **new** — `resolveTargets`, `validateEffectTargets` |
-| `src/domain/services/Position.service.ts` | replace targeting fns with `findOccupants` |
+| `src/domain/utils/TargetUtils.ts` | add `applyAtPositions` (per-occurrence application) |
+| `src/domain/services/Position.service.ts` | delete the old targeting fns |
 | `src/domain/strategies/Damage.class.ts`, `Heal.class.ts`, `Shield.class.ts` | **new** |
 | `src/domain/strategies/Swap.class.ts` | becomes the generic `Swap` (keeps `swapSlotsOnSameTeam`) |
 | other `src/domain/strategies/*.class.ts` | **deleted** |
@@ -144,8 +145,13 @@ describe('resolveTargets', () => {
         ]);
     });
 
-    it('keeps a cell reached twice only once', () => {
-        expect(resolveTargets([enemyRel(0), enemyAbs(2)], p0s2)).toEqual([{ playerIndex: 1, slot: 2 }]);
+    it('keeps a cell reached several times, once per occurrence', () => {
+        expect(resolveTargets([enemyRel(0), enemyAbs(2)], p0s2)).toEqual([
+            { playerIndex: 1, slot: 2 }, { playerIndex: 1, slot: 2 },
+        ]);
+        expect(resolveTargets([enemyAbs(1, 1)], p0s2)).toEqual([
+            { playerIndex: 1, slot: 1 }, { playerIndex: 1, slot: 1 },
+        ]);
     });
 });
 ```
@@ -166,16 +172,13 @@ const MIN_SLOT = 0;
 const MAX_SLOT = 4;
 
 export function resolveTargets(groups: readonly TargetGroup[], actor: Position): Position[] {
+    // Repeated cells are kept on purpose: overlapping patterns stack.
     const out: Position[] = [];
-    const seen = new Set<string>();
     for (const group of groups) {
         const playerIndex = (group.side === 'ALLY' ? actor.playerIndex : 1 - actor.playerIndex) as PlayerIndex;
         for (const n of group.n) {
             const slot = group.mode === 'ABSOLUTE' ? n : actor.slot + n;
             if (slot < MIN_SLOT || slot > MAX_SLOT) continue;
-            const key = `${playerIndex}:${slot}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
             out.push({ playerIndex, slot: slot as SlotIndex });
         }
     }
@@ -249,9 +252,9 @@ describe('validateEffectTargets', () => {
         expect(validateEffectTargets('Damage', [badMode])).not.toEqual([]);
     });
 
-    it('rejects the same (side, mode, n) twice', () => {
-        expect(validateEffectTargets('Damage', [enemyAbs(1, 1)])).not.toEqual([]);
-        expect(validateEffectTargets('Damage', [enemyAbs(1), enemyAbs(1)])).not.toEqual([]);
+    it('accepts repeated cells (they stack)', () => {
+        expect(validateEffectTargets('Damage', [enemyAbs(1, 1)])).toEqual([]);
+        expect(validateEffectTargets('Damage', [enemyAbs(1), enemyAbs(1)])).toEqual([]);
     });
 
     it('Swap needs exactly 2 numbers on one side (modes may differ)', () => {
@@ -282,7 +285,6 @@ export function validateEffectTargets(effect: string, groups: readonly TargetGro
     const errors: string[] = [];
     if (!Array.isArray(groups) || groups.length === 0) return ['targets must be a non-empty array'];
 
-    const seen = new Set<string>();
     groups.forEach((g, gi) => {
         const where = `group ${gi}`;
         if (g.side !== 'ALLY' && g.side !== 'ENEMY') errors.push(`${where}: side must be ALLY or ENEMY`);
@@ -292,9 +294,6 @@ export function validateEffectTargets(effect: string, groups: readonly TargetGro
         for (const n of g.n) {
             if (!Number.isInteger(n)) { errors.push(`${where}: ${n} is not an integer`); continue; }
             if (n < min || n > max) errors.push(`${where}: ${n} is outside ${min}..${max}`);
-            const key = `${g.side}:${g.mode}:${n}`;
-            if (seen.has(key)) errors.push(`${where}: duplicate cell ${g.side} ${g.mode} ${n}`);
-            seen.add(key);
         }
     });
 
@@ -316,7 +315,7 @@ Expected: PASS.
 
 ```bash
 git add src/domain/services/TargetResolution.service.ts tests/TargetResolution.service.spec.ts
-git commit -m "feat: validate effect target groups (ranges, duplicates, Swap arity)"
+git commit -m "feat: validate effect target groups (ranges, Swap arity)"
 ```
 
 ---
@@ -326,13 +325,13 @@ git commit -m "feat: validate effect target groups (ranges, duplicates, Swap ari
 The new classes use the new `solve(gs, targets: readonly Position[], actorId)` signature. They do **not** declare `implements Effect` yet (the interface changes in Task 5); TypeScript structural typing keeps everything compiling.
 
 **Files:**
-- Modify: `src/domain/services/Position.service.ts` (add `findOccupants`)
+- Modify: `src/domain/utils/TargetUtils.ts` (add `applyAtPositions`)
 - Create: `src/domain/strategies/Damage.class.ts`, `Heal.class.ts`, `Shield.class.ts`
 - Modify: `src/domain/strategies/Swap.class.ts` (add named export `Swap`)
 - Test: `tests/Effects.spec.ts`
 
 **Interfaces:**
-- Produces: `findOccupants(players: readonly [Player, Player], positions: readonly Position[]): Character[]`; classes `Damage(amount)`, `Heal(amount)`, `Shield(amount)` (default exports), `Swap` (named export from `Swap.class.ts`, constructor takes no argument), all with `solve(gs: GameState, targets: readonly Position[], actorId: string): { state: GameState; affected: string[] }`.
+- Produces: `applyAtPositions(gameState: GameState, positions: readonly Position[], fn: (c: Character) => Character): { state: GameState; affected: string[] }` — applies `fn` to the occupant of each position **once per occurrence, in order** (a repeated position is applied again, on the already-updated character); empty cells are skipped; `affected` lists each touched id once, in first-touch order. Classes `Damage(amount)`, `Heal(amount)`, `Shield(amount)` (default exports), `Swap` (named export from `Swap.class.ts`, constructor takes no argument), all with `solve(gs: GameState, targets: readonly Position[], actorId: string): { state: GameState; affected: string[] }`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -342,7 +341,8 @@ import Damage from "@domain/strategies/Damage.class";
 import Heal from "@domain/strategies/Heal.class";
 import Shield from "@domain/strategies/Shield.class";
 import { Swap } from "@domain/strategies/Swap.class";
-import { findOccupants } from "@domain/services/Position.service";
+import { applyAtPositions } from "@domain/utils/TargetUtils";
+import { gainShield } from "@domain/services/Character.service";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -368,10 +368,16 @@ const withHp = (s: GameState, pi: PlayerIndex, slot: number, hp: number): GameSt
 };
 const actorId = () => at(gs, 0, 2).id;
 
-describe('findOccupants', () => {
-    it('returns the characters at the given positions, once each', () => {
-        const found = findOccupants(gs.players, [pos(1, 0), pos(0, 3), pos(1, 0)]);
-        expect(found.map(c => c.name)).toEqual(['B0', 'A3']);
+describe('applyAtPositions', () => {
+    it('applies once per occurrence and lists each affected id once, in first-touch order', () => {
+        const { state, affected } = applyAtPositions(gs, [pos(1, 0), pos(0, 3), pos(1, 0)], c => gainShield(c, 1));
+        expect(at(state, 1, 0).shield).toBe(2);
+        expect(at(state, 0, 3).shield).toBe(1);
+        expect(affected).toEqual([at(gs, 1, 0).id, at(gs, 0, 3).id]);
+    });
+
+    it('returns the state untouched for no positions', () => {
+        expect(applyAtPositions(gs, [], c => gainShield(c, 1)).affected).toEqual([]);
     });
 });
 
@@ -398,6 +404,19 @@ describe('Damage', () => {
         expect(at(state, 1, 0).hp).toBe(0);
     });
 
+    it('hits a repeated cell once per occurrence (stacking)', () => {
+        const { state, affected } = new Damage(5).solve(gs, [pos(1, 2), pos(1, 2)], actorId());
+        expect(at(state, 1, 2).hp).toBe(10);
+        expect(affected).toEqual([at(gs, 1, 2).id]);
+    });
+
+    it('a repeated cell hits shield then hp in sequence', () => {
+        const shielded = new Shield(3).solve(gs, [pos(1, 0)], actorId()).state;
+        const { state } = new Damage(2).solve(shielded, [pos(1, 0), pos(1, 0)], actorId());
+        expect(at(state, 1, 0).shield).toBe(0);
+        expect(at(state, 1, 0).hp).toBe(19);
+    });
+
     it('hits all 10 characters when given all 10 cells', () => {
         const all = [0, 1].flatMap(pi => [0, 1, 2, 3, 4].map(s => pos(pi as PlayerIndex, s)));
         const { state, affected } = new Damage(1).solve(gs, all, actorId());
@@ -418,6 +437,12 @@ describe('Heal', () => {
         const { state } = new Heal(5).solve(dead, [pos(0, 1)], actorId());
         expect(at(state, 0, 1).hp).toBe(0);
     });
+
+    it('heals a repeated cell once per occurrence', () => {
+        const hurt = withHp(gs, 0, 1, 10);
+        const { state } = new Heal(3).solve(hurt, [pos(0, 1), pos(0, 1)], actorId());
+        expect(at(state, 0, 1).hp).toBe(16);
+    });
 });
 
 describe('Shield', () => {
@@ -426,6 +451,11 @@ describe('Shield', () => {
         expect(at(state, 0, 0).shield).toBe(4);
         expect(at(state, 0, 4).shield).toBe(4);
         expect(at(state, 0, 2).shield).toBe(0);
+    });
+
+    it('shields a repeated cell once per occurrence', () => {
+        const { state } = new Shield(4).solve(gs, [pos(0, 0), pos(0, 0)], actorId());
+        expect(at(state, 0, 0).shield).toBe(8);
     });
 });
 
@@ -443,6 +473,10 @@ describe('Swap', () => {
     it('fizzles with fewer or more than 2 cells', () => {
         expect(new Swap().solve(gs, [pos(1, 1)], actorId())).toEqual({ state: gs, affected: [] });
         expect(new Swap().solve(gs, [pos(1, 1), pos(1, 2), pos(1, 3)], actorId())).toEqual({ state: gs, affected: [] });
+    });
+
+    it('is a no-op when both cells are the same', () => {
+        expect(new Swap().solve(gs, [pos(1, 1), pos(1, 1)], actorId()).affected).toEqual([]);
     });
 
     it('fizzles when the 2 cells are on different teams', () => {
@@ -463,19 +497,30 @@ describe('Swap', () => {
 Run: `npx jest tests/Effects.spec.ts`
 Expected: FAIL — cannot find module `@domain/strategies/Damage.class`.
 
-- [ ] **Step 3: Add `findOccupants`**
+- [ ] **Step 3: Add `applyAtPositions`**
 
-Append to `src/domain/services/Position.service.ts`:
+Append to `src/domain/utils/TargetUtils.ts` (add imports `GameState` from `../types/GameState.type` and `Position` from `../types/Position.type`):
 
 ```ts
-export function findOccupants(players: readonly [Player, Player], positions: readonly Position[]): Character[] {
-    const out: Character[] = [];
-    const seen = new Set<string>();
+/**
+ * Applies `fn` to the occupant of each position, once per occurrence and in
+ * order: a position listed twice is applied twice (overlapping patterns stack).
+ * Empty cells are skipped. `affected` lists each touched id once.
+ */
+export function applyAtPositions(
+    gameState: GameState,
+    positions: readonly Position[],
+    fn: (character: Character) => Character,
+): { state: GameState; affected: string[] } {
+    let players = gameState.players;
+    const affected: string[] = [];
     for (const p of positions) {
         const char = players[p.playerIndex].team.find(c => c.position.slot === p.slot);
-        if (char && !seen.has(char.id)) { seen.add(char.id); out.push(char); }
+        if (!char) continue;
+        players = applyEffectToTargets(players, [char], fn);
+        if (!affected.includes(char.id)) affected.push(char.id);
     }
-    return out;
+    return { state: { ...gameState, players }, affected };
 }
 ```
 
@@ -484,18 +529,15 @@ export function findOccupants(players: readonly [Player, Player], positions: rea
 ```ts
 // src/domain/strategies/Damage.class.ts
 import { dealDamage } from "../services/Character.service";
-import { findOccupants } from "../services/Position.service";
 import Position from "../types/Position.type";
 import GameState from "../types/GameState.type";
-import { applyEffectToTargets } from "../utils/TargetUtils";
+import { applyAtPositions } from "../utils/TargetUtils";
 
 export default class Damage {
     constructor(private readonly amount: number) {}
 
     solve(gameState: GameState, targets: readonly Position[], _actorId: string): { state: GameState; affected: string[] } {
-        const chars = findOccupants(gameState.players, targets);
-        const players = applyEffectToTargets(gameState.players, chars, c => dealDamage(c, this.amount));
-        return { state: { ...gameState, players }, affected: chars.map(c => c.id) };
+        return applyAtPositions(gameState, targets, c => dealDamage(c, this.amount));
     }
 }
 ```
@@ -503,18 +545,15 @@ export default class Damage {
 ```ts
 // src/domain/strategies/Heal.class.ts
 import { gainHp } from "../services/Character.service";
-import { findOccupants } from "../services/Position.service";
 import Position from "../types/Position.type";
 import GameState from "../types/GameState.type";
-import { applyEffectToTargets } from "../utils/TargetUtils";
+import { applyAtPositions } from "../utils/TargetUtils";
 
 export default class Heal {
     constructor(private readonly amount: number) {}
 
     solve(gameState: GameState, targets: readonly Position[], _actorId: string): { state: GameState; affected: string[] } {
-        const chars = findOccupants(gameState.players, targets);
-        const players = applyEffectToTargets(gameState.players, chars, c => gainHp(c, this.amount));
-        return { state: { ...gameState, players }, affected: chars.map(c => c.id) };
+        return applyAtPositions(gameState, targets, c => gainHp(c, this.amount));
     }
 }
 ```
@@ -522,18 +561,15 @@ export default class Heal {
 ```ts
 // src/domain/strategies/Shield.class.ts
 import { gainShield } from "../services/Character.service";
-import { findOccupants } from "../services/Position.service";
 import Position from "../types/Position.type";
 import GameState from "../types/GameState.type";
-import { applyEffectToTargets } from "../utils/TargetUtils";
+import { applyAtPositions } from "../utils/TargetUtils";
 
 export default class Shield {
     constructor(private readonly amount: number) {}
 
     solve(gameState: GameState, targets: readonly Position[], _actorId: string): { state: GameState; affected: string[] } {
-        const chars = findOccupants(gameState.players, targets);
-        const players = applyEffectToTargets(gameState.players, chars, c => gainShield(c, this.amount));
-        return { state: { ...gameState, players }, affected: chars.map(c => c.id) };
+        return applyAtPositions(gameState, targets, c => gainShield(c, this.amount));
     }
 }
 ```
@@ -561,7 +597,7 @@ Run: `npx jest tests/Effects.spec.ts` → PASS. Then `npm run test` → all gree
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/domain/services/Position.service.ts src/domain/strategies/Damage.class.ts src/domain/strategies/Heal.class.ts src/domain/strategies/Shield.class.ts src/domain/strategies/Swap.class.ts tests/Effects.spec.ts
+git add src/domain/utils/TargetUtils.ts src/domain/strategies/Damage.class.ts src/domain/strategies/Heal.class.ts src/domain/strategies/Shield.class.ts src/domain/strategies/Swap.class.ts tests/Effects.spec.ts
 git commit -m "feat: add generic Damage/Heal/Shield/Swap effects over resolved cells"
 ```
 
@@ -726,7 +762,7 @@ One compile-coupled switch: effect interface, labels, die faces, template loadin
 - Modify tests: `tests/PriorityQueue.service.spec.ts`, `tests/Swap.spec.ts`, `tests/DomainIntegration.spec.ts`, `tests/CharacterGeneration.service.spec.ts`, `tests/EffectFactory.spec.ts`, `tests/templates.spec.ts`, `tests/Player.service.spec.ts`, `tests/Position.service.spec.ts`, `tests/Character.service.spec.ts`, `tests/Round.service.spec.ts`, `tests/GameStateMapper.viewer.spec.ts`, and any other spec that fails to compile
 
 **Interfaces:**
-- Consumes: `TargetGroup`, `resolveTargets`, `validateEffectTargets` (Tasks 1-2); `Damage`, `Heal`, `Shield`, `Swap`, `findOccupants` (Task 3).
+- Consumes: `TargetGroup`, `resolveTargets`, `validateEffectTargets` (Tasks 1-2); `Damage`, `Heal`, `Shield`, `Swap`, `applyAtPositions` (Task 3).
 - Produces:
   - `enum EffectLabel { Damage = "Damage", Heal = "Heal", Shield = "Shield", Swap = "Swap" }`
   - `type Effect = { solve(gs: GameState, targets: readonly Position[], actorId: string): { state: GameState; affected: string[] } }`
@@ -758,7 +794,7 @@ Migrated tests keep the **same cells** the old test hit, expressed as target gro
 | `selectTargetOfCharacter(...)` / `setTarget(...)` / `target: …` on a character | delete — targets now live in the face |
 | `[face, target, id, speed]` queue tuples, `addEffectsToPriorityQueue(q, face, target, id, speed)` | `[face, id, speed]`, `addEffectsToPriorityQueue(q, face, id, speed)` |
 
-Tests whose subject no longer exists are **deleted**, not rewritten: target-constraint enforcement (`throws when … violated targetConstraint`, DomainIntegration "Target constraint enforcement" block, Swap.spec "throws ALLY_ONLY error…"), `selectTargetOfCharacter` block in Player.service.spec, "NONE-constraint face is queued using actor position…", "characters without an assigned target do not fire", Character.service "should set target", Round "should reset all targets to null", CharacterGeneration "defaults targetConstraint…"/"preserves explicit targetConstraint…", MoveToSlot "no-op when destination slot is out of bounds" (now a template validation error), Position.service `findSingleTarget` tests and SelfEffects `findSelf` tests (functions removed; `findOccupants` is covered by Effects.spec). The four spec files listed under "Delete tests" are fully replaced by `Effects.spec.ts` (Task 3) and the new engine tests below.
+Tests whose subject no longer exists are **deleted**, not rewritten: target-constraint enforcement (`throws when … violated targetConstraint`, DomainIntegration "Target constraint enforcement" block, Swap.spec "throws ALLY_ONLY error…"), `selectTargetOfCharacter` block in Player.service.spec, "NONE-constraint face is queued using actor position…", "characters without an assigned target do not fire", Character.service "should set target", Round "should reset all targets to null", CharacterGeneration "defaults targetConstraint…"/"preserves explicit targetConstraint…", MoveToSlot "no-op when destination slot is out of bounds" (now a template validation error), Position.service `findSingleTarget` tests and SelfEffects `findSelf` tests (functions removed; `applyAtPositions` is covered by Effects.spec). The four spec files listed under "Delete tests" are fully replaced by `Effects.spec.ts` (Task 3) and the new engine tests below.
 
 - [ ] **Step 1: Write the new engine tests in `tests/PriorityQueue.service.spec.ts`**
 
@@ -1044,7 +1080,7 @@ Delete `src/domain/types/TargetConstraint.type.ts`, `src/domain/types/TargetingF
 - Add `implements Effect` (and `import Effect from "../types/Effect.type";`) to `Damage`, `Heal`, `Shield`.
 - `src/domain/strategies/Swap.class.ts`: delete the `SwapAlly` class; the generic class becomes the default export: `export default class Swap implements Effect { … }` (same body as Task 3). Update the import in `tests/Effects.spec.ts` to `import Swap from "@domain/strategies/Swap.class";`.
 - Delete the 14 old strategy files listed in **Files**.
-- `src/domain/services/Position.service.ts`: delete `findSingleTarget`, `findAdjacentTargets`, `findFullTeam`, `findSelf` and the `TargetingFunction` import; keep `findOccupants`.
+- `src/domain/services/Position.service.ts`: delete `findSingleTarget`, `findAdjacentTargets`, `findFullTeam`, `findSelf` and the `TargetingFunction` import (delete the file if nothing is left in it, and its `src/index.ts` export).
 - `src/domain/services/TargetResolution.service.ts`: replace `const SWAP_EFFECT = 'Swap';` with `import EffectLabel from "../types/EffectLabels.type";` and compare `effect === EffectLabel.Swap`.
 
 - [ ] **Step 6: Factory and template loading**
