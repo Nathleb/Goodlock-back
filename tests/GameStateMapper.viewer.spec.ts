@@ -28,7 +28,7 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
 
 describe('toDTOForViewer', () => {
     it('always nulls the opponent targets, keeps own targets', () => {
-        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.ASSIGN, [false, true]), 0);
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.RESOLVE, [false, true]), 0);
         expect(dto.players[1].team.every(c => c.target === null)).toBe(true);
         expect(dto.players[0].team.every(c => c.target !== null)).toBe(true);
     });
@@ -51,7 +51,7 @@ describe('toDTOForViewer', () => {
     });
 
     it('masks player 0 when the viewer is player 1', () => {
-        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.ASSIGN, [true, false]), 1);
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.RESOLVE, [true, false]), 1);
         expect(dto.players[0].team.every(c => c.target === null)).toBe(true);
         expect(dto.players[1].team.every(c => c.target !== null)).toBe(true);
     });

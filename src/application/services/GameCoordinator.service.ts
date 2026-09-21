@@ -11,27 +11,22 @@ import { GameStateDTO, GameStateUpdatePayload, GameOverDTO } from '@application/
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import Position, { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
+import { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { assertPhase, assertNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
-import { validateTarget } from '@domain/services/TargetValidator';
-import TargetConstraint from '@domain/types/TargetConstraint.type';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
-import { createPlayer, rearrangeTeam, selectTargetOfCharacter } from '@domain/services/Player.service';
-import { isDead } from '@domain/services/Character.service';
+import { createPlayer, rearrangeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
 import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
 import {
     confirmPlacement, performRoll,
     confirmKeep,
-    confirmAssignment as domainConfirmAssignment,
     cancelPlacement as domainCancelPlacement,
     cancelKeep as domainCancelKeep,
-    cancelAssignment as domainCancelAssignment,
     performResolve,
 } from '@domain/services/GameLoop.service';
 
@@ -69,6 +64,27 @@ export class GameCoordinatorService {
         };
     }
 
+    private resolveRound(roomId: string, gs: GameState): void {
+        const { state: resolved, log } = performResolve(gs);
+        let next = resolved;
+        const winner = checkWinner(next);
+
+        this.roomPort.updateGameState(roomId, next);
+        this.wsPort.emitToRoom(roomId, 'roundResolved', {
+            gameState: GameStateMapper.toDTO(next),
+            resolveLog: GameStateMapper.resolveStepsToDTO(log),
+        });
+
+        if (winner !== null) {
+            const payload: GameOverDTO = { winner, reason: 'elimination' };
+            this.wsPort.emitToRoom(roomId, 'gameOver', payload);
+            return;
+        }
+        next = performRoll(beginRollPhase(endOfRound(next)));
+        this.roomPort.updateGameState(roomId, next);
+        this.wsPort.emitToRoom(roomId, 'gameStateUpdated', this.withTimers(roomId, GameStateMapper.toDTO(next), next));
+    }
+
     private doConfirm(
         socketId: string,
         ctx: GameContext,
@@ -80,6 +96,11 @@ export class GameCoordinatorService {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
             const wasOtherReady = gs.playersReady[otherIndex];
             const confirmed = domainFn(gs, playerIndex);
+            if (confirmed.phase === GamePhase.RESOLVE) {
+                // Last KEEP confirm ends the input stage: resolve immediately.
+                this.resolveRound(room.roomId, confirmed);
+                return;
+            }
             this.roomPort.updateGameState(room.roomId, confirmed);
             if (wasOtherReady) {
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(confirmed), confirmed));
@@ -216,95 +237,6 @@ export class GameCoordinatorService {
         this.doConfirm(socketId, ctx, gsWithLocks, confirmKeep);
     }
 
-    confirmAssignment(socketId: string, targets: { characterId: string; target: { playerIndex: number; slot: number } }[]): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
-        const { room, playerIndex } = ctx;
-        const player = room.gameState.players[playerIndex];
-        const teamIds = new Set(player.team.map(c => c.id));
-
-        // Validate: 5 unique IDs covering exactly the player's team, valid target positions
-        const payloadIds = new Set(targets.map(t => t.characterId));
-        if (targets.length !== 5 || payloadIds.size !== 5) {
-            this.emitError(socketId, 'Payload must contain exactly one entry per character');
-            return;
-        }
-        for (const entry of targets) {
-            if (!teamIds.has(entry.characterId)) { this.emitError(socketId, `Unknown character id: ${entry.characterId}`); return; }
-            if (entry.target.playerIndex !== 0 && entry.target.playerIndex !== 1) { this.emitError(socketId, 'Invalid target playerIndex'); return; }
-            if (entry.target.slot < 0 || entry.target.slot > 4) { this.emitError(socketId, 'Invalid target slot'); return; }
-        }
-
-        // Validate each target against the character's face constraint
-        for (const entry of targets) {
-            const char = player.team.find(c => c.id === entry.characterId)!;
-            if (char.face.targetConstraint === TargetConstraint.NONE || isDead(char)) continue;
-            try {
-                validateTarget(
-                    char.face.targetConstraint,
-                    playerIndex,
-                    { playerIndex: entry.target.playerIndex as PlayerIndex, slot: entry.target.slot as SlotIndex },
-                );
-            } catch (e: unknown) {
-                this.emitError(socketId, (e as Error).message);
-                return;
-            }
-        }
-
-        try {
-            // Apply targets. NONE-constraint faces carry a frontend-supplied default
-            // target that must not be persisted — they resolve via their own position.
-            let updatedPlayer = player;
-            for (const entry of targets) {
-                const char = updatedPlayer.team.find(c => c.id === entry.characterId)!;
-                if (char.face.targetConstraint === TargetConstraint.NONE || isDead(char)) continue;
-                const target: Position = {
-                    playerIndex: entry.target.playerIndex as PlayerIndex,
-                    slot: entry.target.slot as SlotIndex,
-                };
-                updatedPlayer = selectTargetOfCharacter(updatedPlayer, char.position.slot, target);
-            }
-            const players = [...room.gameState.players] as [Player, Player];
-            players[playerIndex] = updatedPlayer;
-            const gsWithTargets: GameState = { ...room.gameState, players };
-
-            // Confirm and resolve
-            const otherIndex = (1 - playerIndex) as PlayerIndex;
-            const wasOtherReady = gsWithTargets.playersReady[otherIndex];
-            let gs = domainConfirmAssignment(gsWithTargets, playerIndex);
-
-            if (!wasOtherReady) {
-                this.roomPort.updateGameState(room.roomId, gs);
-                // First to confirm: echo the opponent-masked state to the actor so
-                // their button flips to WAITING. Opponent is not notified (targets
-                // stay secret until both confirm and the round resolves).
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForViewer(gs, playerIndex), gs));
-                return;
-            }
-
-            const { state: resolved, log } = performResolve(gs);
-            gs = resolved;
-            const winner = checkWinner(gs);
-
-            this.roomPort.updateGameState(room.roomId, gs);
-            this.wsPort.emitToRoom(room.roomId, 'roundResolved', {
-                gameState: GameStateMapper.toDTO(gs),
-                resolveLog: GameStateMapper.resolveStepsToDTO(log),
-            });
-
-            if (winner !== null) {
-                const payload: GameOverDTO = { winner, reason: 'elimination' };
-                this.wsPort.emitToRoom(room.roomId, 'gameOver', payload);
-            } else {
-                gs = performRoll(beginRollPhase(endOfRound(gs)));
-                this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gs), gs));
-            }
-        } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
-        }
-    }
-
     cancelPlacement(socketId: string): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
@@ -326,18 +258,6 @@ export class GameCoordinatorService {
         const { room, playerIndex } = ctx;
         try {
             const gs = domainCancelKeep(room.gameState, playerIndex);
-            if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
-        } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
-        }
-    }
-
-    cancelAssignment(socketId: string): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
-        const { room, playerIndex } = ctx;
-        try {
-            const gs = domainCancelAssignment(room.gameState, playerIndex);
             if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);

@@ -6,7 +6,7 @@ import {
     assertPhase,
     assertNotReady,
     beginPlacementPhase, beginRollPhase, beginKeepPhase,
-    beginAssignPhase, beginResolvePhase, beginResultPhase,
+    beginResolvePhase, beginResultPhase,
 } from "@domain/services/Phase.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
@@ -36,7 +36,6 @@ describe('Phase transitions', () => {
         expect(beginPlacementPhase(gs).phase).toBe(GamePhase.PLACEMENT);
         expect(beginRollPhase(gs).phase).toBe(GamePhase.ROLL);
         expect(beginKeepPhase(gs).phase).toBe(GamePhase.KEEP);
-        expect(beginAssignPhase(gs).phase).toBe(GamePhase.ASSIGN);
         expect(beginResolvePhase(gs).phase).toBe(GamePhase.RESOLVE);
         expect(beginResultPhase(gs).phase).toBe(GamePhase.RESULT);
     });

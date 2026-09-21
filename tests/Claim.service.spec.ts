@@ -39,12 +39,12 @@ describe('evaluateClaim — forfeit ground', () => {
 
 describe('evaluateClaim — AFK ground', () => {
     it('valid when claimant ready, opponent not, past the AFK limit in a confirm phase', () => {
-        expect(evaluateClaim(gs(GamePhase.ASSIGN, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))
+        expect(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))
             .toEqual({ valid: true, reason: 'afk' });
     });
 
     it('invalid when the claimant has not confirmed', () => {
-        expect(evaluateClaim(gs(GamePhase.ASSIGN, [false, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
+        expect(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
     });
 
     it('invalid in non-confirm phases', () => {
@@ -52,16 +52,16 @@ describe('evaluateClaim — AFK ground', () => {
     });
 
     it('invalid when phaseStartedAt is unknown', () => {
-        expect(evaluateClaim(gs(GamePhase.ASSIGN, [true, false]), 0, ONLINE, undefined, NOW, CONFIG).valid).toBe(false);
+        expect(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, undefined, NOW, CONFIG).valid).toBe(false);
     });
 
     it('valid from player 1 seat when roles are mirrored', () => {
-        expect(evaluateClaim(gs(GamePhase.ASSIGN, [false, true]), 1, ONLINE, NOW - 120_000, NOW, CONFIG))
+        expect(evaluateClaim(gs(GamePhase.KEEP, [false, true]), 1, ONLINE, NOW - 120_000, NOW, CONFIG))
             .toEqual({ valid: true, reason: 'afk' });
     });
 
     it('invalid for player 1 when only player 0 is ready', () => {
-        expect(evaluateClaim(gs(GamePhase.ASSIGN, [true, false]), 1, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
+        expect(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 1, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
     });
 });
 

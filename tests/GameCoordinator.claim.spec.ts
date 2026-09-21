@@ -59,7 +59,7 @@ describe('claimVictory', () => {
     });
 
     it('grants an AFK win when claimant is ready, opponent idle past the limit', () => {
-        const r = room({ gameState: gs(GamePhase.ASSIGN, [true, false]), phaseStartedAt: NOW - 120_000 });
+        const r = room({ gameState: gs(GamePhase.KEEP, [true, false]), phaseStartedAt: NOW - 120_000 });
         mockRoom.getRoom.mockReturnValue(r);
         coordinator.claimVictory(SOCKET);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'afk' });
@@ -90,7 +90,7 @@ describe('stable player identity', () => {
     it('resolves playerIndex from playerOrder even when playersId shrank', () => {
         const r = room({
             playersId: ['p0'],
-            gameState: gs(GamePhase.ASSIGN, [true, false]),
+            gameState: gs(GamePhase.KEEP, [true, false]),
             phaseStartedAt: NOW - 120_000,
         });
         mockRoom.getRoom.mockReturnValue(r);

@@ -5,10 +5,10 @@ import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
-import { beginKeepPhase, beginRollPhase, beginAssignPhase } from "@domain/services/Phase.service";
+import { beginKeepPhase, beginRollPhase } from "@domain/services/Phase.service";
 import {
-    confirmPlacement, performRoll, confirmKeep, confirmAssignment, performResolve,
-    cancelPlacement, cancelKeep, cancelAssignment,
+    confirmPlacement, performRoll, confirmKeep, performResolve,
+    cancelPlacement, cancelKeep,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
 import GameState from "@domain/types/GameState.type";
@@ -102,33 +102,33 @@ describe('confirmKeep', () => {
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('transitions to ASSIGN when rollsLeft is 0 and both confirm', () => {
+    it('transitions to RESOLVE when rollsLeft is 0 and both confirm', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 0 };
         const after0 = confirmKeep(inKeep, 0);
         const result = confirmKeep(after0, 1);
-        expect(result.phase).toBe(GamePhase.ASSIGN);
+        expect(result.phase).toBe(GamePhase.RESOLVE);
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('transitions straight to ASSIGN when the final reroll exhausts rollsLeft (no dead keep round)', () => {
+    it('transitions straight to RESOLVE when the final reroll exhausts rollsLeft (no dead keep round)', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
         const after0 = confirmKeep(inKeep, 0);
         const result = confirmKeep(after0, 1);
-        expect(result.phase).toBe(GamePhase.ASSIGN);
+        expect(result.phase).toBe(GamePhase.RESOLVE);
         expect(result.rollsLeft).toBe(0);
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('skips rerolls and transitions to ASSIGN when all dice are locked', () => {
+    it('skips rerolls and transitions to RESOLVE when all dice are locked', () => {
         const inKeep = lockAllPlayers(beginKeepPhase(gs)); // rollsLeft: 2 but all locked
         const after0 = confirmKeep(inKeep, 0);
         const result = confirmKeep(after0, 1);
-        expect(result.phase).toBe(GamePhase.ASSIGN);
+        expect(result.phase).toBe(GamePhase.RESOLVE);
     });
 
     it('does not reroll locked dice', () => {
         const inKeep = beginKeepPhase(gs);
-        // Lock slot 0 for player 0 only (not all 5, so no skip-to-ASSIGN)
+        // Lock slot 0 for player 0 only (not all 5, so no skip-to-RESOLVE)
         const withOneLock = {
             ...inKeep,
             players: [
@@ -150,28 +150,6 @@ describe('confirmKeep', () => {
 
     it('throws when called outside KEEP phase', () => {
         expect(() => confirmKeep(gs, 0)).toThrow();
-    });
-});
-
-describe('confirmAssignment', () => {
-    it('marks player ready but stays in ASSIGN', () => {
-        const inAssign = beginAssignPhase(gs);
-        const result = confirmAssignment(inAssign, 0);
-        expect(result.phase).toBe(GamePhase.ASSIGN);
-        expect(result.playersReady[0]).toBe(true);
-        expect(result.playersReady[1]).toBe(false);
-    });
-
-    it('transitions to RESOLVE and resets playersReady when both confirm', () => {
-        const inAssign = beginAssignPhase(gs);
-        const after0 = confirmAssignment(inAssign, 0);
-        const result = confirmAssignment(after0, 1);
-        expect(result.phase).toBe(GamePhase.RESOLVE);
-        expect(result.playersReady).toEqual([false, false]);
-    });
-
-    it('throws when called outside ASSIGN phase', () => {
-        expect(() => confirmAssignment(gs, 0)).toThrow();
     });
 });
 
@@ -239,23 +217,3 @@ describe('cancelKeep', () => {
     });
 });
 
-describe('cancelAssignment', () => {
-    it('sets playersReady[i] to false when player was confirmed', () => {
-        const inAssign = beginAssignPhase(gs);
-        const confirmed = confirmAssignment(inAssign, 0);
-        expect(confirmed.playersReady[0]).toBe(true);
-        const result = cancelAssignment(confirmed, 0);
-        expect(result.playersReady[0]).toBe(false);
-        expect(result.phase).toBe(GamePhase.ASSIGN);
-    });
-
-    it('returns the same reference when player was not confirmed', () => {
-        const inAssign = beginAssignPhase(gs);
-        const result = cancelAssignment(inAssign, 0);
-        expect(result).toBe(inAssign);
-    });
-
-    it('throws when called outside ASSIGN phase', () => {
-        expect(() => cancelAssignment(gs, 0)).toThrow();
-    });
-});
