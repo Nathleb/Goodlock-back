@@ -89,6 +89,7 @@ resolveTargets(groups: readonly TargetGroup[], actor: Position): Position[]
 - `playerIndex` = actor's for `ALLY`, the other one for `ENEMY`.
 - `slot` = `n` (ABSOLUTE) or `actor.slot + n` (RELATIVE).
 - Cells outside 0..4 are dropped. Order (groups, then numbers) is preserved.
+- A cell reached twice (e.g. `ENEMY REL [0]` + `ENEMY ABS [2]` with the actor in slot 2) is kept once: an effect hits each cell at most once.
 - Never fails: an empty result is a legitimate "fizzle".
 
 ### Generic effects
