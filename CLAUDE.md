@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly assign die face effects each round, then all actions resolve in priority order. Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** is used only for authentication — persisting `User` accounts and `RefreshToken`s. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
+Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly roll and lock die faces each round, then all actions resolve in priority order (each face carries its own target cells — see Auto-targeting below). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** is used only for authentication — persisting `User` accounts and `RefreshToken`s. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
 
 ## Active plugins
 
@@ -58,9 +58,10 @@ src/
 Contains all game logic with zero NestJS dependencies:
 - `types/` plain TypeScript types for `Character`, `Room`, `Session`, `GameState`, `Die`, `DieFace`, `Effect`, etc.
 - `entities/` `CharacterEntity` (JSON template shape read from `tmplt/*.json`)
-- `services/` `RoomService`, `SessionService`, `CharacterService`, `CharacterGeneration`, `PriorityQueue`, `Player`, `Position`, `GameInit`
+- `services/` `RoomService`, `SessionService`, `CharacterService`, `CharacterGeneration`, `PriorityQueue`, `Player`, `GameInit`
+- `services/TargetResolution.service.ts` `resolveTargets` (template target groups -> positions, from the actor's current slot) and `validateEffectTargets` (template validation)
 - `factories/` `EffectFactory`: registry pattern for creating effects by label; effects must be registered before use
-- `strategies/` `SingleTargetDamage/Heal/Shield`; implement per-effect resolution logic
+- `strategies/` `Damage`, `Heal`, `Shield`, `Swap`: generic effects applied to the cells resolved for them
 
 Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneration.service.ts` (`createCharacterFromJsonTemplate`).
 
@@ -94,6 +95,7 @@ Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneratio
 2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) + `deviceIdentifier` are persistent. `SessionService.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
 4. **Priority resolution (Pokemon-style)**: two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Equal `(bracket, speed)` pairs are shuffled (random tiebreak). Speed never crosses brackets. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
+5. **Auto-targeting**: players never choose targets. Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. Off-board cells are dropped; no cell = fizzle. Phases: PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT (no ASSIGN).
 
 ## Workflow for any non-trivial task
 
