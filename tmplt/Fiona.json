@@ -3,11 +3,11 @@
     "maxHp": 15,
     "baseSpeed": 8,
     "baseDieInstructions": [
-        { "description": "Heal a single target for 5 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 5 }] },
-        { "description": "Heal a single target for 4 HP and grant 2 shield.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }, { "effect": "SingleTargetShield", "magnitude": 2 }] },
-        { "description": "Heal a single target for 6 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 6 }] },
-        { "description": "Heal self for 4 HP.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "SelfHeal", "magnitude": 4 }] },
-        { "description": "Grant 4 shield to a single target.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetShield", "magnitude": 4 }] },
-        { "description": "Cleave heal for 3 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveHeal", "magnitude": 3 }] }
+        { "description": "Heal the ally in the next slot for 5 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 5, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] }] },
+        { "description": "Heal the ally in the next slot for 4 HP and grant 2 shield to the ally in the next slot.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] },{ "effect": "Shield", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] }] },
+        { "description": "Heal the ally in the next slot for 6 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 6, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] }] },
+        { "description": "Heal self for 4 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Grant 4 shield to the ally in the next slot.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] }] },
+        { "description": "Heal self and adjacent allies for 3 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 3, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [-1,0,1] }] }] }
     ]
 }

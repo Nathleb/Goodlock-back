@@ -2,7 +2,7 @@ import GameState from "../types/GameState.type";
 import GamePhase from "../types/GamePhase.type";
 import { PlayerIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
-import { assertPhase, assertNotReady, beginRollPhase, beginKeepPhase, beginAssignPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
+import { assertPhase, assertNotReady, beginRollPhase, beginKeepPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
 import { rollDiceForTurn, allDiceLocked } from "./Player.service";
 import { ResolveStep } from "../types/PriorityQueue.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "./PriorityQueue.service";
@@ -56,24 +56,16 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): GameState 
 
     const bothLocked = allDiceLocked(updated.players[0]) && allDiceLocked(updated.players[1]);
     if (updated.rollsLeft === 0 || bothLocked) {
-        return resetReady(beginAssignPhase(updated));
+        return resetReady(beginResolvePhase(updated));
     }
 
     const rerolled = { ...rerollBothPlayers(updated), rollsLeft: updated.rollsLeft - 1 };
     // After the final reroll there are no rerolls left, so locking is moot —
-    // skip the dead keep round and go straight to assign with the final dice.
+    // skip the dead keep round and go straight to resolve with the final dice.
     if (rerolled.rollsLeft === 0) {
-        return resetReady(beginAssignPhase(rerolled));
+        return resetReady(beginResolvePhase(rerolled));
     }
     return resetReady(rerolled);
-}
-
-export function confirmAssignment(gs: GameState, playerIndex: PlayerIndex): GameState {
-    assertPhase(gs, GamePhase.ASSIGN);
-    assertNotReady(gs, playerIndex);
-    const updated = markPlayerReady(gs, playerIndex);
-    if (!areBothReady(updated)) return updated;
-    return resetReady(beginResolvePhase(updated));
 }
 
 export function cancelPlacement(gs: GameState, playerIndex: PlayerIndex): GameState {
@@ -84,12 +76,6 @@ export function cancelPlacement(gs: GameState, playerIndex: PlayerIndex): GameSt
 
 export function cancelKeep(gs: GameState, playerIndex: PlayerIndex): GameState {
     assertPhase(gs, GamePhase.KEEP);
-    if (!gs.playersReady[playerIndex]) return gs;
-    return unmarkPlayerReady(gs, playerIndex);
-}
-
-export function cancelAssignment(gs: GameState, playerIndex: PlayerIndex): GameState {
-    assertPhase(gs, GamePhase.ASSIGN);
     if (!gs.playersReady[playerIndex]) return gs;
     return unmarkPlayerReady(gs, playerIndex);
 }

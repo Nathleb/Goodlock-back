@@ -39,7 +39,6 @@ export class GameStateMapper {
         const maskLocks = gameState.phase === GamePhase.KEEP && gameState.playersReady[enemyIndex];
         const enemyTeam = dto.players[enemyIndex].team.map(char => ({
             ...char,
-            target: null,
             isFaceLocked: maskLocks ? false : char.isFaceLocked,
         }));
         const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
@@ -51,6 +50,10 @@ export class GameStateMapper {
         return steps.map(step => ({
             characterId: step.characterId,
             skipped: step.skipped,
+            effects: step.effects.map(e => ({
+                effect: e.effect,
+                targets: e.targets.map(t => ({ playerIndex: t.playerIndex, slot: t.slot })),
+            })),
             changes: step.changes.map(c => ({
                 characterId: c.characterId,
                 after: GameStateMapper.characterToDTO(c.character),
@@ -76,7 +79,6 @@ export class GameStateMapper {
             baseDie: char.baseDie.map(GameStateMapper.faceToDTO),
             face: GameStateMapper.faceToDTO(char.face),
             isFaceLocked: char.isFaceLocked,
-            target: char.target,
             position: char.position,
         };
     }
@@ -85,7 +87,11 @@ export class GameStateMapper {
         return {
             description: face.description,
             priority: face.priority,
-            targetConstraint: face.targetConstraint,
+            effects: face.effects.map(e => ({
+                effect: e.label,
+                magnitude: e.magnitude,
+                targets: e.targets.map(g => ({ side: g.side, mode: g.mode, n: [...g.n] })),
+            })),
         };
     }
 }

@@ -6,21 +6,22 @@ import {
     assertPhase,
     assertNotReady,
     beginPlacementPhase, beginRollPhase, beginKeepPhase,
-    beginAssignPhase, beginResolvePhase, beginResultPhase,
+    beginResolvePhase, beginResultPhase,
 } from "@domain/services/Phase.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
+import { enemyRel } from "./helpers/targets";
 import GamePhase from "@domain/types/GamePhase.type";
 
 const factory = buildEffectFactory();
 
 const die = generateFullDie([
-    { description: "A", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "B", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "C", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "D", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "E", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
-    { description: "F", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 1 }] },
+    { description: "A", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "B", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "C", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "E", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
+    { description: "F", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
 ] satisfies BaseDieInstructions, factory);
 
 const team1 = [0, 1, 2, 3, 4].map(i => createCharacter(`P1-${i}`, 100, 1, die, { playerIndex: 0, slot: i as SlotIndex }));
@@ -36,7 +37,6 @@ describe('Phase transitions', () => {
         expect(beginPlacementPhase(gs).phase).toBe(GamePhase.PLACEMENT);
         expect(beginRollPhase(gs).phase).toBe(GamePhase.ROLL);
         expect(beginKeepPhase(gs).phase).toBe(GamePhase.KEEP);
-        expect(beginAssignPhase(gs).phase).toBe(GamePhase.ASSIGN);
         expect(beginResolvePhase(gs).phase).toBe(GamePhase.RESOLVE);
         expect(beginResultPhase(gs).phase).toBe(GamePhase.RESULT);
     });

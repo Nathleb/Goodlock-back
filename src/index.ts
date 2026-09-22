@@ -5,14 +5,15 @@ export * from "./domain/services/CharacterGeneration.service";
 export * from "./domain/services/GameInit.service";
 export * from "./domain/services/GameLoop.service";
 export * from "./domain/services/Phase.service";
-export * from "./domain/services/Position.service";
 export * from "./domain/services/Player.service";
 export * from "./domain/services/PriorityQueue.service";
 
-export * from "./domain/strategies/SingleTargetDamage.class";
-export * from "./domain/strategies/SingleTargetHeal.class";
-export * from "./domain/strategies/SingleTargetShield.class";
-export * from "./domain/types/TargetingFunction.type";
+export * from "./domain/services/TargetResolution.service";
+export * from "./domain/types/TargetGroup.type";
+export { default as Damage } from "./domain/strategies/Damage.class";
+export { default as Heal } from "./domain/strategies/Heal.class";
+export { default as Shield } from "./domain/strategies/Shield.class";
+export { default as Swap } from "./domain/strategies/Swap.class";
 
 
 export * from "./domain/types/Die.type";

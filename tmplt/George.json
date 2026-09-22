@@ -3,11 +3,11 @@
     "maxHp": 15,
     "baseSpeed": 4,
     "baseDieInstructions": [
-        { "description": "Heal all allies for 3 HP.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamHeal", "magnitude": 3 }] },
-        { "description": "Grant 2 shield to all allies.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamShield", "magnitude": 2 }] },
-        { "description": "Heal all allies for 4 HP.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamHeal", "magnitude": 4 }] },
-        { "description": "Cleave heal for 4 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveHeal", "magnitude": 4 }] },
-        { "description": "Grant 3 shield to all allies.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamShield", "magnitude": 3 }] },
-        { "description": "Heal self for 5 HP.", "priority": 1, "targetConstraint": "NONE", "effects": [{ "effect": "SelfHeal", "magnitude": 5 }] }
+        { "description": "Heal all allies for 3 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 3, "targets": [{ "side": "ALLY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] },
+        { "description": "Grant 2 shield to all allies.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] },
+        { "description": "Heal all allies for 4 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] },
+        { "description": "Heal self and adjacent allies for 4 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
+        { "description": "Grant 3 shield to all allies.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 3, "targets": [{ "side": "ALLY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] },
+        { "description": "Heal self for 5 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 5, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] }
     ]
 }

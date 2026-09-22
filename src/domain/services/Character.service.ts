@@ -1,6 +1,5 @@
 import Character from "../types/Character.type";
 import { roll1D6 } from "../utils/Random.utils";
-import Position from "../types/Position.type";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
     ...character,
@@ -53,8 +52,4 @@ export function isDead(character: Character): boolean {
 
 export function toggleIsFaceLocked(character: Character): Character {
     return updateCharacter(character, { isFaceLocked: !character.isFaceLocked });
-}
-
-export function setTarget(character: Character, position: Position): Character {
-    return updateCharacter(character, { target: position });
 }

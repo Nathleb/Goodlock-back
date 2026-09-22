@@ -25,18 +25,12 @@ export function swapSlotsOnSameTeam(
     };
 }
 
-export default class SwapAlly implements Effect {
-    solve(gameState: GameState, target: Position, actorId: string): { state: GameState; affected: string[] } {
-        let actorSlot: number | undefined;
-        let actorPlayerIndex: number | undefined;
-
-        for (let pi = 0; pi < gameState.players.length; pi++) {
-            const idx = gameState.players[pi].team.findIndex(c => c.id === actorId);
-            if (idx !== -1) { actorSlot = idx; actorPlayerIndex = pi; break; }
-        }
-
-        if (actorSlot === undefined || actorPlayerIndex === undefined) return { state: gameState, affected: [] };
-
-        return swapSlotsOnSameTeam(gameState, actorPlayerIndex, actorSlot, target.slot);
+/** Exchanges the occupants of exactly 2 cells on the same team; anything else fizzles. */
+export default class Swap implements Effect {
+    solve(gameState: GameState, targets: readonly Position[], _actorId: string): { state: GameState; affected: string[] } {
+        if (targets.length !== 2) return { state: gameState, affected: [] };
+        const [a, b] = targets;
+        if (a.playerIndex !== b.playerIndex) return { state: gameState, affected: [] };
+        return swapSlotsOnSameTeam(gameState, a.playerIndex, a.slot, b.slot);
     }
 }

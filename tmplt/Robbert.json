@@ -3,11 +3,11 @@
     "maxHp": 14,
     "baseSpeed": 14,
     "baseDieInstructions": [
-        { "description": "Deal 3 damage to a single target.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 3 }] },
-        { "description": "Deal 2 cleave damage.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 2 }] },
-        { "description": "Heal a single target for 4 HP.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "SingleTargetHeal", "magnitude": 4 }] },
-        { "description": "Deal 2 damage to all enemies.", "priority": 0, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
-        { "description": "Cleave shield for 2.", "priority": 1, "targetConstraint": "ALLY_ONLY", "effects": [{ "effect": "CleaveShield", "magnitude": 2 }] },
-        { "description": "Deal 4 damage and gain 2 shield.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 4 }, { "effect": "SelfShield", "magnitude": 2 }] }
+        { "description": "Deal 3 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 2 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 2, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
+        { "description": "Heal the ally in the next slot for 4 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] }] },
+        { "description": "Deal 2 damage to all enemies.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 2, "targets": [{ "side": "ENEMY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] },
+        { "description": "Grant 2 shield to self and adjacent allies.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
+        { "description": "Deal 4 damage to the enemy in front and gain 2 shield.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 4, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] },{ "effect": "Shield", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] }
     ]
 }

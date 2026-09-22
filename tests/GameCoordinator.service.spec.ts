@@ -9,8 +9,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 import { createCharacter, generateFullDie } from '@domain/services/CharacterGeneration.service';
 import { createGameState, buildEffectFactory } from '@domain/services/GameInit.service';
 import { createPlayer } from '@domain/services/Player.service';
-import { beginKeepPhase, beginAssignPhase } from '@domain/services/Phase.service';
-import TargetConstraint from '@domain/types/TargetConstraint.type';
+import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
 import { UserId } from '@shared/branded.types';
 import { EFFECT_FACTORY } from '@application/ports/tokens';
@@ -40,7 +39,6 @@ const makeTeam = (pi: 0 | 1): Player =>
 
 const baseGs = createGameState(makeTeam(0), makeTeam(1));
 const keepGs  = beginKeepPhase(baseGs);
-const assignGs = beginAssignPhase(baseGs);
 
 const p0Ready = (gs: typeof baseGs) => ({ ...gs, playersReady: [true, false] as [boolean, boolean] });
 const p1Ready = (gs: typeof baseGs) => ({ ...gs, playersReady: [false, true] as [boolean, boolean] });
@@ -56,13 +54,6 @@ const makeRoom = (gameState: typeof baseGs): Room => ({
 
 const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
 const singlePlayerRoom: Room = { ...lobbyRoom, playersId: ['p0'] };
-
-// Builds a valid 5-entry targets payload: player 0 targets all enemies at matching slot indices
-const makeTargets = (gs: typeof assignGs) =>
-    gs.players[0].team.map(c => ({
-        characterId: c.id,
-        target: { playerIndex: 1 as const, slot: c.position.slot as number },
-    }));
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -248,10 +239,29 @@ describe('confirmKeep', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
     });
 
-    it('advances to ASSIGN and emits gameStateUpdated when both confirm with rollsLeft = 0', () => {
+    it('resolves the round when both confirm with rollsLeft = 0: roundResolved then next-round gameStateUpdated', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
         coordinator.confirmKeep(SOCKET_0, []);
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.ASSIGN }));
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.objectContaining({ resolveLog: expect.any(Array) }));
+        const events = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
+        expect(events).toEqual(['roundResolved', 'gameStateUpdated']);
+        expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP, rollsLeft: 2 }));
+    });
+
+    it('resolves the round when both confirm with every die locked', () => {
+        const allLocked = (p: Player): Player => ({ ...p, team: p.team.map(c => ({ ...c, isFaceLocked: true })) });
+        const locked = { ...keepGs, players: [keepGs.players[0], allLocked(keepGs.players[1])] as [Player, Player] };
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(locked)));
+        coordinator.confirmKeep(SOCKET_0, keepGs.players[0].team.map(c => c.id));
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
+    });
+
+    it('resolves then emits gameOver last when a winner is found', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 0 }))));
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'elimination' });
+        const events = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
+        expect(events[events.length - 1]).toBe('gameOver');
     });
 
     it('emits error when lockedCharacterIds contains unknown id', () => {
@@ -283,150 +293,6 @@ describe('confirmKeep', () => {
     });
 });
 
-// ── confirmAssignment ─────────────────────────────────────────────────────────
-
-describe('confirmAssignment', () => {
-    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(assignGs)));
-
-    it('echoes the confirming player\'s own ready state to their socket when first to confirm', () => {
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
-        expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(
-            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ playersReady: [true, false] }),
-        );
-        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
-    });
-
-    it('masks the opponent (no targets leaked) in the first-confirm echo', () => {
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
-        const call = mockWs.emitToSocket.mock.calls.find(([, ev]) => ev === 'gameStateUpdated');
-        expect(call).toBeDefined();
-        const dto = call![2];
-        expect(dto.players[1].team.every((c: { target: unknown }) => c.target === null)).toBe(true);
-    });
-
-    it('emits roundResolved then gameStateUpdated for a new round when no winner', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(assignGs)));
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.objectContaining({ resolveLog: expect.any(Array) }));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
-    });
-
-    it('emits roundResolved then gameOver when a winner is found', () => {
-        const gameOverGs = withDeadEnemies(p1Ready(assignGs));
-        mockRoom.getRoom.mockReturnValue(makeRoom(gameOverGs));
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'elimination' });
-        const calls = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
-        expect(calls[calls.length - 1]).toBe('gameOver');
-    });
-
-    it('emits error when payload contains unknown characterId', () => {
-        const bad = makeTargets(assignGs).map((t, i) => i === 0 ? { ...t, characterId: 'unknown-id' } : t);
-        coordinator.confirmAssignment(SOCKET_0, bad);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
-    it('emits error when payload has wrong count (4 entries)', () => {
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs).slice(0, 4));
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
-    it('emits error when payload has duplicate characterIds', () => {
-        const firstId = assignGs.players[0].team[0].id;
-        const dup = makeTargets(assignGs).map((t, i) => i === 4 ? { ...t, characterId: firstId } : t);
-        coordinator.confirmAssignment(SOCKET_0, dup);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
-    it('emits error when target playerIndex is invalid', () => {
-        const bad = makeTargets(assignGs).map((t, i) => i === 0 ? { ...t, target: { playerIndex: 2, slot: 0 } } : t);
-        coordinator.confirmAssignment(SOCKET_0, bad);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
-    it('emits error when target slot is out of bounds', () => {
-        const bad = makeTargets(assignGs).map((t, i) => i === 0 ? { ...t, target: { playerIndex: 1, slot: 5 } } : t);
-        coordinator.confirmAssignment(SOCKET_0, bad);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
-    it('resolves (does not get stuck) when a NONE-constraint face receives the frontend default target and both players confirm', () => {
-        const noneDie = generateFullDie([
-            { description: 'SelfThing', priority: 1, effects: [], targetConstraint: TargetConstraint.NONE },
-            { description: 'B', priority: 1, effects: [] },
-            { description: 'C', priority: 1, effects: [] },
-            { description: 'D', priority: 1, effects: [] },
-            { description: 'E', priority: 1, effects: [] },
-            { description: 'F', priority: 1, effects: [] },
-        ] satisfies BaseDieInstructions, factory);
-        const mixedTeam = createPlayer(
-            [0, 1, 2, 3, 4].map(i => createCharacter('C', 100, 1, i === 0 ? noneDie : die, { playerIndex: 0, slot: i as SlotIndex })),
-            0,
-        );
-        const noneGs = beginAssignPhase(createGameState(mixedTeam, makeTeam(1)));
-        // player 1 already ready — player 0 confirms second, triggering resolution.
-        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(noneGs)));
-        // char[0] is NONE; the frontend sends it a default enemy target — must be ignored, not rejected.
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(noneGs));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
-        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('resolves (does not get stuck) when a dead character would otherwise fail target validation', () => {
-        const allyDie = generateFullDie([
-            { description: 'AllyHeal', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
-            { description: 'B', priority: 1, effects: [] },
-            { description: 'C', priority: 1, effects: [] },
-            { description: 'D', priority: 1, effects: [] },
-            { description: 'E', priority: 1, effects: [] },
-            { description: 'F', priority: 1, effects: [] },
-        ] satisfies BaseDieInstructions, factory);
-        // char[0] is dead (hp 0) and has an ALLY_ONLY face; the frontend default targets an enemy,
-        // which would violate ALLY_ONLY for a living actor. A dead actor must be skipped instead.
-        const team = createPlayer(
-            [0, 1, 2, 3, 4].map(i =>
-                createCharacter('C', i === 0 ? 0 : 100, 1, i === 0 ? allyDie : die, { playerIndex: 0, slot: i as SlotIndex }),
-            ),
-            0,
-        );
-        const deadGs = beginAssignPhase(createGameState(team, makeTeam(1)));
-        // player 1 already ready — player 0 confirms second, triggering resolution.
-        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(deadGs)));
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(deadGs));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
-        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('emits error (not roundResolved) when an enemy target violates ALLY_ONLY constraint and both players confirm', () => {
-        const allyDie = generateFullDie([
-            { description: 'AllyHeal', priority: 1, effects: [], targetConstraint: TargetConstraint.ALLY_ONLY },
-            { description: 'B', priority: 1, effects: [] },
-            { description: 'C', priority: 1, effects: [] },
-            { description: 'D', priority: 1, effects: [] },
-            { description: 'E', priority: 1, effects: [] },
-            { description: 'F', priority: 1, effects: [] },
-        ] satisfies BaseDieInstructions, factory);
-        const mixedTeam = createPlayer(
-            [0, 1, 2, 3, 4].map(i => createCharacter('C', 100, 1, i === 0 ? allyDie : die, { playerIndex: 0, slot: i as SlotIndex })),
-            0,
-        );
-        const constraintGs = beginAssignPhase(createGameState(mixedTeam, makeTeam(1)));
-        // player 1 already ready — player 0 confirms second, triggering resolution
-        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(constraintGs)));
-        // char[0] has ALLY_ONLY; default enemy target violates it → resolve must not run
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(constraintGs));
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
-    });
-});
-
 // ── double-confirm guards ────────────────────────────────────────────────────
 
 describe('double-confirm guards', () => {
@@ -440,13 +306,6 @@ describe('double-confirm guards', () => {
     it('emits error on second confirmKeep', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
         coordinator.confirmKeep(SOCKET_0, []);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-
-    it('emits error on second confirmAssignment', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
-        coordinator.confirmAssignment(SOCKET_0, makeTargets(assignGs));
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
@@ -504,29 +363,6 @@ describe('cancelKeep', () => {
 
     it('emits error when not in KEEP phase', () => {
         coordinator.cancelKeep(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-    });
-});
-
-describe('cancelAssignment', () => {
-    it('resets ready state silently when confirmed', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(assignGs)));
-        coordinator.cancelAssignment(SOCKET_0);
-        expect(mockRoom.updateGameState).toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
-        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
-    });
-
-    it('does not save when not confirmed (no-op)', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(assignGs));
-        coordinator.cancelAssignment(SOCKET_0);
-        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
-        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
-    });
-
-    it('emits error when not in ASSIGN phase', () => {
-        coordinator.cancelAssignment(SOCKET_0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });

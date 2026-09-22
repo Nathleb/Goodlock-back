@@ -1,4 +1,5 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
+import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -6,12 +7,12 @@ import { canReroll, reroll } from "@domain/services/Roll.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage", priority: 1, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
-    { description: "Heal", priority: 1, effects: [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }] },
-    { description: "Shield", priority: 1, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
-    { description: "Damage", priority: 2, effects: [{ effect: EffectLabel.SingleTargetDamage, magnitude: 5 }] },
-    { description: "Heal", priority: 2, effects: [{ effect: EffectLabel.SingleTargetHeal, magnitude: 5 }] },
-    { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.SingleTargetShield, magnitude: 5 }] },
+    { description: "Damage", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }] },
+    { description: "Heal", priority: 1, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [allyRel(0)] }] },
+    { description: "Shield", priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }] },
+    { description: "Damage", priority: 2, effects: [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }] },
+    { description: "Heal", priority: 2, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [allyRel(0)] }] },
+    { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }] },
 ];
 
 const factory = buildEffectFactory();

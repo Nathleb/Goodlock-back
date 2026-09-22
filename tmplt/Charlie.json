@@ -3,11 +3,11 @@
     "maxHp": 10,
     "baseSpeed": 12,
     "baseDieInstructions": [
-        { "description": "Deal 4 cleave damage.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 4 }] },
-        { "description": "Deal 3 cleave damage.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }] },
-        { "description": "Deal 2 damage to all enemies.", "priority": 0, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 2 }] },
-        { "description": "Deal 5 damage to a single target.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "SingleTargetDamage", "magnitude": 5 }] },
-        { "description": "Deal 3 cleave damage and take 2 self damage.", "priority": 0, "targetConstraint": "ENEMY_ONLY", "effects": [{ "effect": "CleaveDamage", "magnitude": 3 }, { "effect": "SelfDamage", "magnitude": 2 }] },
-        { "description": "Deal 3 damage to all enemies.", "priority": 0, "targetConstraint": "NONE", "effects": [{ "effect": "FullTeamDamage", "magnitude": 3 }] }
+        { "description": "Deal 4 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 4, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
+        { "description": "Deal 3 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
+        { "description": "Deal 2 damage to all enemies.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 2, "targets": [{ "side": "ENEMY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] },
+        { "description": "Deal 5 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 5, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 3 damage to the enemy in front and its neighbours and take 2 damage.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] },{ "effect": "Damage", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 3 damage to all enemies.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "ABSOLUTE", "n": [0,1,2,3,4] }] }] }
     ]
 }
