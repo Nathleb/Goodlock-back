@@ -55,8 +55,11 @@ Stated in the repo's decision format so they are captured as observations.
    B's deck validation needs a real "does this user own this?" query to call. Without it the check gets
    hardcoded and has to be unpicked later; with it, acquisition only changes how rows are created.
 5. **Decision:** the catalog is read from an in-memory map built at boot rather than queried per use,
-   because it only changes on redeploy. This keeps the whole WebSocket coordinator path synchronous —
-   no `await` ripples into `startGame` or the round flow.
+   because templates are fixed for a given version of the app — content ships with the build, so "cached
+   until restart" and "fixed for this version" are the same statement. This also keeps the whole WebSocket
+   coordinator path synchronous: no `await` ripples into `startGame` or the round flow. No reload hatch is
+   provided; editing a template requires a restart, which is correct for versioned content. Today the
+   content version *is* the app version.
 6. **Decision:** `Result<T, E>` is **not** introduced here. `shared/result.type.ts` still does not exist;
    this slice follows the code's existing convention (throw at infrastructure boundaries, plain returns
    elsewhere). Introducing `Result` is its own change.
