@@ -50,6 +50,10 @@ export class GameStateMapper {
         return steps.map(step => ({
             characterId: step.characterId,
             skipped: step.skipped,
+            effects: step.effects.map(e => ({
+                effect: e.effect,
+                targets: e.targets.map(t => ({ playerIndex: t.playerIndex, slot: t.slot })),
+            })),
             changes: step.changes.map(c => ({
                 characterId: c.characterId,
                 after: GameStateMapper.characterToDTO(c.character),

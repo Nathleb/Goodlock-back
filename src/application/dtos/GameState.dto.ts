@@ -31,9 +31,15 @@ export type ResolveChangeDTO = {
     after: CharacterDTO;
 };
 
+export type ResolvedEffectDTO = {
+    effect: string;
+    targets: { playerIndex: number; slot: number }[];  // [] = fizzled
+};
+
 export type ResolveStepDTO = {
     characterId: string;
     skipped: boolean;
+    effects: ResolvedEffectDTO[];
     changes: ResolveChangeDTO[];
 };
 
