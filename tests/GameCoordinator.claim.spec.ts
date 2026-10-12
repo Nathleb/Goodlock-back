@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
+import { makeTestCatalog } from './helpers/catalog';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { Room } from '@domain/types/Room.type';
@@ -40,6 +41,7 @@ beforeEach(async () => {
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: EFFECT_FACTORY, useValue: buildEffectFactory() },
+            { provide: CATALOG_PORT, useValue: makeTestCatalog(10) },
             { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
         ],
     }).compile();

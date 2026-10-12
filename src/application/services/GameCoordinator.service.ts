@@ -1,10 +1,9 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { Injectable, Inject } from '@nestjs/common';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
+import { CatalogPort } from '@application/ports/CatalogPort';
 import { Session } from '@application/dtos/Session.dto';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import { GameStateDTO, GameStateUpdatePayload, GameOverDTO } from '@application/dtos/GameState.dto';
@@ -16,7 +15,7 @@ import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { assertPhase, assertNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
 import EffectFactory from '@domain/factories/EffectFactory.class';
-import { createCharacterFromJsonTemplate } from '@domain/services/CharacterGeneration.service';
+import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer, rearrangeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex } from '@domain/services/Room.service';
@@ -40,6 +39,7 @@ export class GameCoordinatorService {
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
         @Inject(EFFECT_FACTORY) private readonly effectFactory: EffectFactory,
         @Inject(CLAIM_CONFIG) private readonly claimConfig: ClaimConfig,
+        @Inject(CATALOG_PORT) private readonly catalogPort: CatalogPort,
     ) {}
 
     private getContext(socketId: string): GameContext | null {
@@ -116,13 +116,6 @@ export class GameCoordinatorService {
         }
     }
 
-    private loadTemplates(): string[] {
-        const dir = path.join(process.cwd(), 'tmplt');
-        return fs.readdirSync(dir)
-            .filter(f => f.endsWith('.json'))
-            .map(f => fs.readFileSync(path.join(dir, f), 'utf-8'));
-    }
-
     private shuffle<T>(arr: T[]): T[] {
         const result = [...arr];
         for (let i = result.length - 1; i > 0; i--) {
@@ -142,11 +135,11 @@ export class GameCoordinatorService {
             if (room.ownerId !== session.sessionId) throw new Error('Only the room owner can start the game');
             if (!isRoomReady(room)) throw new Error('Room is not ready to start');
 
-            const templates = this.shuffle(this.loadTemplates());
+            const templates = this.shuffle([...this.catalogPort.list()]);
             if (templates.length < 10) throw new Error('Not enough character templates');
 
-            const player0 = createPlayer(templates.slice(0, 5).map(t => createCharacterFromJsonTemplate(t, this.effectFactory)), 0);
-            const player1 = createPlayer(templates.slice(5, 10).map(t => createCharacterFromJsonTemplate(t, this.effectFactory)), 1);
+            const player0 = createPlayer(templates.slice(0, 5).map(t => createCharacterFromTemplate(t, this.effectFactory)), 0);
+            const player1 = createPlayer(templates.slice(5, 10).map(t => createCharacterFromTemplate(t, this.effectFactory)), 1);
             const gameState = createGameState(player0, player1);
 
             this.roomPort.startGame(room.roomId, gameState);

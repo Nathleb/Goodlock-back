@@ -29,7 +29,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 - [x] 5. **`CatalogModule`** (`src/infrastructure/catalog.module.ts`): provides and exports `EFFECT_FACTORY` (moved out of `app.module.ts`) and `CATALOG_PORT`. `AppModule` imports it.
 
 ### Match start
-- [ ] 6. **`GameCoordinator.startGame` uses the catalog** — inject `CATALOG_PORT`, shuffle `catalogPort.list()`, build with `createCharacterFromTemplate`; delete `loadTemplates` and the `fs`/`path` imports. Test first: in `tests/GameCoordinator.service.spec.ts`, startGame with a mocked catalog of 10 templates builds two teams of 5 carrying catalog ids; also provide the mock in `tests/GameCoordinator.claim.spec.ts` (it currently hits the real disk).
+- [x] 6. **`GameCoordinator.startGame` uses the catalog** — inject `CATALOG_PORT`, shuffle `catalogPort.list()`, build with `createCharacterFromTemplate`; delete `loadTemplates` and the `fs`/`path` imports. Test first: in `tests/GameCoordinator.service.spec.ts`, startGame with a mocked catalog of 10 templates builds two teams of 5 carrying catalog ids; also provide the mock in `tests/GameCoordinator.claim.spec.ts` (it currently hits the real disk).
 
 ### Persistence
 - [ ] 7. **Prisma** — `UserCharacter` model as in the spec (`@@unique([userId, characterId])`, cascade) + `User.characters` back-relation; `npx prisma migrate dev --name add_user_character` (needs the docker Postgres up).

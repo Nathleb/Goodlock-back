@@ -1,4 +1,4 @@
-import { TEST_CATALOG_ID } from './helpers/catalog';
+import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
@@ -13,7 +13,8 @@ import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
 import { UserId } from '@shared/branded.types';
-import { EFFECT_FACTORY } from '@application/ports/tokens';
+import { EFFECT_FACTORY, CATALOG_PORT } from '@application/ports/tokens';
+import GameState from '@domain/types/GameState.type';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, userId: USER_I
 const SESSION_1: Session = { sessionId: 'p1', socketId: SOCKET_1, userId: USER_ID_1, roomId: 'room-1' };
 
 const factory = buildEffectFactory();
+const catalog = makeTestCatalog(10);
 
 const die = generateFullDie([
     { description: 'A', priority: 1, effects: [] },
@@ -73,6 +75,7 @@ beforeEach(async () => {
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: EFFECT_FACTORY, useValue: factory },
+            { provide: CATALOG_PORT, useValue: catalog },
             { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
         ],
     }).compile();
@@ -158,6 +161,32 @@ describe('startGame', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
+    it('builds two teams of five distinct catalog characters', () => {
+        coordinator.startGame(SOCKET_0);
+        const state: GameState = mockRoom.startGame.mock.calls[0][1];
+        const ids = state.players.flatMap(p => p.team.map(c => c.catalogId));
+        expect(state.players.map(p => p.team.length)).toEqual([5, 5]);
+        expect(new Set(ids).size).toBe(10);
+        ids.forEach(id => expect(catalog.has(id)).toBe(true));
+    });
+
+    it('emits error when the catalog has fewer than ten characters', async () => {
+        const small = await Test.createTestingModule({
+            providers: [
+                GameCoordinatorService,
+                { provide: SESSION_PORT, useValue: mockSession },
+                { provide: ROOM_PORT, useValue: mockRoom },
+                { provide: WEBSOCKET_PORT, useValue: mockWs },
+                { provide: EFFECT_FACTORY, useValue: factory },
+                { provide: CATALOG_PORT, useValue: makeTestCatalog(9) },
+                { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
+            ],
+        }).compile();
+        small.get(GameCoordinatorService).startGame(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 });
 
