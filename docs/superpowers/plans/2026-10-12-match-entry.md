@@ -24,7 +24,7 @@ Reuse: confirm/cancel helpers in `src/domain/services/GameLoop.service.ts` (`mar
 ### Coordinators
 - [x] 6. **`selectDeck`** — `DeckCoordinatorService.getOwnDeckCharacterIds`; `RoomCoordinatorService.selectDeck(socketId, deckId)` async: load, re-read room, refuse if player left / game started, store, emit `roomUpdated`; errors → `error` event. RoomCoordinator gets `DeckCoordinatorService` (already exported by `DeckModule`, imported by `AppModule`). Tests in `tests/RoomCoordinator.service.spec.ts`, incl. the two await races.
 - [x] 7. **`startGame` → SELECTION** — require both snapshots, templates from `CATALOG_PORT`, per-viewer emit. Rewrite the slice-A startGame tests in `tests/GameCoordinator.service.spec.ts` / `.claim.spec.ts` (decks now come from the room).
-- [ ] 8. **`confirmSelection` / `cancelSelection`** in `GameCoordinatorService` — first confirm echoes to self only; completion sends a per-viewer PLACEMENT view to each player; input checked as an array of strings. Tests in `tests/GameCoordinator.service.spec.ts`, incl. "opponent never receives my pick".
+- [x] 8. **`confirmSelection` / `cancelSelection`** in `GameCoordinatorService` — first confirm echoes to self only; completion sends a per-viewer PLACEMENT view to each player; input checked as an array of strings. Tests in `tests/GameCoordinator.service.spec.ts`, incl. "opponent never receives my pick".
 
 ### Gateway
 - [ ] 9. **Events** — `selectDeck`, `confirmSelection`, `cancelSelection` in `session.gateway.ts` with payload types next to the existing ones; existing gateway/guard tests patterns.

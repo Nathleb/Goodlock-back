@@ -7,7 +7,8 @@ import { Room } from '@domain/types/Room.type';
 import { BaseDieInstructions } from '@domain/types/BaseDieInstructions.type';
 import { SlotIndex } from '@domain/types/Position.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import { createCharacter, generateFullDie } from '@domain/services/CharacterGeneration.service';
+import { createCharacter, generateFullDie, createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
+import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
 import { createGameState, buildEffectFactory } from '@domain/services/GameInit.service';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
@@ -197,6 +198,74 @@ describe('startGame', () => {
         coordinator.startGame(SOCKET_0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
         expect(mockRoom.startGame).not.toHaveBeenCalled();
+    });
+});
+
+// ── team selection ───────────────────────────────────────────────────────────
+
+describe('team selection', () => {
+    const PICK_P0 = ['c6', 'c0', 'c1', 'c2', 'c3'];
+    const PICK_P1 = ['c9', 'c8', 'c7', 'c6', 'c5'];
+    const selectingRoom = (gs: GameState): Room => ({ ...makeRoom(gs), playerOrder: ['p0', 'p1'] });
+    const fresh = () => createSelectionState([
+        DECK_P0.map(id => catalog.get(id)!),
+        DECK_P1.map(id => catalog.get(id)!),
+    ]);
+    const lastState = (): GameState => mockRoom.updateGameState.mock.calls.at(-1)[1];
+    const sentTo = (socket: string) => mockWs.emitToSocket.mock.calls.filter(c => c[0] === socket && c[1] === 'gameStateUpdated').map(c => c[2]);
+
+    beforeEach(() => {
+        mockRoom.getRoom.mockReturnValue(selectingRoom(fresh()));
+        mockSession.getSessionById.mockImplementation((id: string) => id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
+    });
+
+    it('first confirm is echoed to the picker only', () => {
+        coordinator.confirmSelection(SOCKET_0, PICK_P0);
+        expect(lastState().selection?.picks[0]).toEqual(PICK_P0);
+        expect(sentTo(SOCKET_0)[0].selection.myPicks).toEqual(PICK_P0);
+        expect(sentTo(SOCKET_1)).toHaveLength(0);
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
+    it('second confirm starts PLACEMENT with a per-viewer view that hides the opponent', () => {
+        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        coordinator.confirmSelection(SOCKET_0, PICK_P0);
+
+        expect(lastState().phase).toBe(GamePhase.PLACEMENT);
+        const toP0 = sentTo(SOCKET_0)[0];
+        expect(toP0.players[0].team.map((c: { name: string }) => c.name)).toEqual(PICK_P0.map(id => `Name-${id}`));
+        expect(toP0.players[1].team).toEqual([]);
+        expect(JSON.stringify(toP0)).not.toContain('Name-c9');
+        expect(sentTo(SOCKET_1)[0].players[0].team).toEqual([]);
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
+    it("never sends a player the opponent's pick during SELECTION", () => {
+        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        coordinator.cancelSelection(SOCKET_1); // no-op for p1, must not leak anything either
+        coordinator.confirmSelection(SOCKET_1, ['c3', 'c4', 'c5', 'c6', 'c7']);
+        for (const payload of sentTo(SOCKET_1)) {
+            expect(payload.selection?.myPicks ?? []).not.toEqual(PICK_P0);
+            expect(JSON.stringify(payload)).not.toContain('"picks"');
+        }
+    });
+
+    it.each([
+        ['not an array', 'c0'],
+        ['non-string ids', [1, 2, 3, 4, 5]],
+        ['an invalid pick', ['c0', 'c0', 'c1', 'c2', 'c3']],
+    ])('emits error for %s', (_label, input) => {
+        coordinator.confirmSelection(SOCKET_0, input as unknown as string[]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('cancelSelection un-readies the player and echoes to them only', () => {
+        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        coordinator.cancelSelection(SOCKET_0);
+        expect(lastState().playersReady).toEqual([false, false]);
+        expect(sentTo(SOCKET_0)[0].selection.myPicks).toBeNull();
+        expect(sentTo(SOCKET_1)).toHaveLength(0);
     });
 });
 

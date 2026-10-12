@@ -26,7 +26,10 @@ import {
     cancelKeep as domainCancelKeep,
     performResolve,
     createSelectionState,
+    confirmSelection as domainConfirmSelection,
+    cancelSelection as domainCancelSelection,
 } from '@domain/services/GameLoop.service';
+import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
 import { CatalogId } from '@shared/branded.types';
 
@@ -134,9 +137,13 @@ export class GameCoordinatorService {
         players.forEach((playerSessionId, idx) => {
             const playerSession = this.sessionPort.getSessionById(playerSessionId);
             if (!playerSession) return;
-            const view = GameStateMapper.toDTOForViewer(gs, idx as PlayerIndex);
-            this.wsPort.emitToSocket(playerSession.socketId, 'gameStateUpdated', this.withTimers(roomId, view, gs));
+            this.emitToViewer(playerSession.socketId, roomId, gs, idx as PlayerIndex);
         });
+    }
+
+    private emitToViewer(socketId: string, roomId: string, gs: GameState, viewerIndex: PlayerIndex): void {
+        const view = GameStateMapper.toDTOForViewer(gs, viewerIndex);
+        this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(roomId, view, gs));
     }
 
     startGame(socketId: string): void {
@@ -154,6 +161,43 @@ export class GameCoordinatorService {
 
             this.roomPort.startGame(room.roomId, gameState);
             this.emitPerViewer(room.roomId, room.playersId, gameState);
+        } catch (e: unknown) {
+            this.emitError(socketId, (e as Error).message);
+        }
+    }
+
+    confirmSelection(socketId: string, characterIds: string[]): void {
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const { room, playerIndex } = ctx;
+        try {
+            if (!Array.isArray(characterIds) || characterIds.some(id => typeof id !== 'string')) {
+                throw new Error('characterIds must be an array of catalog ids');
+            }
+            const gs = domainConfirmSelection(room.gameState, playerIndex, characterIds as CatalogId[],
+                template => createCharacterFromTemplate(template, this.effectFactory));
+            this.roomPort.updateGameState(room.roomId, gs);
+            if (gs.phase === GamePhase.PLACEMENT) {
+                this.emitPerViewer(room.roomId, room.playerOrder ?? room.playersId, gs);
+            } else {
+                // First to pick: only the picker learns about it, the pick stays secret.
+                this.emitToViewer(socketId, room.roomId, gs, playerIndex);
+            }
+        } catch (e: unknown) {
+            this.emitError(socketId, (e as Error).message);
+        }
+    }
+
+    cancelSelection(socketId: string): void {
+        const ctx = this.getContext(socketId);
+        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const { room, playerIndex } = ctx;
+        try {
+            const gs = domainCancelSelection(room.gameState, playerIndex);
+            if (gs !== room.gameState) {
+                this.roomPort.updateGameState(room.roomId, gs);
+                this.emitToViewer(socketId, room.roomId, gs, playerIndex);
+            }
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }
