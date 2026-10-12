@@ -1,8 +1,8 @@
 # Pokemon-style Speed System — Design
 
 **Date:** 2026-06-17
-**Status:** Approved (pending spec review)
-**Branch:** fix/confirm-ready-echo (TBD: dedicated branch)
+**Status:** Implemented — merged to main in `8f054e8` (resolution order = face.priority bracket, then baseSpeed, random tiebreak)
+**Branch:** merged
 
 ## Problem
 
