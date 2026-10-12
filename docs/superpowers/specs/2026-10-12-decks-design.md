@@ -1,7 +1,7 @@
 # Decks — design
 
 Date: 2026-10-12
-Status: validated, ready for planning
+Status: implemented 2026-10-12 (plan: `docs/superpowers/plans/2026-10-12-decks.md`)
 Slice: **B** of three (A: catalog + collection — done, B: decks, C: match entry). Items stay out of scope.
 
 ## Problem
@@ -82,7 +82,7 @@ slots whose character did not change; that is the items slice's concern.
 - Branded `DeckId` in `shared/branded.types.ts`.
 - `DeckPort` (`DECK_PORT`): `listByUser`, `findById`, `countByUser`, `create`, `update` (name + slots,
   transactional), `delete`. Implemented by `DeckRepository` over Prisma (no spec, per convention).
-- `DeckCoordinatorService`, using `DeckPort`, `CollectionPort` (ownership) and `CatalogPort`:
+- `DeckCoordinatorService`, using `DeckPort`, `CatalogPort`, and `CollectionCoordinatorService.ownedIds` for ownership:
   - `list(userId)` → `DeckDTO[]`;
   - `create(userId, dto)` → 400 on invalid composition, 409 when the user already has 5 decks;
   - `update(userId, deckId, dto)` → 404 when the deck is missing **or belongs to someone else** (no
@@ -129,6 +129,19 @@ TDD bottom-up; domain specs import no NestJS.
 3. **Application** — `AuthCoordinator`: starter deck after grant on register and login; failures logged.
 4. **Infrastructure** — `DeckController` with a mocked coordinator (mirrors `CollectionController.spec.ts`),
    module wiring test with Prisma mocked.
+
+## Implementation notes (2026-10-12)
+
+- Ownership is read through `CollectionCoordinatorService.ownedIds(userId)`, so `CollectionPort` stays
+  private to the collection module.
+- The deck name is trimmed and checked (1–30) in the coordinator: the global `ValidationPipe` does not run
+  with `transform: true`, so a DTO-level trim would never reach the handler. `SaveDeckDto` only bounds the
+  shape (string name ≤ 100, exactly 7 string ids, no extra fields), covered by a test through a real
+  `ValidationPipe` with `main.ts` options.
+- Starter content at auth: if the collection grant fails, the starter deck is skipped (it would reference
+  unowned characters); both failures are logged and never fail authentication.
+- Migration `20261012120000_add_decks` was generated offline with `prisma migrate diff`; apply with
+  `npx prisma migrate deploy`.
 
 ## Out of scope
 

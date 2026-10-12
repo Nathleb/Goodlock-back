@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly roll and lock die faces each round, then all actions resolve in priority order (each face carries its own target cells — see Auto-targeting below). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** persists authentication (`User`, `RefreshToken`) and player ownership (`UserCharacter`: which catalog characters a user owns). Character definitions are not in the database: they are git-authored in `tmplt/*.json`. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
+Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly roll and lock die faces each round, then all actions resolve in priority order (each face carries its own target cells — see Auto-targeting below). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** persists authentication (`User`, `RefreshToken`) and player data (`UserCharacter`: which catalog characters a user owns; `Deck` + `DeckSlot`: decks of 7 characters, max 5 per user). Character definitions are not in the database: they are git-authored in `tmplt/*.json`. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
 
 ## Tooling
 
@@ -56,28 +56,28 @@ src/
 Contains all game logic with zero NestJS dependencies:
 - `types/` plain TypeScript types for `Character`, `Room`, `Session`, `GameState`, `Die`, `DieFace`, `Effect`, etc.
 - `entities/` `CharacterEntity` (JSON template shape read from `tmplt/*.json`)
-- `services/` `RoomService`, `SessionService`, `CharacterService`, `CharacterGeneration`, `CharacterCatalog` (`validateCatalog`: id presence/shape/uniqueness), `PriorityQueue`, `Player`, `GameInit`
+- `services/` `RoomService`, `SessionService`, `CharacterService`, `CharacterGeneration`, `CharacterCatalog` (`validateCatalog`: id presence/shape/uniqueness), `Deck` (`validateDeck`, `DECK_SIZE` = 7, `MAX_DECKS_PER_USER` = 5), `PriorityQueue`, `Player`, `GameInit`
 - `services/TargetResolution.service.ts` `resolveTargets` (template target groups -> positions, from the actor's current slot) and `validateEffectTargets` (template validation)
 - `factories/` `EffectFactory`: registry pattern for creating effects by label; effects must be registered before use
 - `strategies/` `Damage`, `Heal`, `Shield`, `Swap`: generic effects applied to the cells resolved for them
 
-Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (`[a-z0-9-]+`, branded `CatalogId`; it is stored in DB rows, so never rename it). They are loaded once at boot by the catalog and built with `createCharacterFromTemplate`; every runtime `Character` carries its `catalogId`.
+Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (`[a-z0-9-]+`, branded `CatalogId`; it is stored in DB rows, so never rename it). They are loaded once at boot by the catalog and built with `createCharacterFromTemplate`; every runtime `Character` carries its `catalogId`. Characters are never removed from the catalog (pre-release, a replacement reuses the id), so stored ids never dangle: validate on write, no "retired character" handling.
 
 ### Application layer (`src/application/`)
 
-- `ports/` interfaces `RoomPort`, `SessionPort`, `WebSocketPort`, `CatalogPort` (sync, in-memory), `CollectionPort` (async, DB) (tokens in `tokens.ts`)
-- `services/` `RoomCoordinatorService`, `SessionCoordinatorService`, `AuthCoordinatorService`, `GameCoordinatorService`, `CollectionCoordinatorService` (the only write path into `UserCharacter`, validated against the catalog): bridge domain services with WebSocket/HTTP handlers
-- `mappers/` `RoomMapper`: domain `Room` -> `RoomDTO`; `CollectionMapper`: template -> `CollectionCharacterDTO`
-- `dtos/` `RoomDTO`, `PlayerDTO`, `GameStateDTO`, `CollectionDTO`
+- `ports/` interfaces `RoomPort`, `SessionPort`, `WebSocketPort`, `CatalogPort` (sync, in-memory), `CollectionPort` (async, DB), `DeckPort` (async, DB) (tokens in `tokens.ts`)
+- `services/` `RoomCoordinatorService`, `SessionCoordinatorService`, `AuthCoordinatorService`, `GameCoordinatorService`, `CollectionCoordinatorService` (the only write path into `UserCharacter`, validated against the catalog), `DeckCoordinatorService` (deck CRUD; another user's deck answers 404; last deck can't be deleted): bridge domain services with WebSocket/HTTP handlers
+- `mappers/` `RoomMapper`: domain `Room` -> `RoomDTO`; `CollectionMapper`: template -> `CollectionCharacterDTO`; `DeckMapper`
+- `dtos/` `RoomDTO`, `PlayerDTO`, `GameStateDTO`, `CollectionDTO`, `DeckDTO`/`SaveDeckDto`
 
 ### Infrastructure layer (`src/infrastructure/adapters/`)
 
 - `managers/` `SessionManager`, `RoomManager`: in-memory `Map`-based state stores (the source of truth for all game state)
 - `prisma/` `PrismaModule` + `PrismaService`: the Prisma client wrapper used by the repositories
-- `adapters/repositories/` `UserRepository`, `RefreshTokenRepository`, `UserCharacterRepository`: the only DB-backed code
+- `adapters/repositories/` `UserRepository`, `RefreshTokenRepository`, `UserCharacterRepository`, `DeckRepository`: the only DB-backed code
 - `adapters/catalog/` `FileCharacterCatalog`: reads and validates `tmplt/*.json` at boot (`CatalogModule`, which also owns `EFFECT_FACTORY`); a bad catalog stops the app from starting
-- `adapters/http/` `AuthController`, `RoomController`, `CollectionController` (`GET /collection`): REST endpoints
-- `catalog.module.ts`, `collection.module.ts`, `auth.module.ts`: `AuthModule` imports `CollectionModule` (grant on register/login), so `CollectionController` is declared in `AppModule` to avoid a cycle
+- `adapters/http/` `AuthController`, `RoomController`, `CollectionController` (`GET /collection`), `DeckController` (`GET/POST /decks`, `PUT/DELETE /decks/:id`): REST endpoints
+- `catalog.module.ts`, `collection.module.ts`, `deck.module.ts`, `auth.module.ts`: `AuthModule` imports `CollectionModule` and `DeckModule` (starter collection + deck on register/login), so `CollectionController` and `DeckController` are declared in `AppModule` to avoid a cycle
 - `websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: `createRoom`, `joinRoom`, `quitRoom`
 - `websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
 - `websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
@@ -85,7 +85,7 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 
 ### Shared utilities (`src/shared/`)
 
-- `branded.types.ts` `SessionId`, `SocketId`, `RoomId`, `PlayerId`, `CharacterId`, `DeviceId`, `UserId`, `CatalogId` branded string types to prevent ID mix-ups
+- `branded.types.ts` `SessionId`, `SocketId`, `RoomId`, `PlayerId`, `CharacterId`, `DeviceId`, `UserId`, `CatalogId`, `DeckId` branded string types to prevent ID mix-ups
 - `Result<T, E>` is **not implemented yet** (no `result.type.ts`); existing code throws. Introducing it is a dedicated change, not something to slip into a feature.
 
 ### Key design rules
@@ -153,7 +153,7 @@ Wrap any secret, API key, or private information in `<private>...</private>` tag
 
 **Test colocation**: tests live in `tests/` mirroring `src/` structure. One spec file per service or strategy. Domain specs must not import NestJS.
 
-**Game state stays in-memory**: the `Manager` classes in `infrastructure/adapters/managers/` are the single source of truth for all game state (rooms, sessions, live games) and must never be persisted to the database. Persistence (Prisma/Postgres) is reserved for **auth and player ownership** — `User`, `RefreshToken`, `UserCharacter` — accessed via the repositories in `adapters/repositories/`. Content (character definitions) stays in `tmplt/`, not in the database. Do not introduce a new DB-backed entity, a different ORM, or persist game state without explicit discussion.
+**Game state stays in-memory**: the `Manager` classes in `infrastructure/adapters/managers/` are the single source of truth for all game state (rooms, sessions, live games) and must never be persisted to the database. Persistence (Prisma/Postgres) is reserved for **auth and player data** — `User`, `RefreshToken`, `UserCharacter`, `Deck`, `DeckSlot` — accessed via the repositories in `adapters/repositories/`. Content (character definitions) stays in `tmplt/`, not in the database. Do not introduce a new DB-backed entity, a different ORM, or persist game state without explicit discussion.
 
 **Conventional commits**: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`. One commit per logical change.
 
