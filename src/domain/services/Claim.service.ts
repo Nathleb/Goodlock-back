@@ -4,7 +4,7 @@ import { PlayerIndex } from "../types/Position.type";
 import { PlayerPresence } from "../types/Presence.type";
 import { ClaimConfig, ClaimVerdict } from "../types/Claim.type";
 
-const CONFIRM_PHASES: readonly GamePhase[] = [GamePhase.PLACEMENT, GamePhase.KEEP];
+const CONFIRM_PHASES: readonly GamePhase[] = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP];
 
 export function evaluateClaim(
     gs: GameState,

@@ -82,3 +82,14 @@ describe('countdown helpers', () => {
         expect(computeForfeitClaimInMs(ONLINE, NOW, 60_000)).toBeNull();
     });
 });
+
+describe('team selection counts as a confirm phase', () => {
+    it('AFK claim is valid in SELECTION when the opponent has not picked', () => {
+        expect(evaluateClaim(gs(GamePhase.SELECTION, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))
+            .toEqual({ valid: true, reason: 'afk' });
+    });
+
+    it('the AFK countdown runs during SELECTION', () => {
+        expect(computeAfkClaimInMs(gs(GamePhase.SELECTION, [false, false]), NOW - 20_000, NOW, 120_000)).toBe(100_000);
+    });
+});
