@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import Damage from "@domain/strategies/Damage.class";
 import Heal from "@domain/strategies/Heal.class";
 import Shield from "@domain/strategies/Shield.class";
@@ -15,7 +16,7 @@ import { Player } from "@domain/types/Player.type";
 // Shape-agnostic die: effects never read the die, so its face content is irrelevant.
 const EMPTY_DIE = Array.from({ length: 6 }, () => ({ description: '', priority: 0, effects: [] })) as unknown as Die;
 const team = (pi: PlayerIndex, prefix: string) =>
-    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter(`${prefix}${i}`, 20, 1, EMPTY_DIE, { playerIndex: pi, slot: i as SlotIndex })), pi);
+    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `${prefix}${i}`, maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
 
 let gs: GameState;
 beforeEach(() => { gs = createGameState(team(0, 'A'), team(1, 'B')); });

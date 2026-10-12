@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
@@ -35,7 +36,7 @@ const die = generateFullDie([
 ] satisfies BaseDieInstructions, factory);
 
 const makeTeam = (pi: 0 | 1): Player =>
-    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter('C', 100, 1, die, { playerIndex: pi, slot: i as SlotIndex })), pi);
+    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
 
 const baseGs = createGameState(makeTeam(0), makeTeam(1));
 const keepGs  = beginKeepPhase(baseGs);

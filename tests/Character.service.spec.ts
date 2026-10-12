@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { describe } from "node:test";
@@ -18,7 +19,7 @@ describe('CharacterService', () => {
 
   const factory = buildEffectFactory();
   const die = generateFullDie(baseDieInstructions, factory);
-  const character = createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
+  const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
 
   it('should roll a die for the character', () => {
     const updatedCharacter = rollDie(character);

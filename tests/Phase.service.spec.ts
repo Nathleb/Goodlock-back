@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import { SlotIndex, PlayerIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
@@ -24,8 +25,8 @@ const die = generateFullDie([
     { description: "F", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
 ] satisfies BaseDieInstructions, factory);
 
-const team1 = [0, 1, 2, 3, 4].map(i => createCharacter(`P1-${i}`, 100, 1, die, { playerIndex: 0, slot: i as SlotIndex }));
-const team2 = [0, 1, 2, 3, 4].map(i => createCharacter(`P2-${i}`, 100, 1, die, { playerIndex: 1, slot: i as SlotIndex }));
+const team1 = [0, 1, 2, 3, 4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P1-${i}`, maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: 0, slot: i as SlotIndex } }));
+const team2 = [0, 1, 2, 3, 4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P2-${i}`, maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: 1, slot: i as SlotIndex } }));
 const gs = createGameState(createPlayer(team1, 0), createPlayer(team2, 1));
 
 describe('Phase transitions', () => {

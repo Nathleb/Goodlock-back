@@ -1,5 +1,6 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
-import { createCharacter, createCharacterFromJsonTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
+import { createCharacter, createCharacterFromJsonTemplate, createCharacterFromTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
+import { CatalogId } from "@shared/branded.types";
 import { buildEffectFactory } from "@domain/services/GameInit.service";
 
 describe('CharacterGenerationService', () => {
@@ -28,10 +29,26 @@ describe('CharacterGenerationService', () => {
 
   it('should create a character with specified attributes', () => {
     const die = generateFullDie(JSON.parse(jsonTemplate).baseDieInstructions, factory);
-    const character = createCharacter("TestCharacter", 100, 5, die, { playerIndex: 0, slot: 0 });
+    const character = createCharacter({ catalogId: 'test-char' as CatalogId, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+    expect(character.catalogId).toBe('test-char');
     expect(character.name).toBe("TestCharacter");
     expect(character.maxHp).toBe(100);
     expect(character.baseSpeed).toBe(5);
+  });
+
+  it('copies the template id into catalogId', () => {
+    const template = { ...JSON.parse(jsonTemplate), id: 'test-char' };
+    const character = createCharacterFromTemplate(template, factory);
+    expect(character.catalogId).toBe('test-char');
+    expect(character.name).toBe("TestCharacter");
+  });
+
+  it('gives each built character its own instance id', () => {
+    const template = { ...JSON.parse(jsonTemplate), id: 'test-char' };
+    const a = createCharacterFromTemplate(template, factory);
+    const b = createCharacterFromTemplate(template, factory);
+    expect(a.id).not.toBe(b.id);
+    expect(a.catalogId).toBe(b.catalogId);
   });
 
   it('carries label, magnitude and targets on each face effect', () => {

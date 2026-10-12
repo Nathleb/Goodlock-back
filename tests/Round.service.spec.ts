@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
@@ -21,7 +22,7 @@ const die = generateFullDie(baseDieInstructions, factory);
 
 describe('Round.service', () => {
     it('should reset all shields to 0 at end of round', () => {
-        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const charWithShield = gainShield(makeChar(), 20);
         const player1 = createPlayer([charWithShield, makeChar(), makeChar(), makeChar(), makeChar()], 0);
         const player2 = createPlayer([gainShield(makeChar(), 10), makeChar(), makeChar(), makeChar(), makeChar()], 1);
@@ -35,7 +36,7 @@ describe('Round.service', () => {
     });
 
     it('should not affect HP', () => {
-        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         const player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
         const gameState = createGameState(player1, player2);
@@ -48,7 +49,7 @@ describe('Round.service', () => {
     });
 
     it('should increment currentRound', () => {
-        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         const player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
         const gameState = createGameState(player1, player2);
@@ -59,7 +60,7 @@ describe('Round.service', () => {
     });
 
     it('should reset rollsLeft to 2', () => {
-        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         const player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
         const gameState = { ...createGameState(player1, player2), rollsLeft: 0 };
@@ -70,7 +71,7 @@ describe('Round.service', () => {
     });
 
     it('should unlock all dice', () => {
-        const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+        const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         let player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         let player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
         player1 = { ...player1, team: player1.team.map((c, i) => i === 0 ? { ...c, isFaceLocked: true } : c) };
@@ -86,7 +87,7 @@ describe('Round.service', () => {
 });
 
 describe('checkWinner', () => {
-    const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+    const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
     const dead = () => loseHp(makeChar(), 100);
     const alive5 = () => [makeChar(), makeChar(), makeChar(), makeChar(), makeChar()];
     const dead3 = () => [dead(), dead(), dead(), makeChar(), makeChar()];

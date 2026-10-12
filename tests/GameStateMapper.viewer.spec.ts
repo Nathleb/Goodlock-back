@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
@@ -15,7 +16,7 @@ const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 
 function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean): Character {
     return {
-        id, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [],
+        id, catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [],
         baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked,
         position: { playerIndex, slot: slot as SlotIndex },
     };
@@ -84,7 +85,7 @@ describe('face DTO', () => {
                 { effect: EffectLabel.Damage, magnitude: 3, targets: [enemyRel(-1, 0, 1)] },
             ],
         }) as unknown as BaseDieInstructions, factory);
-        const character = createCharacter('T', 10, 1, die, { playerIndex: 0, slot: 0 });
+        const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'T', maxHp: 10, baseSpeed: 1, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const dto = GameStateMapper.characterToDTO(character);
         expect(dto.face.effects).toEqual([
             { effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }] },

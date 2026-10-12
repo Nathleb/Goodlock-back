@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
@@ -26,7 +27,7 @@ const die = generateFullDie([
 ] satisfies BaseDieInstructions, factory);
 
 const makeTeam = (pi: 0 | 1) =>
-    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter("C", 100, 1, die, { playerIndex: pi, slot: i as SlotIndex })), pi);
+    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
 
 const gs = createGameState(makeTeam(0), makeTeam(1));
 

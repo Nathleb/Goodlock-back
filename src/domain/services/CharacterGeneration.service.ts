@@ -6,6 +6,7 @@ import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.t
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
 import { validateEffectTargets } from "./TargetResolution.service";
+import { CatalogId } from "@shared/branded.types";
 
 export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, factory: EffectFactory): Character {
     let template: CharacterTemplate;
@@ -14,13 +15,34 @@ export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, f
     } catch {
         throw new Error("Invalid JSON template");
     }
-    const die = generateFullDie(template.baseDieInstructions, factory);
-    return createCharacter(template.name, template.maxHp, template.baseSpeed, die, { playerIndex: 0, slot: 0 });
+    return createCharacterFromTemplate(template, factory);
 }
 
-export function createCharacter(name: string, maxHp: number, baseSpeed: number, baseDie: Die, position: Position): Character {
+export function createCharacterFromTemplate(template: CharacterTemplate, factory: EffectFactory): Character {
+    const die = generateFullDie(template.baseDieInstructions, factory);
+    return createCharacter({
+        catalogId: template.id,
+        name: template.name,
+        maxHp: template.maxHp,
+        baseSpeed: template.baseSpeed,
+        baseDie: die,
+        position: { playerIndex: 0, slot: 0 },
+    });
+}
+
+export type CharacterParams = {
+    readonly catalogId: CatalogId;
+    readonly name: string;
+    readonly maxHp: number;
+    readonly baseSpeed: number;
+    readonly baseDie: Die;
+    readonly position: Position;
+};
+
+export function createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, position }: CharacterParams): Character {
     return {
         id: crypto.randomUUID(),
+        catalogId,
         name,
         maxHp,
         baseSpeed,

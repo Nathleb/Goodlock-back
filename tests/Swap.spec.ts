@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -21,7 +22,7 @@ const baseDieInstructions: BaseDieInstructions = [
 
 const factory = buildEffectFactory();
 const die = generateFullDie(baseDieInstructions, factory);
-const makeChar = (name: string) => createCharacter(name, 100, 5, die, { playerIndex: 0, slot: 0 });
+const makeChar = (name: string) => createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
 
 const team1 = [makeChar("A"), makeChar("B"), makeChar("C"), makeChar("D"), makeChar("E")];
 const team2 = [makeChar("V"), makeChar("W"), makeChar("X"), makeChar("Y"), makeChar("Z")];

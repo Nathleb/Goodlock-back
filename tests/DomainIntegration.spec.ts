@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import GamePhase from "@domain/types/GamePhase.type";
 import { SlotIndex } from "@domain/types/Position.type";
@@ -33,7 +34,7 @@ function uniformDie(
 /** Team of 5 characters sharing one die. */
 function makeTeam(die: DieFn, playerIndex: 0 | 1, maxHp = 50) {
     return ([0, 1, 2, 3, 4] as SlotIndex[]).map(slot =>
-        createCharacter(`P${playerIndex}S${slot}`, maxHp, 0, die, { playerIndex, slot }),
+        createCharacter({ catalogId: TEST_CATALOG_ID, name: `P${playerIndex}S${slot}`, maxHp, baseSpeed: 0, baseDie: die, position: { playerIndex, slot } }),
     );
 }
 
@@ -68,7 +69,7 @@ const noopDie = uniformDie('No-op', 1, []);
  */
 function makeTeamWith(playerIndex: 0 | 1, dies: Partial<Record<SlotIndex, DieFn>>, maxHp = 50) {
     return ([0, 1, 2, 3, 4] as SlotIndex[]).map(slot =>
-        createCharacter(`P${playerIndex}S${slot}`, maxHp, 0, dies[slot] ?? noopDie, { playerIndex, slot }),
+        createCharacter({ catalogId: TEST_CATALOG_ID, name: `P${playerIndex}S${slot}`, maxHp, baseSpeed: 0, baseDie: dies[slot] ?? noopDie, position: { playerIndex, slot } }),
     );
 }
 
@@ -230,8 +231,8 @@ describe('Domain integration — Priority ordering', () => {
     it('higher-priority attacker kills target before lower-priority defender fires', () => {
         const highPrioDmgDie = uniformDie('HighPrio', 5, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
         const lowPrioDmgDie  = uniformDie('LowPrio',  1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
-        const player0 = createPlayer([createCharacter('Killer', 50, 0, highPrioDmgDie, { playerIndex: 0, slot: 0 as SlotIndex })], 0);
-        const player1 = createPlayer([createCharacter('Victim', 50, 0, lowPrioDmgDie,  { playerIndex: 1, slot: 0 as SlotIndex })], 1);
+        const player0 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Killer', maxHp: 50, baseSpeed: 0, baseDie: highPrioDmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } })], 0);
+        const player1 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Victim', maxHp: 50, baseSpeed: 0, baseDie: lowPrioDmgDie, position: { playerIndex: 1, slot: 0 as SlotIndex } })], 1);
         const gameState = createGameState(player0, player1);
 
         const resolvedState = advanceToResolve(gameState);
@@ -245,8 +246,8 @@ describe('Domain integration — Priority ordering', () => {
 
     it('equal-priority characters both fire — neither is skipped', () => {
         const dmgDie = uniformDie('Damage', 3, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
-        const player0 = createPlayer([createCharacter('A', 50, 0, dmgDie, { playerIndex: 0, slot: 0 as SlotIndex })], 0);
-        const player1 = createPlayer([createCharacter('B', 50, 0, dmgDie, { playerIndex: 1, slot: 0 as SlotIndex })], 1);
+        const player0 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'A', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } })], 0);
+        const player1 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'B', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 1, slot: 0 as SlotIndex } })], 1);
         const gameState = createGameState(player0, player1);
 
         const resolvedState = advanceToResolve(gameState);
@@ -259,8 +260,8 @@ describe('Domain integration — Priority ordering', () => {
 
     it('resolve log contains a step for every queued character', () => {
         const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
-        const player0 = createPlayer([createCharacter('A', 50, 0, dmgDie, { playerIndex: 0, slot: 0 as SlotIndex })], 0);
-        const player1 = createPlayer([createCharacter('B', 50, 0, dmgDie, { playerIndex: 1, slot: 0 as SlotIndex })], 1);
+        const player0 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'A', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } })], 0);
+        const player1 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'B', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 1, slot: 0 as SlotIndex } })], 1);
         const gameState = createGameState(player0, player1);
 
         const resolvedState = advanceToResolve(gameState);
@@ -306,9 +307,9 @@ describe('Domain integration — Self-targeted effects', () => {
         const dmgDie      = uniformDie('Damage',   1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
 
         const player0Team = [
-            createCharacter('Self-healer', 50, 0, selfHealDie, { playerIndex: 0, slot: 0 as SlotIndex }),
-            createCharacter('Attacker',   50, 0, dmgDie,      { playerIndex: 0, slot: 1 as SlotIndex }),
-            ...[2, 3, 4].map(idx => createCharacter(`P0S${idx}`, 50, 0, noopDie, { playerIndex: 0, slot: idx as SlotIndex })),
+            createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Self-healer', maxHp: 50, baseSpeed: 0, baseDie: selfHealDie, position: { playerIndex: 0, slot: 0 as SlotIndex } }),
+            createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Attacker', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 1 as SlotIndex } }),
+            ...[2, 3, 4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P0S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 0, slot: idx as SlotIndex } })),
         ];
         let gameState = createGameState(createPlayer(player0Team, 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
@@ -482,12 +483,12 @@ describe('Domain integration — Round cleanup and multi-round', () => {
         const dmgDie        = uniformDie('Damage',     1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
 
         const player0Team = [
-            createCharacter('Attacker', 50, 0, dmgDie, { playerIndex: 0, slot: 0 as SlotIndex }),
-            ...[1, 2, 3, 4].map(idx => createCharacter(`P0S${idx}`, 50, 0, noopDie, { playerIndex: 0, slot: idx as SlotIndex })),
+            createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Attacker', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } }),
+            ...[1, 2, 3, 4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P0S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 0, slot: idx as SlotIndex } })),
         ];
         const player1Team = [
-            createCharacter('Shielder', 50, 0, selfShieldDie, { playerIndex: 1, slot: 0 as SlotIndex }),
-            ...[1, 2, 3, 4].map(idx => createCharacter(`P1S${idx}`, 50, 0, noopDie, { playerIndex: 1, slot: idx as SlotIndex })),
+            createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Shielder', maxHp: 50, baseSpeed: 0, baseDie: selfShieldDie, position: { playerIndex: 1, slot: 0 as SlotIndex } }),
+            ...[1, 2, 3, 4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P1S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 1, slot: idx as SlotIndex } })),
         ];
         const gameState = createGameState(createPlayer(player0Team, 0), createPlayer(player1Team, 1));
 
@@ -511,8 +512,8 @@ describe('Domain integration — Round cleanup and multi-round', () => {
         // If we strip the self-shield by using a non-shielding P1, HP takes full damage
         const round3GameState = beginPlacementPhase(endOfRound(round2State));
         const player1NoShield = createPlayer(
-            [createCharacter('Target', round3GameState.players[1].team[0].hp, 0, noopDie, { playerIndex: 1, slot: 0 as SlotIndex }),
-             ...[1,2,3,4].map(idx => createCharacter(`P1S${idx}`, 50, 0, noopDie, { playerIndex: 1, slot: idx as SlotIndex }))],
+            [createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Target', maxHp: round3GameState.players[1].team[0].hp, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 1, slot: 0 as SlotIndex } }),
+             ...[1,2,3,4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P1S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 1, slot: idx as SlotIndex } }))],
             1,
         );
         const round3GameStateNoShield = { ...round3GameState, players: [round3GameState.players[0], player1NoShield] as typeof round3GameState.players };

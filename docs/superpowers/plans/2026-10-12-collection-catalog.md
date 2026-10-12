@@ -10,7 +10,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 
 ## Findings that adjust the spec
 
-- [ ] 1. **`createCharacter` has 58 call sites in 14 specs**, not "~4". Still the right call (two adjacent `number`s), but it is a mechanical rewrite, done in its own step.
+- [x] 1. **`createCharacter` has 58 call sites in 14 specs**, not "~4". Still the right call (two adjacent `number`s), but it is a mechanical rewrite, done in its own step.
 - [ ] 2. **Nest module cycle**: `AuthModule` will need the collection, and `CollectionController` needs `JwtAccessGuard` (exported by `AuthModule`). Fix: `CollectionController` lives in `AppModule` next to `RoomController`; `CollectionModule` only holds providers.
 - [ ] 3. **One validated write path**: `AuthCoordinator` calls `CollectionCoordinatorService.grant(userId, catalog.ids())` instead of the raw port, so validate-on-write cannot be bypassed. Auth spec mocks the coordinator, not the port.
 - [ ] 4. **Grant failures never fail auth**: they are logged. A failed grant at register would otherwise return an error for an account that exists (retry → "username taken"). The next login heals it.
@@ -18,7 +18,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 ## Steps (each = failing test → code → green → one commit)
 
 ### Domain
-- [ ] 1. **`createCharacter` object form + `catalogId`** — `shared/branded.types.ts`: add `CatalogId`. `CharacterTemplate` gains `id`, `Character` gains `catalogId`. `createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, position })`. New `createCharacterFromTemplate(template, factory)`; `createCharacterFromJsonTemplate` delegates to it. Test first in `tests/CharacterGeneration.service.spec.ts` (catalogId copied from template). Rewrite the 58 call sites (`catalogId: 'test' as CatalogId`, or a `tests/helpers` fixture where a file has many).
+- [x] 1. **`createCharacter` object form + `catalogId`** — `shared/branded.types.ts`: add `CatalogId`. `CharacterTemplate` gains `id`, `Character` gains `catalogId`. `createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, position })`. New `createCharacterFromTemplate(template, factory)`; `createCharacterFromJsonTemplate` delegates to it. Test first in `tests/CharacterGeneration.service.spec.ts` (catalogId copied from template). Rewrite the 58 call sites (`catalogId: 'test' as CatalogId`, or a `tests/helpers` fixture where a file has many).
 - [ ] 2. **`validateCatalog(templates): string[]`** in new `src/domain/services/CharacterCatalog.service.ts` — missing id, malformed id (`^[a-z0-9-]+$`), duplicates. New `tests/CharacterCatalog.service.spec.ts`.
 
 ### Content

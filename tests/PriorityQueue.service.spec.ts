@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { PlayerIndex, SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
@@ -25,7 +26,7 @@ describe('PriorityQueueService', () => {
   const factory = buildEffectFactory();
   const die = generateFullDie(baseDieInstructions, factory);
   // baseSpeed: 0 so finalPriority = face.priority + 0 = face.priority
-  const character = createCharacter("TestCharacter", 100, 0, die, { playerIndex: 0, slot: 0 });
+  const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
   const player1: Player = { playerIndex: 0, team: [character] };
   const player2: Player = { playerIndex: 1, team: [character] };
 
@@ -55,8 +56,8 @@ describe('PriorityQueueService', () => {
   });
 
   it('should cancel effects from dead actors and mark them skipped in the log', () => {
-    const actor = createCharacter("Actor", 100, 0, die, { playerIndex: 0, slot: 0 });
-    const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+    const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const deadActor = loseHp(actor, 100);
     const stateWithDead: GameState = {
       ...gameState,
@@ -81,18 +82,15 @@ describe('PriorityQueueService', () => {
   });
 
   it('killing blow appears in the log changes with hp 0', () => {
-    const actor = createCharacter("Attacker", 100, 0,
-      generateFullDie([
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Attacker", maxHp: 100, baseSpeed: 0, baseDie: generateFullDie([
         { description: "Kill", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 100, targets: [enemyAbs(0)] }] },
         { description: "B", priority: 1, effects: [] },
         { description: "C", priority: 1, effects: [] },
         { description: "D", priority: 1, effects: [] },
         { description: "E", priority: 1, effects: [] },
         { description: "F", priority: 1, effects: [] },
-      ], factory),
-      { playerIndex: 0, slot: 0 }
-    );
-    const victim = createCharacter("Victim", 50, 0, die, { playerIndex: 1, slot: 0 });
+      ], factory), position: { playerIndex: 0, slot: 0 } });
+    const victim = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Victim", maxHp: 50, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState(
         { playerIndex: 0, team: [actor] },
@@ -124,8 +122,8 @@ describe('PriorityQueueService', () => {
       { description: "E", priority: 1, effects: [] },
       { description: "F", priority: 1, effects: [] },
     ], factory);
-    const actor = createCharacter("Actor", 100, 0, noOpDie, { playerIndex: 0, slot: 0 });
-    const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: noOpDie, position: { playerIndex: 0, slot: 0 } });
+    const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
@@ -153,8 +151,8 @@ describe('PriorityQueueService', () => {
       { description: "E",        priority: 1, effects: [] },
       { description: "F",        priority: 1, effects: [] },
     ], factory);
-    const actor = createCharacter("Swapper", 100, 0, swapDie, { playerIndex: 0, slot: 0 });
-    const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Swapper", maxHp: 100, baseSpeed: 0, baseDie: swapDie, position: { playerIndex: 0, slot: 0 } });
+    const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
@@ -174,8 +172,8 @@ describe('PriorityQueueService', () => {
   });
 
   it('two actors in the same priority bucket each produce a log step', () => {
-    const actor1 = createCharacter("Actor1", 100, 0, die, { playerIndex: 0, slot: 0 });
-    const actor2 = createCharacter("Actor2", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const actor1 = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor1", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+    const actor2 = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor2", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor1] }, { playerIndex: 1, team: [actor2] }),
       priorityQueue: addEffectsToPriorityQueue(
@@ -206,10 +204,10 @@ describe('PriorityQueueService', () => {
     };
 
     const team1 = [0, 1, 2, 3, 4].map(i =>
-        createCharacter(`T${i}`, 100, 5, [face, face, face, face, face, face], { playerIndex: 0 as 0 | 1, slot: i as SlotIndex })
+        createCharacter({ catalogId: TEST_CATALOG_ID, name: `T${i}`, maxHp: 100, baseSpeed: 5, baseDie: [face, face, face, face, face, face], position: { playerIndex: 0 as 0 | 1, slot: i as SlotIndex } })
     );
     const team2 = [0, 1, 2, 3, 4].map(i =>
-        createCharacter(`E${i}`, 100, 5, [face, face, face, face, face, face], { playerIndex: 1 as 0 | 1, slot: i as SlotIndex })
+        createCharacter({ catalogId: TEST_CATALOG_ID, name: `E${i}`, maxHp: 100, baseSpeed: 5, baseDie: [face, face, face, face, face, face], position: { playerIndex: 1 as 0 | 1, slot: i as SlotIndex } })
     );
     const player1 = createPlayer(team1, 0);
     const player2 = createPlayer(team2, 1);
@@ -231,8 +229,8 @@ describe('PriorityQueueService', () => {
   it('an actor killed during resolution by a higher-priority action is marked skipped', () => {
     // killer uses face[3] (priority 2, damage 4) — resolves first
     // victim uses face[0] (priority 1, damage 1) — but is dead by then
-    const killer = createCharacter("Killer", 100, 0, die, { playerIndex: 0, slot: 0 });
-    const victim = createCharacter("Victim", 1, 0, die, { playerIndex: 1, slot: 0 });
+    const killer = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Killer", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+    const victim = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Victim", maxHp: 1, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [killer] }, { playerIndex: 1, team: [victim] }),
       priorityQueue: addEffectsToPriorityQueue(
@@ -263,11 +261,8 @@ describe('PriorityQueueService', () => {
     const selfFace = generateFullDie(Array(6).fill(
         { description: 'self-only', priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 2, targets: [allyRel(0)] }] },
     ) as unknown as BaseDieInstructions, factory)[0];
-    const actor = createCharacter('SelfActor', 100, 0,
-        [selfFace, selfFace, selfFace, selfFace, selfFace, selfFace],
-        { playerIndex: 0, slot: 0 as SlotIndex }
-    );
-    const enemy = createCharacter('Enemy', 100, 0, die, { playerIndex: 1, slot: 0 as SlotIndex });
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'SelfActor', maxHp: 100, baseSpeed: 0, baseDie: [selfFace, selfFace, selfFace, selfFace, selfFace, selfFace], position: { playerIndex: 0, slot: 0 as SlotIndex } });
+    const enemy = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Enemy', maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 as SlotIndex } });
     const stateWithQueue: GameState = {
         ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [enemy] }),
         priorityQueue: addEffectsToPriorityQueue(
@@ -295,8 +290,8 @@ describe('PriorityQueueService', () => {
       { description: "E", priority: 1, effects: [] },
       { description: "F", priority: 1, effects: [] },
     ], factory);
-    const actor = createCharacter("Actor", 100, 0, multiDie, { playerIndex: 0, slot: 0 });
-    const targetChar = createCharacter("Target", 100, 0, die, { playerIndex: 1, slot: 0 });
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: multiDie, position: { playerIndex: 0, slot: 0 } });
+    const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [targetChar] }),
       priorityQueue: addEffectsToPriorityQueue(
@@ -327,8 +322,8 @@ describe('PriorityQueueService', () => {
     const buildState = (
       entries: { face: DieFace; id: string; speed: number; playerIndex: 0 | 1 }[],
     ): GameState => {
-      const a = createCharacter('A', 100, 0, dieOf(noop(0)), { playerIndex: 0, slot: 0 });
-      const b = createCharacter('B', 100, 0, dieOf(noop(0)), { playerIndex: 1, slot: 0 });
+      const a = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'A', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 0, slot: 0 } });
+      const b = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'B', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 0 } });
       const charA = { ...a, id: entries[0].id };
       const charB = { ...b, id: entries[1].id };
       let q = createPriorityQueue();
@@ -382,8 +377,8 @@ describe('PriorityQueueService', () => {
     });
 
     it('a dead high-bracket actor is skipped but keeps its place in the ordering', () => {
-      const deadHigh = loseHp(createCharacter('DeadHigh', 100, 0, dieOf(noop(1)), { playerIndex: 0, slot: 0 }), 100);
-      const liveLow = createCharacter('LiveLow', 100, 0, dieOf(noop(0)), { playerIndex: 1, slot: 0 });
+      const deadHigh = loseHp(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'DeadHigh', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(1)), position: { playerIndex: 0, slot: 0 } }), 100);
+      const liveLow = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'LiveLow', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 0 } });
       let q = createPriorityQueue();
       q = addEffectsToPriorityQueue(q, noop(1), deadHigh.id, 0);
       q = addEffectsToPriorityQueue(q, noop(0), liveLow.id, 0);
@@ -408,7 +403,7 @@ describe('PriorityQueueService', () => {
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory)[0];
     const idle = face(0, []);
     const mk = (name: string, speed: number, f: DieFace, pi: PlayerIndex, slot: number) =>
-      ({ ...createCharacter(name, 20, speed, [f, f, f, f, f, f], { playerIndex: pi, slot: slot as SlotIndex }), face: f });
+      ({ ...createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 20, baseSpeed: speed, baseDie: [f, f, f, f, f, f], position: { playerIndex: pi, slot: slot as SlotIndex } }), face: f });
     const teamOf = (pi: PlayerIndex, overrides: Record<number, DieFace> = {}, speeds: Record<number, number> = {}) =>
       createPlayer([0, 1, 2, 3, 4].map(s => mk(`${pi}-${s}`, speeds[s] ?? 1, overrides[s] ?? idle, pi, s)), pi);
     const run = (p0: Player, p1: Player) => {

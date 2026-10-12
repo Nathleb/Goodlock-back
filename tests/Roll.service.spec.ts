@@ -1,3 +1,4 @@
+import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
@@ -17,7 +18,7 @@ const baseDieInstructions: BaseDieInstructions = [
 
 const factory = buildEffectFactory();
 const die = generateFullDie(baseDieInstructions, factory);
-const makeChar = () => createCharacter("C", 100, 5, die, { playerIndex: 0, slot: 0 });
+const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
 const makeTeam = () => [makeChar(), makeChar(), makeChar(), makeChar(), makeChar()];
 
 describe('Roll.service', () => {
