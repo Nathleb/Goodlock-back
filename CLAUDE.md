@@ -83,9 +83,8 @@ Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneratio
 
 ### Shared utilities (`src/shared/`)
 
-- `result.type.ts` `Result<T, E>` / `ok()` / `err()` / `unwrap()`. Use this for domain error handling instead of throwing.
-- `branded.types.ts` `SessionId`, `SocketId`, `RoomId`, `PlayerId`, `CharacterId`, `DeviceId` branded string types to prevent ID mix-ups
-- `id.utils.ts`, `random.utils.ts`
+- `branded.types.ts` `SessionId`, `SocketId`, `RoomId`, `PlayerId`, `CharacterId`, `DeviceId`, `UserId` branded string types to prevent ID mix-ups
+- `Result<T, E>` is **not implemented yet** (no `result.type.ts`); existing code throws. Introducing it is a dedicated change, not something to slip into a feature.
 
 ### Key design rules
 
@@ -108,7 +107,7 @@ Read the memory injected at session start (Claude-Mem observations + `MEMORY.md`
 Work in plan mode. The plan states:
 
 - Which layer the change belongs to; new ports/adapters needed.
-- `Result<T, E>` vs throw (default `Result`), new branded IDs, new effects/templates.
+- Error handling (see "Result over exceptions"), new branded IDs, new effects/templates.
 - Ordered steps, bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
 
 Each step is one testable unit: one failing test, the minimum code, tests green, one commit. A step that touches more than one layer or would take more than ~30 minutes gets split.
@@ -146,7 +145,7 @@ Wrap any secret, API key, or private information in `<private>...</private>` tag
 
 ## Conventions for this codebase
 
-**Result over exceptions**: any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`. Throwing is reserved for `infrastructure/` and only for non-recoverable system errors.
+**Result over exceptions** (target convention, pending `Result<T, E>`): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors. Until then, follow the existing code's convention.
 
 **Branded IDs**: never accept a raw `string` as an identifier in service signatures. Always use `SessionId`, `RoomId`, `PlayerId`, etc. If a new identifier type is needed, add it to `shared/branded.types.ts`.
 
