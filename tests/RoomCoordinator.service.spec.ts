@@ -3,7 +3,9 @@ import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/toke
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
-import { UserId } from '@shared/branded.types';
+import { UserId, CatalogId } from '@shared/branded.types';
+import { NotFoundException } from '@nestjs/common';
+import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 
 const SOCKET = 'socket-0';
 const USER_ID = 'user-uuid-0' as UserId;
@@ -14,7 +16,8 @@ const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], i
 const OLD_ROOM: Room = { roomId: 'old-room', ownerId: 'p0', playersId: ['p0'], isStarted: false };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
-const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn() };
+const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setDeckSelection: jest.fn() };
+const mockDecks = { getOwnDeckCharacterIds: jest.fn() };
 const mockWs = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn() };
 
 let coordinator: RoomCoordinatorService;
@@ -27,6 +30,7 @@ beforeEach(async () => {
             { provide: SESSION_PORT, useValue: mockSession },
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
+            { provide: DeckCoordinatorService, useValue: mockDecks },
         ],
     }).compile();
     coordinator = module.get(RoomCoordinatorService);
@@ -130,6 +134,53 @@ describe('quitRoom', () => {
         mockRoom.quitRoom.mockReturnValue(null);
         coordinator.quitRoom(SOCKET);
         expect(mockWs.leaveRoom).toHaveBeenCalled();
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+});
+
+describe('selectDeck', () => {
+    const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
+    const IN_ROOM: Session = { ...SESSION, roomId: 'room-1' };
+
+    beforeEach(() => {
+        mockSession.getSession.mockReturnValue(IN_ROOM);
+        mockDecks.getOwnDeckCharacterIds.mockResolvedValue(SEVEN);
+        mockRoom.setDeckSelection.mockReturnValue({ ...ROOM, deckSelections: { p0: SEVEN } });
+    });
+
+    it("snapshots the player's deck in the room and tells the room who is ready", async () => {
+        await coordinator.selectDeck(SOCKET, 'deck-1');
+        expect(mockDecks.getOwnDeckCharacterIds).toHaveBeenCalledWith(USER_ID, 'deck-1');
+        expect(mockRoom.setDeckSelection).toHaveBeenCalledWith('room-1', 'p0', SEVEN);
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated',
+            expect.objectContaining({ players: expect.arrayContaining([expect.objectContaining({ playerId: 'p0', hasDeck: true })]) }));
+    });
+
+    it('errors when the player is not in a room', async () => {
+        mockSession.getSession.mockReturnValue(SESSION);
+        await coordinator.selectDeck(SOCKET, 'deck-1');
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.anything());
+        expect(mockDecks.getOwnDeckCharacterIds).not.toHaveBeenCalled();
+    });
+
+    it("errors on a deck the player doesn't own, storing nothing", async () => {
+        mockDecks.getOwnDeckCharacterIds.mockRejectedValue(new NotFoundException('Deck not found'));
+        await coordinator.selectDeck(SOCKET, 'deck-x');
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { message: 'Deck not found' });
+        expect(mockRoom.setDeckSelection).not.toHaveBeenCalled();
+    });
+
+    it('stores nothing when the player left the room during the deck lookup', async () => {
+        mockSession.getSession.mockReturnValueOnce(IN_ROOM).mockReturnValue(SESSION);
+        await coordinator.selectDeck(SOCKET, 'deck-1');
+        expect(mockRoom.setDeckSelection).not.toHaveBeenCalled();
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
+    it('reports an error when the game started during the deck lookup', async () => {
+        mockRoom.setDeckSelection.mockImplementation(() => { throw new Error('Game already started'); });
+        await coordinator.selectDeck(SOCKET, 'deck-1');
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { message: 'Game already started' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });

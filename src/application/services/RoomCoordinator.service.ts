@@ -8,6 +8,8 @@ import GamePhase from '@domain/types/GamePhase.type';
 import { beginResultPhase } from '@domain/services/Phase.service';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
 import { GameOverDTO } from '@application/dtos/GameState.dto';
+import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
+import { DeckId } from '@shared/branded.types';
 
 @Injectable()
 export class RoomCoordinatorService {
@@ -15,6 +17,7 @@ export class RoomCoordinatorService {
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
+        private readonly decks: DeckCoordinatorService,
     ) {}
 
     private leaveCurrentRoom(socketId: string, sessionId: string, roomId: string): void {
@@ -78,6 +81,29 @@ export class RoomCoordinatorService {
 
         try {
             this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
+        } catch (e: unknown) {
+            this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
+        }
+    }
+
+    /**
+     * Lobby: the player picks the deck they will bring. The deck is read from the database (the only
+     * await on the WebSocket path) and snapshotted in the in-memory room, so the game itself stays sync.
+     */
+    async selectDeck(socketId: string, deckId: string): Promise<void> {
+        const session = this.sessionPort.getSession(socketId);
+        if (!session) return;
+        const roomId = session.roomId;
+        if (!roomId) {
+            this.wsPort.emitToSocket(socketId, 'error', { message: 'Join a room before choosing a deck' });
+            return;
+        }
+        try {
+            const characterIds = await this.decks.getOwnDeckCharacterIds(session.userId, deckId as DeckId);
+            // The world may have moved during the await: only store if the player is still in that room.
+            if (this.sessionPort.getSession(socketId)?.roomId !== roomId) return;
+            const room = this.roomPort.setDeckSelection(roomId, session.sessionId, characterIds);
+            this.wsPort.emitToRoom(roomId, 'roomUpdated', RoomMapper.toDTO(room));
         } catch (e: unknown) {
             this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
         }

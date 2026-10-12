@@ -48,6 +48,12 @@ export class DeckCoordinatorService {
         await this.decks.delete(deckId);
     }
 
+    /** The deck's characters, for its owner only (another user's deck answers 404). */
+    async getOwnDeckCharacterIds(userId: UserId, deckId: DeckId): Promise<readonly CatalogId[]> {
+        const deck = await this.findOwnDeck(userId, deckId);
+        return deck.characterIds;
+    }
+
     // TEMPORARY: the starter deck is simply the first catalog ids, sorted, while the game is being built.
     async ensureStarterDeck(userId: UserId): Promise<void> {
         if (await this.decks.countByUser(userId) > 0) return;

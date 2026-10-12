@@ -1,3 +1,4 @@
+import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
@@ -32,6 +33,7 @@ beforeEach(async () => {
             { provide: SESSION_PORT, useValue: mockSession },
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
+            { provide: DeckCoordinatorService, useValue: {} },
         ],
     }).compile();
     coordinator = module.get(RoomCoordinatorService);

@@ -134,6 +134,18 @@ describe('delete', () => {
     });
 });
 
+describe('getOwnDeckCharacterIds', () => {
+    it("returns the deck's characters for its owner", async () => {
+        const { id } = await coordinator.create(ALICE, save('Mine'));
+        await expect(coordinator.getOwnDeckCharacterIds(ALICE, id as DeckId)).resolves.toEqual(SEVEN);
+    });
+
+    it("answers 404 for someone else's deck", async () => {
+        const { id } = await coordinator.create(BOB, save('Bob deck'));
+        await expect(coordinator.getOwnDeckCharacterIds(ALICE, id as DeckId)).rejects.toBeInstanceOf(NotFoundException);
+    });
+});
+
 describe('ensureStarterDeck', () => {
     it('creates a starter deck from the first 7 catalog ids, sorted', async () => {
         await coordinator.ensureStarterDeck(ALICE);
