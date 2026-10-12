@@ -14,6 +14,7 @@ model User {
   createdAt     DateTime        @default(now())
   refreshTokens RefreshToken[]
   characters    UserCharacter[]
+  decks         Deck[]
 }
 
 model RefreshToken {
@@ -34,4 +35,27 @@ model UserCharacter {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, characterId])
+}
+
+model Deck {
+  id        String     @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots     DeckSlot[]
+
+  @@index([userId])
+}
+
+model DeckSlot {
+  id          String @id @default(uuid())
+  deckId      String
+  position    Int // 0..6, stable slot identity for future items; not a play order
+  characterId String // catalog id, validated on write, deliberately not a FK
+  deck        Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@unique([deckId, position])
+  @@unique([deckId, characterId])
 }
