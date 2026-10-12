@@ -12,6 +12,7 @@ export type DieFaceDTO = {
 
 export type CharacterDTO = {
     id: string;
+    catalogId: string;   // which catalog character this is (art, name lookup)
     name: string;
     hp: number;
     maxHp: number;

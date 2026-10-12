@@ -90,6 +90,7 @@ export class GameStateMapper {
     static characterToDTO(char: Character): CharacterDTO {
         return {
             id: char.id,
+            catalogId: char.catalogId,
             name: char.name,
             hp: char.hp,
             maxHp: char.maxHp,

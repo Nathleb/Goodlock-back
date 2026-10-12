@@ -132,6 +132,7 @@ describe('face DTO', () => {
         }) as unknown as BaseDieInstructions, factory);
         const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'T', maxHp: 10, baseSpeed: 1, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const dto = GameStateMapper.characterToDTO(character);
+        expect(dto.catalogId).toBe(TEST_CATALOG_ID);
         expect(dto.face.effects).toEqual([
             { effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }] },
         ]);
