@@ -17,6 +17,8 @@ import { GameCoordinatorService } from '@application/services/GameCoordinator.se
 import { JoinRoomPayload } from './payloads/JoinRoom.payload';
 import { RearrangeTeamPayload } from './payloads/RearrangeTeam.payload';
 import { ConfirmKeepPayload } from './payloads/ConfirmKeep.payload';
+import { SelectDeckPayload } from './payloads/SelectDeck.payload';
+import { ConfirmSelectionPayload } from './payloads/ConfirmSelection.payload';
 
 import { SessionGuard } from './guards/Session.guard';
 import { UserId } from '@shared/branded.types';
@@ -74,7 +76,28 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         this.roomCoordinator.quitRoom(client.id);
     }
 
+    @SubscribeMessage('selectDeck')
+    handleSelectDeck(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: SelectDeckPayload,
+    ): Promise<void> {
+        return this.roomCoordinator.selectDeck(client.id, data.deckId);
+    }
+
     // ── Game ─────────────────────────────────────────────────────────────────
+
+    @SubscribeMessage('confirmSelection')
+    handleConfirmSelection(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: ConfirmSelectionPayload,
+    ): void {
+        this.gameCoordinator.confirmSelection(client.id, data.characterIds);
+    }
+
+    @SubscribeMessage('cancelSelection')
+    handleCancelSelection(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.cancelSelection(client.id);
+    }
 
     @SubscribeMessage('startGame')
     handleStartGame(@ConnectedSocket() client: Socket): void {

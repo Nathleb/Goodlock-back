@@ -27,7 +27,7 @@ Reuse: confirm/cancel helpers in `src/domain/services/GameLoop.service.ts` (`mar
 - [x] 8. **`confirmSelection` / `cancelSelection`** in `GameCoordinatorService` — first confirm echoes to self only; completion sends a per-viewer PLACEMENT view to each player; input checked as an array of strings. Tests in `tests/GameCoordinator.service.spec.ts`, incl. "opponent never receives my pick".
 
 ### Gateway
-- [ ] 9. **Events** — `selectDeck`, `confirmSelection`, `cancelSelection` in `session.gateway.ts` with payload types next to the existing ones; existing gateway/guard tests patterns.
+- [x] 9. **Events** — `selectDeck`, `confirmSelection`, `cancelSelection` in `session.gateway.ts` with payload types next to the existing ones; existing gateway/guard tests patterns.
 
 ### Wrap-up
 - [ ] 10. **Docs + memory** — `CLAUDE.md` (phases now SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT, new events), spec → implemented + notes, memory entry (frontend must catch up), Decision lines.
