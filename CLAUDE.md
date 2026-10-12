@@ -6,13 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly roll and lock die faces each round, then all actions resolve in priority order (each face carries its own target cells — see Auto-targeting below). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** is used only for authentication — persisting `User` accounts and `RefreshToken`s. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
 
-## Active plugins
+## Tooling
 
-Three Claude Code plugins are installed and cooperate on this project. Each has a distinct role.
-
-- **Superpowers** drives development methodology: brainstorming, planning, TDD execution, debugging.
-- **Context-Mode** keeps the context window clean by sandboxing tool output.
-- **Claude-Mem** persists decisions across sessions and re-injects relevant context on session start.
+- **Plan mode** (Shift+Tab) enforces planning: no file can be modified until the plan is approved.
+- **Claude-Mem** persists observations across sessions and re-injects relevant context on session start. Query past work with the `mem-search` skill.
+- **Context-Mode** keeps the context window clean by sandboxing verbose tool output (`ctx_execute`, `ctx_batch_execute`, `ctx_search`).
 
 ## Commands
 
@@ -99,71 +97,52 @@ Character templates live in `tmplt/*.json` and are parsed by `CharacterGeneratio
 
 ## Workflow for any non-trivial task
 
-For any change touching domain logic, application services, the WebSocket protocol, or the architectural layers, follow this sequence. Skip it only for typos, formatting, dependency bumps without API changes, and renaming.
+Applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. See "Trivial tasks" for exceptions.
 
-### Step 1: Recover prior context
+### 1. Recover context
 
-At session start, Claude-Mem injects observations from previous sessions. Read them before proposing anything. If the task references past decisions (a new effect strategy, a refactor in progress, a known bug), query the memory via the `mem-search` skill with a natural-language question before suggesting a direction.
+Read the memory injected at session start (Claude-Mem observations + `MEMORY.md`). If the task touches past work (an effect, a refactor in progress, a known bug, a pending spec), run `mem-search` and check `docs/superpowers/specs/` and `docs/superpowers/plans/` before proposing anything.
 
-### Step 2: Brainstorm against the architecture
+### 2. Plan — always, before any code
 
-Invoke `/brainstorm` (Superpowers) and frame the discussion within the existing constraints:
+Work in plan mode. The plan states:
 
-- Which layer does this belong to (domain, application, infrastructure)?
-- Does it require a new port, a new adapter, or both?
-- Does it return `Result<T, E>` or throw? (Default: `Result`. Throwing is reserved for genuinely exceptional infrastructure failures.)
-- Are new branded IDs needed?
-- Does it introduce a new effect, strategy, or character template?
+- Which layer the change belongs to; new ports/adapters needed.
+- `Result<T, E>` vs throw (default `Result`), new branded IDs, new effects/templates.
+- Ordered steps, bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
 
-The output is a short spec validated explicitly before moving on.
+Each step is one testable unit: one failing test, the minimum code, tests green, one commit. A step that touches more than one layer or would take more than ~30 minutes gets split.
 
-### Step 3: Plan
+Wait for explicit approval. For a feature spanning several commits or sessions, save the approved spec/plan as `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and `docs/superpowers/plans/YYYY-MM-DD-<topic>.md` (existing location, kept for continuity) and update the plan's checkboxes as steps land.
 
-Invoke `/write-plan` (Superpowers). The plan must list, in order:
+### 3. Implement in TDD
 
-1. Domain types or entities to add or modify.
-2. Domain services or strategies impacted.
-3. Application ports, coordinators, DTOs, and mappers to adjust.
-4. Infrastructure adapters and gateway events to wire.
-5. Tests to write before each layer (TDD discipline applies bottom-up: domain first, then application, then infrastructure).
+For each step: failing test (red) → minimum code (green) → refactor with tests green. Domain tests live in `tests/` and never import NestJS. If three fix attempts fail on the same point, stop and discuss the design instead of persisting.
 
-### Step 4: Execute in TDD
+### 4. Verify
 
-Invoke `/execute-plan` (Superpowers). For each unit:
+Run `npm run test` then `npm run lint` (route full output through Context-Mode). Never claim done without passing output.
 
-1. Write the failing test (red). Domain tests live in `tests/` and never import from NestJS.
-2. Implement the minimum to pass (green).
-3. Refactor with tests green.
+### 5. Record
 
-If three fix attempts fail on the same point, stop and trigger an architectural review rather than persisting.
+- State architectural decisions as "Decision: [choice] rather than [alternative] because [reason]." so Claude-Mem captures them.
+- Update the auto-memory: mark the feature's `project_*` entry as done (absolute date, what shipped, what is still pending, e.g. frontend follow-up) and keep its `MEMORY.md` line in sync. Create the entry if none exists.
+- Commit with a conventional message.
 
-### Step 5: Verify
+## Subagents
 
-Run `npm run test`, then `npm run lint`. Summarize the architectural decisions taken in a structured message so Claude-Mem captures them as observations. Format: "Decision: [choice] rather than [alternative] because [reason]."
+Use subagents only for: broad codebase searches where only the conclusion matters (`Explore`), an independent review before merging a large feature (`/code-review` or a reviewer agent given the spec + diff), or tasks with no shared state (e.g. mirroring a protocol change in Goodlock-frontend). TDD implementation stays in the main session, which holds the plan and the conventions.
 
-## Context hygiene rules (Context-Mode)
+## Context hygiene (Context-Mode)
 
-The context window is finite. Apply the following systematically.
+- Verbose output (listings, logs, full test runs, external API calls, large files) goes through `ctx_execute` / `ctx_batch_execute`; only the summary enters the conversation.
+- Never read a file longer than 200 lines in full unless editing it; use `ctx_index` + `ctx_search`.
+- Batch multiple searches in one `ctx_batch_execute`.
+- External docs (NestJS, Socket.io): `ctx_fetch_and_index`, not `WebFetch`.
 
-**Verbose output**: any listing, log dump, external API call, or large file read goes through `ctx_execute` or `ctx_batch_execute`. Never read a file longer than 200 lines in full; use `ctx_index` then `ctx_search` to target the relevant section.
+## Sensitive data
 
-**Test runs**: when running the full test suite, route through `ctx_execute` so only the failure summary enters the conversation. The full Jest output is rarely needed in context.
-
-**Grouped searches**: if multiple searches are needed (cross-cutting refactor, hunting for a regression), batch them in a single `ctx_batch_execute` instead of sequential calls.
-
-**External documentation**: for fetching NestJS or Socket.io docs, use `ctx_fetch_and_index` rather than `WebFetch`. Pages are indexed in FTS5 and queryable on demand without polluting context.
-
-**Stats check**: on long sessions, run `/context-mode:stats` periodically. If the conversation slows down, the context is saturated despite the sandbox.
-
-## Persistent memory rules (Claude-Mem)
-
-Observations are captured automatically. Respect these conventions to maximize their usefulness.
-
-**Architectural decisions**: state choices explicitly in messages such as "Decision: extracted PriorityQueue into a dedicated service rather than inlined in GameInit, because it will be reused by the future async combat system." This format is captured cleanly by the observer.
-
-**Sensitive data**: wrap any secret, API key, or private information in `<private>...</private>` tags. The Claude-Mem hook strips this content before it reaches the worker and database.
-
-**History queries**: to interrogate past sessions, ask natural questions ("How did we handle reconnection in the SessionService refactor?"). The `mem-search` skill auto-triggers.
+Wrap any secret, API key, or private information in `<private>...</private>` tags; the Claude-Mem hook strips it before storage.
 
 ## Conventions for this codebase
 
@@ -179,16 +158,8 @@ Observations are captured automatically. Respect these conventions to maximize t
 
 ## Trivial tasks (workflow bypass)
 
-The full workflow does not apply to:
-
-- Documentation typos and comment fixes.
-- Variable or file renaming with IDE refactor support.
-- Running `prettier`/`eslint --fix`.
-- Dependency version bumps with no API surface change.
-- Clarification questions that do not modify code.
-
-Anything else triggers the full workflow.
+No plan needed for: doc typos and comment fixes, IDE-assisted renames, `prettier`/`eslint --fix`, dependency bumps with no API change, questions that don't modify code.
 
 ## When in doubt
 
-If the request is ambiguous, ask a question before acting. A clarifying question costs thirty seconds; a wrong implementation costs hours to undo.
+If the request is ambiguous, ask before acting.
