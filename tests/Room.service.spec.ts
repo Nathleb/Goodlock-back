@@ -2,7 +2,8 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom } from "@domain/services/Room.service";
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, assertDecksSelected } from "@domain/services/Room.service";
+import { CatalogId } from "@shared/branded.types";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -82,4 +83,41 @@ describe('RoomService', () => {
   it('startRoom throws when room is not ready', () => {
     expect(() => startRoom(createRoom("player1"), gameState)).toThrow('Room is not ready to start');
   });
+});
+
+describe('deck selection in the lobby', () => {
+    const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
+    const OTHER = ['h', 'i', 'j', 'k', 'l', 'm', 'n'] as CatalogId[];
+    const lobby = () => addPlayerToRoom(createRoom('p0'), 'p1');
+
+    it('stores a snapshot of the chosen deck per player', () => {
+        const room = selectDeckInRoom(lobby(), 'p0', SEVEN);
+        expect(room.deckSelections).toEqual({ p0: SEVEN });
+    });
+
+    it('replaces a previous choice', () => {
+        const room = selectDeckInRoom(selectDeckInRoom(lobby(), 'p0', SEVEN), 'p0', OTHER);
+        expect(room.deckSelections).toEqual({ p0: OTHER });
+    });
+
+    it('refuses a player who is not in the room', () => {
+        expect(() => selectDeckInRoom(lobby(), 'stranger', SEVEN)).toThrow();
+    });
+
+    it('refuses once the game has started', () => {
+        const started = { ...lobby(), isStarted: true };
+        expect(() => selectDeckInRoom(started, 'p0', SEVEN)).toThrow();
+    });
+
+    it("drops a leaving player's choice", () => {
+        const room = selectDeckInRoom(selectDeckInRoom(lobby(), 'p0', SEVEN), 'p1', OTHER);
+        expect(removePlayerFromRoom(room, 'p1')?.deckSelections).toEqual({ p0: SEVEN });
+    });
+
+    it('assertDecksSelected returns both snapshots in player order, or throws', () => {
+        const one = selectDeckInRoom(lobby(), 'p0', SEVEN);
+        expect(() => assertDecksSelected(one)).toThrow(/deck/i);
+        const both = selectDeckInRoom(one, 'p1', OTHER);
+        expect(assertDecksSelected(both)).toEqual([SEVEN, OTHER]);
+    });
 });

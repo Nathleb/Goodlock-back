@@ -1,5 +1,6 @@
 import GameState from "./GameState.type";
 import { PlayerPresence } from "./Presence.type";
+import { CatalogId } from "@shared/branded.types";
 
 export type Room = {
     readonly roomId: string;
@@ -13,4 +14,6 @@ export type Room = {
     readonly presence?: readonly [PlayerPresence, PlayerPresence];
     /** Stamped by RoomManager when phase or rollsLeft changes. Epoch ms. */
     readonly phaseStartedAt?: number;
+    /** Lobby only: snapshot of each player's chosen deck (session id -> catalog ids), taken at selectDeck. */
+    readonly deckSelections?: Readonly<Record<string, readonly CatalogId[]>>;
 };

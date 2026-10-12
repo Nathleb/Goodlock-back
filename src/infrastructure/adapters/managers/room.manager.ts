@@ -2,7 +2,8 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom } from '@domain/services/Room.service';
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom, selectDeckInRoom } from '@domain/services/Room.service';
+import { CatalogId } from '@shared/branded.types';
 
 const SWEEP_INTERVAL_MS = 60_000;
 const ABANDONED_ROOM_TTL_MS = 10 * 60_000;
@@ -53,6 +54,14 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         } else {
             this.rooms.set(roomId, updated);
         }
+        return updated;
+    }
+
+    setDeckSelection(roomId: string, playerId: string, characterIds: readonly CatalogId[]): Room {
+        const room = this.rooms.get(roomId);
+        if (!room) throw new Error('Room not found');
+        const updated = selectDeckInRoom(room, playerId, characterIds);
+        this.rooms.set(roomId, updated);
         return updated;
     }
 

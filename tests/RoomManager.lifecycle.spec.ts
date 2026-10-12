@@ -1,6 +1,7 @@
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
+import { CatalogId } from '@shared/branded.types';
 
 function gs(phase: GamePhase, rollsLeft: number): GameState {
     return { phase, currentRound: 1, rollsLeft, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
@@ -96,5 +97,21 @@ describe('sweepAbandonedRooms', () => {
         manager.sweepAbandonedRooms(2000 + 600_000, 600_000);
         // quitRoom resolves via playerToRoom; null proves the mapping is gone
         expect(manager.quitRoom('p0')).toBeNull();
+    });
+});
+
+describe('setDeckSelection', () => {
+    const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
+
+    it('stores the snapshot on the room and returns the updated room', () => {
+        const manager = new RoomManager();
+        const room = manager.createRoom('p0');
+        const updated = manager.setDeckSelection(room.roomId, 'p0', SEVEN);
+        expect(updated.deckSelections).toEqual({ p0: SEVEN });
+        expect(manager.getRoom(room.roomId)!.deckSelections).toEqual({ p0: SEVEN });
+    });
+
+    it('throws for an unknown room', () => {
+        expect(() => new RoomManager().setDeckSelection('nope', 'p0', SEVEN)).toThrow(/not found/i);
     });
 });

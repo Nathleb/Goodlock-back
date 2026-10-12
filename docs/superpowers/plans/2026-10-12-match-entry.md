@@ -14,7 +14,7 @@ Reuse: confirm/cancel helpers in `src/domain/services/GameLoop.service.ts` (`mar
 
 ### Domain
 - [x] 1. **Selection rules** — `GamePhase.SELECTION`, `TEAM_SIZE = 5` in `Deck.service.ts`, `GameState.selection?`; in `GameLoop.service.ts`: `createSelectionState(decks)`, `confirmSelection(gs, pi, picks, build)`, `cancelSelection(gs, pi)` (rules per spec). Tests in a new `tests/TeamSelection.spec.ts`: wrong phase, already ready, not 5 / duplicates / id not in own deck, first confirm only marks ready, both → PLACEMENT with teams in pick order and `selection` cleared, cancel clears pick.
-- [ ] 2. **Room deck snapshot** — `Room.deckSelections`, `selectDeckInRoom`, `assertDecksSelected`, selection dropped in `removePlayerFromRoom` (`Room.service.ts`); `RoomPort.setDeckSelection` + `RoomManager`. Tests in `tests/Room.service.spec.ts` and `tests/RoomManager.lifecycle.spec.ts`.
+- [x] 2. **Room deck snapshot** — `Room.deckSelections`, `selectDeckInRoom`, `assertDecksSelected`, selection dropped in `removePlayerFromRoom` (`Room.service.ts`); `RoomPort.setDeckSelection` + `RoomManager`. Tests in `tests/Room.service.spec.ts` and `tests/RoomManager.lifecycle.spec.ts`.
 - [ ] 3. **AFK claim covers SELECTION** — add to `CONFIRM_PHASES` in `Claim.service.ts`; tests in `tests/Claim.service.spec.ts`.
 
 ### Mapping (no leaks)

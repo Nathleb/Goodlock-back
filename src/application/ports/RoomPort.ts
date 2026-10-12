@@ -1,5 +1,6 @@
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
+import { CatalogId } from '@shared/branded.types';
 
 export interface RoomPort {
     createRoom(ownerId: string): Room;
@@ -9,5 +10,6 @@ export interface RoomPort {
     startGame(roomId: string, gameState: GameState): Room;
     updateGameState(roomId: string, gameState: GameState): void;
     listOpenRooms(): Room[];
+    setDeckSelection(roomId: string, playerId: string, characterIds: readonly CatalogId[]): Room;
     setPresence(roomId: string, playerIndex: number, connected: boolean, now: number): Room | undefined;
 }
