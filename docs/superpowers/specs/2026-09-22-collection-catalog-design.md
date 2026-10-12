@@ -1,7 +1,7 @@
 # Character catalog and player collection — design
 
 Date: 2026-09-22
-Status: validated, ready for planning
+Status: implemented 2026-10-12 (plan: `docs/superpowers/plans/2026-10-12-collection-catalog.md`)
 Slice: **A** of three (A: catalog + collection, B: decks, C: match entry). Items are out of scope entirely.
 
 ## Problem
@@ -249,6 +249,24 @@ Verification: `npm run test`, `npm run lint`, `npm run build`.
   in-memory in the `Manager` classes, unchanged.
 - **`CLAUDE.md`** needs the catalog/collection bullets and a note that Postgres now holds player-owned data
   in addition to auth.
+
+## Implementation notes (2026-10-12)
+
+Where the implementation departs from or sharpens the text above:
+
+- **`createCharacter` object form** touched 58 call sites in 14 specs, not ~4. Done mechanically; test
+  characters use `TEST_CATALOG_ID` from `tests/helpers/catalog.ts`.
+- **One validated write path.** `AuthCoordinator` does not touch `CollectionPort`; it calls
+  `CollectionCoordinatorService.grantAll(userId)`, which goes through `grant` and its catalog check.
+- **Grant failures never fail authentication.** They are logged; the account already exists, and the next
+  login heals it.
+- **Module layout.** `CatalogModule` owns `EFFECT_FACTORY` and `CATALOG_PORT`; `CollectionModule` holds
+  providers only. `CollectionController` is declared in `AppModule`, because `AuthModule` imports
+  `CollectionModule` and the controller needs `JwtAccessGuard` from `AuthModule`.
+- **Boot consistency check** runs in `CollectionCoordinatorService.onApplicationBootstrap`, via
+  `CollectionPort.listUnknownIds`; if the check itself fails it logs an error rather than blocking boot.
+- **Migration** `20261012000000_add_user_character` was generated offline with `prisma migrate diff`
+  (no database available at the time); apply it with `npx prisma migrate deploy`.
 
 ## Future directions
 

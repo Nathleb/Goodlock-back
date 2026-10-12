@@ -44,7 +44,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 - [x] 12. **`GET /collection`** — `CollectionController` (`@UseGuards(JwtAccessGuard)`, `req.user.sub as UserId`, same pattern as `AuthController.getMe`), registered in `AppModule`. New `tests/CollectionController.spec.ts` mirroring `tests/RoomController.spec.ts`.
 
 ### Wrap-up
-- [ ] 13. **Docs + memory** — `CLAUDE.md`: catalog/collection bullets, Postgres now holds player-owned collection data (not only auth); note the 4 deviations above in the spec. Mark `project_collection_slice_a.md` done in memory; record the decisions.
+- [x] 13. **Docs + memory** — `CLAUDE.md`: catalog/collection bullets, Postgres now holds player-owned collection data (not only auth); note the 4 deviations above in the spec. Mark `project_collection_slice_a.md` done in memory; record the decisions.
 
 ## Verification
 
