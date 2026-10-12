@@ -2,8 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG } from '@application/ports/tokens';
-import { buildEffectFactory } from '@domain/services/GameInit.service';
+import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { claimConfigFromEnv } from '@infrastructure/config/claim.config';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
@@ -16,6 +15,7 @@ import { SessionGateway } from '@infrastructure/adapters/websocket/session.gatew
 import { SessionGuard } from '@infrastructure/adapters/websocket/guards/Session.guard';
 import { PrismaModule } from '@infrastructure/prisma/prisma.module';
 import { AuthModule } from '@infrastructure/auth.module';
+import { CatalogModule } from '@infrastructure/catalog.module';
 import { RoomController } from '@infrastructure/adapters/http/RoomController';
 
 @Module({
@@ -24,11 +24,11 @@ import { RoomController } from '@infrastructure/adapters/http/RoomController';
         ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
         PrismaModule,
         AuthModule,
+        CatalogModule,
     ],
     controllers: [RoomController],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
-        { provide: EFFECT_FACTORY, useValue: buildEffectFactory() },
         {
             provide: CLAIM_CONFIG,
             inject: [ConfigService],
