@@ -8,9 +8,11 @@ import { UserRepository } from './adapters/repositories/UserRepository';
 import { RefreshTokenRepository } from './adapters/repositories/RefreshTokenRepository';
 import { JwtAccessGuard } from './adapters/websocket/guards/JwtAccess.guard';
 import { USER_PORT, REFRESH_TOKEN_PORT } from '@application/ports/tokens';
+import { CollectionModule } from './collection.module';
 
 @Module({
     imports: [
+        CollectionModule,
         JwtModule.registerAsync({
             inject: [ConfigService],
             useFactory: (config: ConfigService) => {

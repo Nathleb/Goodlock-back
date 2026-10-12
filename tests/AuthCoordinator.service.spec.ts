@@ -1,5 +1,6 @@
-import { ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { AuthCoordinatorService } from '@application/services/AuthCoordinator.service';
+import { CollectionCoordinatorService } from '@application/services/CollectionCoordinator.service';
 import { UserPort } from '@application/ports/UserPort';
 import { RefreshTokenPort } from '@application/ports/RefreshTokenPort';
 import { UserId } from '@shared/branded.types';
@@ -37,6 +38,10 @@ const mockRefreshTokenPort: jest.Mocked<RefreshTokenPort> = {
     deleteAllForUser: jest.fn(),
 };
 
+const mockCollection = {
+    grantAll: jest.fn(),
+};
+
 const mockJwtService = {
     signAsync: jest.fn().mockResolvedValue('signed-access-token'),
 };
@@ -48,10 +53,12 @@ beforeEach(() => {
     mockBcrypt.hash.mockResolvedValue('hashed' as never);
     mockBcrypt.compare.mockResolvedValue(true as never);
     mockRefreshTokenPort.save.mockResolvedValue(undefined);
+    mockCollection.grantAll.mockResolvedValue(undefined);
     service = new AuthCoordinatorService(
         mockUserPort,
         mockRefreshTokenPort,
         mockJwtService as any,
+        mockCollection as unknown as CollectionCoordinatorService,
     );
 });
 
@@ -218,5 +225,52 @@ describe('deleteAccount', () => {
 
         expect(mockRefreshTokenPort.deleteAllForUser).toHaveBeenCalledWith(USER_ID);
         expect(mockUserPort.delete).toHaveBeenCalledWith(USER_ID);
+    });
+});
+
+describe('collection grant (temporary grant-all)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('register grants every catalog character to the new user', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(undefined);
+        await service.register({ username: 'newuser', password: 'password123' });
+        const savedUser = mockUserPort.save.mock.calls[0][0];
+        expect(mockCollection.grantAll).toHaveBeenCalledWith(savedUser.id);
+    });
+
+    it('login grants every catalog character (self-heals older accounts)', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        await service.login({ username: 'testuser', password: 'password123' });
+        expect(mockCollection.grantAll).toHaveBeenCalledWith(USER_ID);
+    });
+
+    it('does not grant when registration is refused', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        await expect(service.register({ username: 'testuser', password: 'password123' })).rejects.toThrow(ConflictException);
+        expect(mockCollection.grantAll).not.toHaveBeenCalled();
+    });
+
+    it('does not grant on a failed login', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        mockBcrypt.compare.mockResolvedValue(false as never);
+        await expect(service.login({ username: 'testuser', password: 'wrong' })).rejects.toThrow(UnauthorizedException);
+        expect(mockCollection.grantAll).not.toHaveBeenCalled();
+    });
+
+    it('register still returns tokens when the grant fails, and logs it', async () => {
+        const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockUserPort.findByUsername.mockResolvedValue(undefined);
+        mockCollection.grantAll.mockRejectedValue(new Error('db hiccup'));
+        const result = await service.register({ username: 'newuser', password: 'password123' });
+        expect(result.accessToken).toBe('signed-access-token');
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('db hiccup'));
+    });
+
+    it('login still returns tokens when the grant fails', async () => {
+        jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        mockCollection.grantAll.mockRejectedValue(new Error('db hiccup'));
+        const result = await service.login({ username: 'testuser', password: 'password123' });
+        expect(result.accessToken).toBe('signed-access-token');
     });
 });

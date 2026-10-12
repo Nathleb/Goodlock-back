@@ -38,7 +38,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 ### Collection use case
 - [x] 9. **`CollectionCoordinatorService`** + `CollectionMapper` (template → `CollectionCharacterDTO`, reusing `DieFaceDTO` from `GameState.dto.ts`, no effect instantiation). Methods: `getCollection(userId)` (skips ids the catalog can't resolve), `grant(userId, ids)` (rejects unknown ids), `checkConsistency()` on `onApplicationBootstrap` (warns with orphan ids via Nest `Logger`). New `tests/CollectionCoordinator.service.spec.ts` with mocked ports: maps owned → DTOs, skips unknown, empty → `[]`, rejects unknown grant, warns on orphans.
 - [x] 10. **`CollectionModule`** (`src/infrastructure/collection.module.ts`): repository + coordinator, imports `CatalogModule`, exports the coordinator.
-- [ ] 11. **Auth grants** — `AuthCoordinator` injects `CollectionCoordinatorService` + `CATALOG_PORT`; `register` (after `save`) and `login` grant all catalog ids, catching and logging failures. `AuthModule` imports `CollectionModule` and `CatalogModule`. Extend `tests/AuthCoordinator.service.spec.ts`: both grant every id; a grant failure still returns tokens.
+- [x] 11. **Auth grants** — `AuthCoordinator` injects `CollectionCoordinatorService` + `CATALOG_PORT`; `register` (after `save`) and `login` grant all catalog ids, catching and logging failures. `AuthModule` imports `CollectionModule` and `CatalogModule`. Extend `tests/AuthCoordinator.service.spec.ts`: both grant every id; a grant failure still returns tokens.
 
 ### API
 - [ ] 12. **`GET /collection`** — `CollectionController` (`@UseGuards(JwtAccessGuard)`, `req.user.sub as UserId`, same pattern as `AuthController.getMe`), registered in `AppModule`. New `tests/CollectionController.spec.ts` mirroring `tests/RoomController.spec.ts`.
