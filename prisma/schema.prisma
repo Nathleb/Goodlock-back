@@ -8,11 +8,12 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  username      String         @unique
+  id            String          @id @default(uuid())
+  username      String          @unique
   passwordHash  String
-  createdAt     DateTime       @default(now())
+  createdAt     DateTime        @default(now())
   refreshTokens RefreshToken[]
+  characters    UserCharacter[]
 }
 
 model RefreshToken {
@@ -23,4 +24,14 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserCharacter {
+  id          String   @id @default(uuid())
+  userId      String
+  characterId String // catalog id, e.g. "alicent"; validated against the catalog on write, deliberately not a FK
+  acquiredAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, characterId])
 }
