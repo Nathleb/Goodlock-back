@@ -1,4 +1,5 @@
 {
+    "id": "eve",
     "name": "Eve",
     "maxHp": 20,
     "baseSpeed": 3,

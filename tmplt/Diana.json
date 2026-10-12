@@ -1,4 +1,5 @@
 {
+    "id": "diana",
     "name": "Diana",
     "maxHp": 20,
     "baseSpeed": 2,

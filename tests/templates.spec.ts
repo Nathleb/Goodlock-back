@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { createCharacterFromJsonTemplate } from "@domain/services/CharacterGeneration.service";
 import { buildEffectFactory } from "@domain/services/GameInit.service";
+import { validateCatalog } from "@domain/services/CharacterCatalog.service";
 
 const tmpltDir = path.join(__dirname, "..", "tmplt");
 const files = fs.readdirSync(tmpltDir).filter(f => f.endsWith(".json"));
@@ -15,6 +16,11 @@ describe("character templates", () => {
     const content = fs.readFileSync(path.join(tmpltDir, file), "utf-8");
     const factory = buildEffectFactory();
     expect(() => createCharacterFromJsonTemplate(content, factory)).not.toThrow();
+  });
+
+  it("forms a valid catalog (every template has a unique, well-formed id)", () => {
+    const templates = files.map(f => JSON.parse(fs.readFileSync(path.join(tmpltDir, f), "utf-8")));
+    expect(validateCatalog(templates)).toEqual([]);
   });
 
   it.each(files)("%s uses small integer priority brackets in [-2, 3]", (file) => {

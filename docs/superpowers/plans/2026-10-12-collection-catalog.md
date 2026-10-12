@@ -12,7 +12,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 
 - [x] 1. **`createCharacter` has 58 call sites in 14 specs**, not "~4". Still the right call (two adjacent `number`s), but it is a mechanical rewrite, done in its own step.
 - [x] 2. **Nest module cycle**: `AuthModule` will need the collection, and `CollectionController` needs `JwtAccessGuard` (exported by `AuthModule`). Fix: `CollectionController` lives in `AppModule` next to `RoomController`; `CollectionModule` only holds providers.
-- [ ] 3. **One validated write path**: `AuthCoordinator` calls `CollectionCoordinatorService.grant(userId, catalog.ids())` instead of the raw port, so validate-on-write cannot be bypassed. Auth spec mocks the coordinator, not the port.
+- [x] 3. **One validated write path**: `AuthCoordinator` calls `CollectionCoordinatorService.grant(userId, catalog.ids())` instead of the raw port, so validate-on-write cannot be bypassed. Auth spec mocks the coordinator, not the port.
 - [ ] 4. **Grant failures never fail auth**: they are logged. A failed grant at register would otherwise return an error for an account that exists (retry → "username taken"). The next login heals it.
 
 ## Steps (each = failing test → code → green → one commit)
@@ -22,7 +22,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 - [x] 2. **`validateCatalog(templates): string[]`** in new `src/domain/services/CharacterCatalog.service.ts` — missing id, malformed id (`^[a-z0-9-]+$`), duplicates. New `tests/CharacterCatalog.service.spec.ts`.
 
 ### Content
-- [ ] 3. **Ids in templates** — add `"id"` to the 10 `tmplt/*.json` (`alicent`, `charlie`, `diana`, `edward`, `eve`, `fiona`, `george`, `hannah`, `jason`, `robbert`). Extend `tests/templates.spec.ts`: `validateCatalog(all shipped templates)` returns `[]`.
+- [x] 3. **Ids in templates** — add `"id"` to the 10 `tmplt/*.json` (`alicent`, `charlie`, `diana`, `edward`, `eve`, `fiona`, `george`, `hannah`, `jason`, `robbert`). Extend `tests/templates.spec.ts`: `validateCatalog(all shipped templates)` returns `[]`.
 
 ### Catalog port + adapter
 - [ ] 4. **`CatalogPort`** (`src/application/ports/CatalogPort.ts`: `list`, `get`, `has`, `ids`) + `CATALOG_PORT` in `tokens.ts`. **`FileCharacterCatalog`** in `src/infrastructure/adapters/catalog/`: an exported `loadCatalogFromDir(dir, factory)` reads, parses, runs `validateCatalog`, builds each character once via `createCharacterFromTemplate` (surfaces effect/target errors), **throws** on any error; the class calls it in `onModuleInit` and caches a `Map`. New `tests/FileCharacterCatalog.spec.ts` against a temp fixture dir: good catalog loads; duplicate id and missing id throw.

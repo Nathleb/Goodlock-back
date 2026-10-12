@@ -1,4 +1,5 @@
 {
+    "id": "george",
     "name": "George",
     "maxHp": 15,
     "baseSpeed": 4,
