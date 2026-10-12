@@ -16,7 +16,9 @@ import { SessionGuard } from '@infrastructure/adapters/websocket/guards/Session.
 import { PrismaModule } from '@infrastructure/prisma/prisma.module';
 import { AuthModule } from '@infrastructure/auth.module';
 import { CatalogModule } from '@infrastructure/catalog.module';
+import { CollectionModule } from '@infrastructure/collection.module';
 import { RoomController } from '@infrastructure/adapters/http/RoomController';
+import { CollectionController } from '@infrastructure/adapters/http/CollectionController';
 
 @Module({
     imports: [
@@ -25,8 +27,9 @@ import { RoomController } from '@infrastructure/adapters/http/RoomController';
         PrismaModule,
         AuthModule,
         CatalogModule,
+        CollectionModule,
     ],
-    controllers: [RoomController],
+    controllers: [RoomController, CollectionController],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
         {
