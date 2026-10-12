@@ -5,7 +5,11 @@ import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import { UserId } from '@shared/branded.types';
+import { UserId, CatalogId } from '@shared/branded.types';
+import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
+import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
+import { buildEffectFactory } from '@domain/services/GameInit.service';
+import { testTemplate } from './helpers/catalog';
 
 const SOCKET = 'socket-0';
 const USER_ID = 'user-uuid-1' as UserId;
@@ -13,7 +17,6 @@ const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
 const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: 'room-1' };
 
 const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
-const ROOM_SINGLE: Room = { ...ROOM, playersId: ['p0'] };
 
 const GS: GameState = {
     phase: GamePhase.KEEP,
@@ -90,6 +93,46 @@ describe('handleConnect — started game reconnect', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'presenceChanged', { playerIndex: 0, connected: true, claimInMs: null });
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'gameStateUpdated',
             expect.objectContaining({ afkClaimInMs: expect.any(Number) }));
+    });
+});
+
+describe('handleConnect — reconnect before combat keeps secrets', () => {
+    const factory = buildEffectFactory();
+    const build = (t: ReturnType<typeof testTemplate>) => createCharacterFromTemplate(t, factory);
+    const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
+    const PICK_P0 = ['a0', 'a1', 'a2', 'a3', 'a4'] as CatalogId[];
+    const PICK_P1 = ['b6', 'b5', 'b4', 'b3', 'b2'] as CatalogId[];
+    const reconnectInto = (gameState: GameState) => {
+        const room: Room = { ...STARTED_ROOM, gameState, deckSelections: { p0: [], p1: [] } };
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue(room);
+        mockRoom.setPresence.mockReturnValue(room);
+        coordinator.handleConnect(SOCKET, USER_ID);
+        return mockWs.emitToSocket.mock.calls.find(c => c[1] === 'gameStateUpdated')?.[2];
+    };
+
+    it("during SELECTION, the snapshot has the player's own pick and never the opponent's", () => {
+        // Only the opponent (player 1) has picked; the reconnecting player is player 0.
+        const selecting = confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build);
+
+        const snapshot = reconnectInto(selecting);
+
+        expect(snapshot.phase).toBe('SELECTION_PHASE');
+        expect(snapshot.selection.myPicks).toBeNull();
+        expect(snapshot.selection.decks[1]).toHaveLength(7);
+        expect(JSON.stringify(snapshot)).not.toContain('"picks"');
+        expect(snapshot.players[1].team).toEqual([]);
+    });
+
+    it('during PLACEMENT, the snapshot hides the opponent team', () => {
+        const placing = confirmSelection(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build), 0, PICK_P0, build);
+
+        const snapshot = reconnectInto(placing);
+
+        expect(snapshot.phase).toBe('PLACEMENT_PHASE');
+        expect(snapshot.players[0].team).toHaveLength(5);
+        expect(snapshot.players[1].team).toEqual([]);
+        expect(JSON.stringify(snapshot)).not.toContain('Name-b6');
     });
 });
 
