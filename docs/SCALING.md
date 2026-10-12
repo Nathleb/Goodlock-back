@@ -51,7 +51,10 @@ progress**. Mitigations, in order of cost:
 
 ### Stage 1 — cheap preparation (worth doing early)
 - Client: `transports: ['websocket']` to drop the long-polling phase, so no sticky sessions are needed
-  just to hold a connection. Check first that every target network allows WebSockets.
+  just to hold a connection. Check first that every target network allows WebSockets — and the dev
+  setup: the early HTML test client had to force polling because Firefox under WSL2 could not upgrade
+  to WebSocket from a cross-origin page. Verify on the Capacitor build and in the browser dev loop
+  before switching (or switch for the device build only).
 - Keep all state access behind `RoomPort` / `SessionPort` (already the case).
 - Add the metrics above (Phase 4 observability).
 
