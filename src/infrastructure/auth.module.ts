@@ -9,10 +9,12 @@ import { RefreshTokenRepository } from './adapters/repositories/RefreshTokenRepo
 import { JwtAccessGuard } from './adapters/websocket/guards/JwtAccess.guard';
 import { USER_PORT, REFRESH_TOKEN_PORT } from '@application/ports/tokens';
 import { CollectionModule } from './collection.module';
+import { DeckModule } from './deck.module';
 
 @Module({
     imports: [
         CollectionModule,
+        DeckModule,
         JwtModule.registerAsync({
             inject: [ConfigService],
             useFactory: (config: ConfigService) => {

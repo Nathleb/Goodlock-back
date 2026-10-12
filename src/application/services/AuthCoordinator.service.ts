@@ -13,6 +13,7 @@ import { RefreshDto } from '@application/dtos/RefreshDto';
 import { AuthResponseDto } from '@application/dtos/AuthResponseDto';
 import { MeDto } from '@application/dtos/MeDto';
 import { CollectionCoordinatorService } from '@application/services/CollectionCoordinator.service';
+import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 
 const REFRESH_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 const GENERIC_AUTH_ERROR = 'Invalid credentials';
@@ -26,6 +27,7 @@ export class AuthCoordinatorService {
         @Inject(REFRESH_TOKEN_PORT) private readonly refreshTokenPort: RefreshTokenPort,
         private readonly jwtService: JwtService,
         private readonly collection: CollectionCoordinatorService,
+        private readonly decks: DeckCoordinatorService,
     ) {}
 
     async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -40,7 +42,7 @@ export class AuthCoordinatorService {
             createdAt: new Date(),
         };
         await this.userPort.save(user);
-        await this.grantStarterCollection(user.id);
+        await this.grantStarterContent(user.id);
         return this.issueTokenPair(user.id, user.username);
     }
 
@@ -51,7 +53,7 @@ export class AuthCoordinatorService {
         const valid = await bcrypt.compare(dto.password, user.passwordHash);
         if (!valid) throw new UnauthorizedException(GENERIC_AUTH_ERROR);
 
-        await this.grantStarterCollection(user.id);
+        await this.grantStarterContent(user.id);
         return this.issueTokenPair(user.id, user.username);
     }
 
@@ -96,14 +98,20 @@ export class AuthCoordinatorService {
         await this.userPort.delete(userId);
     }
 
-    // TEMPORARY: everyone owns everything until acquisition exists; the acquisition slice removes this.
+    // TEMPORARY: everyone owns everything and gets a starter deck until acquisition exists.
     // Idempotent and run on both register and login, so a failure heals on the next login.
-    // A grant failure must never fail authentication: the account already exists at this point.
-    private async grantStarterCollection(userId: UserId): Promise<void> {
+    // A failure here must never fail authentication: the account already exists at this point.
+    private async grantStarterContent(userId: UserId): Promise<void> {
         try {
             await this.collection.grantAll(userId);
         } catch (e: unknown) {
             this.logger.error(`Starter collection grant failed for user ${userId}: ${(e as Error).message}`);
+            return; // the starter deck would reference characters the user doesn't own yet
+        }
+        try {
+            await this.decks.ensureStarterDeck(userId);
+        } catch (e: unknown) {
+            this.logger.error(`Starter deck creation failed for user ${userId}: ${(e as Error).message}`);
         }
     }
 

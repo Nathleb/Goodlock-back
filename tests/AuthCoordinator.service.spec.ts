@@ -1,6 +1,7 @@
 import { ConflictException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { AuthCoordinatorService } from '@application/services/AuthCoordinator.service';
 import { CollectionCoordinatorService } from '@application/services/CollectionCoordinator.service';
+import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { UserPort } from '@application/ports/UserPort';
 import { RefreshTokenPort } from '@application/ports/RefreshTokenPort';
 import { UserId } from '@shared/branded.types';
@@ -38,6 +39,10 @@ const mockRefreshTokenPort: jest.Mocked<RefreshTokenPort> = {
     deleteAllForUser: jest.fn(),
 };
 
+const mockDecks = {
+    ensureStarterDeck: jest.fn(),
+};
+
 const mockCollection = {
     grantAll: jest.fn(),
 };
@@ -54,11 +59,13 @@ beforeEach(() => {
     mockBcrypt.compare.mockResolvedValue(true as never);
     mockRefreshTokenPort.save.mockResolvedValue(undefined);
     mockCollection.grantAll.mockResolvedValue(undefined);
+    mockDecks.ensureStarterDeck.mockResolvedValue(undefined);
     service = new AuthCoordinatorService(
         mockUserPort,
         mockRefreshTokenPort,
         mockJwtService as any,
         mockCollection as unknown as CollectionCoordinatorService,
+        mockDecks as unknown as DeckCoordinatorService,
     );
 });
 
@@ -272,5 +279,41 @@ describe('collection grant (temporary grant-all)', () => {
         mockCollection.grantAll.mockRejectedValue(new Error('db hiccup'));
         const result = await service.login({ username: 'testuser', password: 'password123' });
         expect(result.accessToken).toBe('signed-access-token');
+    });
+});
+
+describe('starter deck (temporary)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('register creates the starter deck after granting the collection', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(undefined);
+        await service.register({ username: 'newuser', password: 'password123' });
+        const savedUser = mockUserPort.save.mock.calls[0][0];
+        expect(mockDecks.ensureStarterDeck).toHaveBeenCalledWith(savedUser.id);
+        expect(mockCollection.grantAll.mock.invocationCallOrder[0])
+            .toBeLessThan(mockDecks.ensureStarterDeck.mock.invocationCallOrder[0]);
+    });
+
+    it('login ensures the starter deck (self-heals accounts without one)', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        await service.login({ username: 'testuser', password: 'password123' });
+        expect(mockDecks.ensureStarterDeck).toHaveBeenCalledWith(USER_ID);
+    });
+
+    it('skips the deck when the grant failed (it would not be owned)', async () => {
+        jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        mockCollection.grantAll.mockRejectedValue(new Error('db hiccup'));
+        await service.login({ username: 'testuser', password: 'password123' });
+        expect(mockDecks.ensureStarterDeck).not.toHaveBeenCalled();
+    });
+
+    it('still returns tokens when the starter deck fails, and logs it', async () => {
+        const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockUserPort.findByUsername.mockResolvedValue(undefined);
+        mockDecks.ensureStarterDeck.mockRejectedValue(new Error('deck hiccup'));
+        const result = await service.register({ username: 'newuser', password: 'password123' });
+        expect(result.accessToken).toBe('signed-access-token');
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('deck hiccup'));
     });
 });
