@@ -96,10 +96,18 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
   audit on all gateway payloads (check whether the global `ValidationPipe` actually applies to the
   WebSocket gateway; coordinators re-validate sensitive inputs meanwhile), authz on every event.
 - Test debt: gateway handlers are thinly covered (~33%), no end-to-end tests yet.
-- **Scaling story:** in-memory state = single instance. For v1.0, document & accept the ceiling
-  (or sticky-session plan) — don't over-build.
+- **Scaling (see [`docs/SCALING.md`](SCALING.md)):** in-memory state = single instance. For v1.0,
+  run **one instance on purpose** and measure (sockets, rooms, memory, event-loop lag).
+  - **Graceful drain on deploy** (the real v1.0 risk: a restart kills every match in progress):
+    enable Nest shutdown hooks, refuse new rooms/starts on `SIGTERM`, let running matches finish.
+  - Cheap prep: client on `transports: ['websocket']` (no long-polling → no sticky sessions needed
+    just to keep a connection).
+  - Multi-instance later = **one match per instance** (rooms assigned by the quick-match queue,
+    Socket.io Redis adapter + Redis throttler storage); game state stays in-memory. Externalising
+    game state to Redis is not planned.
 - CI for both repos: build + tests on every push; **automated APK build on tag**.
-- **Exit:** monitored, rate-limited; CI produces an installable APK from a tag.
+- **Exit:** monitored, rate-limited; a deploy no longer kills running matches; CI produces an
+  installable APK from a tag.
 
 ### Phase 5 — v1.0 (installable launch)
 - First-run onboarding/tutorial (mobile-shaped), app icon + splash, content pass (10 placeholder
@@ -122,7 +130,8 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 4. **Items** — will attach to deck slots (`DeckSlot`), design not started.
 5. **`Result<T, E>`** — the convention exists in CLAUDE.md but the type is not implemented; adopt it in
    a dedicated change or drop the convention.
-3. **Scaling** — accept single-instance ceiling for v1.0, or invest in sticky sessions now?
+3. **Scaling** — proposed in [`docs/SCALING.md`](SCALING.md): single instance + graceful drain for
+   v1.0; one-match-per-instance with Redis for cross-instance traffic when needed. Awaiting sign-off.
 
 ## Risks
 - **iOS builds need a Mac** (Xcode signing). Android-first keeps Phase 0 unblocked; sequence iOS
