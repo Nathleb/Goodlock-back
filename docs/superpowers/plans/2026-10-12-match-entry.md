@@ -18,7 +18,7 @@ Reuse: confirm/cancel helpers in `src/domain/services/GameLoop.service.ts` (`mar
 - [x] 3. **AFK claim covers SELECTION** — add to `CONFIRM_PHASES` in `Claim.service.ts`; tests in `tests/Claim.service.spec.ts`.
 
 ### Mapping (no leaks)
-- [ ] 4. **`CatalogCharacterDTO` + `CatalogMapper`** — extract template → DTO from `CollectionMapper` (which keeps adding `acquiredAt`); existing collection tests stay green.
+- [x] 4. **`CatalogCharacterDTO` + `CatalogMapper`** — extract template → DTO from `CollectionMapper` (which keeps adding `acquiredAt`); existing collection tests stay green.
 - [ ] 5. **Viewer masking** — `toDTOForViewer` in SELECTION: `selection: { decks, myPicks }`, opponent pick never present; `toDTOForPlacement`: opponent team `[]`. `RoomDTO.players[].hasDeck` in `RoomMapper`. Tests in `tests/GameStateMapper.viewer.spec.ts` (update the placement test that expected a sorted enemy team) + a JSON-level assertion that the opponent's pick ids appear nowhere in the viewer payload.
 
 ### Coordinators
