@@ -26,6 +26,11 @@ export class CollectionCoordinatorService implements OnApplicationBootstrap {
         return { characters };
     }
 
+    async ownedIds(userId: UserId): Promise<ReadonlySet<CatalogId>> {
+        const owned = await this.collection.listOwned(userId);
+        return new Set(owned.map(row => row.characterId));
+    }
+
     /** The only write path into the collection: every id is checked against the catalog. */
     async grant(userId: UserId, ids: readonly CatalogId[]): Promise<void> {
         const unknown = ids.filter(id => !this.catalog.has(id));

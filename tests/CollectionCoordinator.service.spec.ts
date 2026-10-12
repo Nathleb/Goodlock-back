@@ -68,6 +68,18 @@ describe('getCollection', () => {
     });
 });
 
+describe('ownedIds', () => {
+    it('returns the set of catalog ids the user owns', async () => {
+        collection.listOwned.mockResolvedValue([
+            { characterId: id('c0'), acquiredAt: ACQUIRED },
+            { characterId: id('c2'), acquiredAt: ACQUIRED },
+        ]);
+        const owned = await coordinator.ownedIds(USER);
+        expect(collection.listOwned).toHaveBeenCalledWith(USER);
+        expect([...owned].sort()).toEqual(['c0', 'c2']);
+    });
+});
+
 describe('grant', () => {
     it('writes catalog ids', async () => {
         await coordinator.grant(USER, [id('c0'), id('c2')]);
