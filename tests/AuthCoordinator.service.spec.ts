@@ -1,3 +1,4 @@
+import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { AuthCoordinatorService } from '@application/services/AuthCoordinator.service';
 import { CollectionCoordinatorService } from '@application/services/CollectionCoordinator.service';
@@ -63,7 +64,7 @@ beforeEach(() => {
     service = new AuthCoordinatorService(
         mockUserPort,
         mockRefreshTokenPort,
-        mockJwtService as any,
+        mockJwtService as unknown as JwtService,
         mockCollection as unknown as CollectionCoordinatorService,
         mockDecks as unknown as DeckCoordinatorService,
     );
@@ -124,13 +125,13 @@ describe('login', () => {
         mockUserPort.findByUsername.mockResolvedValue(undefined);
         let errorMessage = '';
         try { await service.login({ username: 'ghost', password: 'any' }); }
-        catch (e: any) { errorMessage = e.message; }
+        catch (e: unknown) { errorMessage = (e as Error).message; }
 
         mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
         mockBcrypt.compare.mockResolvedValue(false as never);
         let errorMessage2 = '';
         try { await service.login({ username: 'testuser', password: 'wrong' }); }
-        catch (e: any) { errorMessage2 = e.message; }
+        catch (e: unknown) { errorMessage2 = (e as Error).message; }
 
         expect(errorMessage).toBe(errorMessage2);
     });
@@ -213,7 +214,7 @@ describe('getMe', () => {
         expect(result.id).toBe(USER_ID);
         expect(result.username).toBe('testuser');
         expect(result.createdAt).toEqual(new Date('2026-01-01'));
-        expect((result as any).passwordHash).toBeUndefined();
+        expect('passwordHash' in result).toBe(false);
     });
 
     it('throws NotFoundException when user does not exist', async () => {
