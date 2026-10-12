@@ -21,9 +21,10 @@ exist first. This slice adds decks and nothing about matches.
 3. **Decision:** persisted as **`Deck` + `DeckSlot`** tables rather than an id array on `Deck`, because
    items will attach to a deck slot later and must not require splitting a column then. Agreed explicitly
    (second player-data table set, per the CLAUDE.md persistence rule).
-4. **Decision:** a deck referencing a character the catalog no longer has, or the user no longer owns, is
-   **kept and reported `isValid: false`** rather than repaired or deleted, because silently changing a
-   player's deck is worse than asking them to fix it. Slice C refuses invalid decks.
+4. **Decision:** decks are validated **on write only**, with no `isValid` flag on read, because a saved
+   deck cannot become invalid: characters are never removed from the catalog once the game ships (before
+   that, a replacement character reuses the old id), and ownership is never lost. Write-time checks stay,
+   since the client can send anything.
 5. **Decision:** a **starter deck** is created on register (and on login when the user has no deck), using
    the first 7 catalog ids sorted alphabetically — the simplest deterministic choice while the game is
    being built. Temporary, like the grant-all of slice A; idempotent; a failure is logged and never fails
@@ -42,7 +43,7 @@ exist first. This slice adds decks and nothing about matches.
 - an id the catalog does not know;
 - an id the user does not own.
 
-Used on write (reject with 400) and on read (compute `isValid`).
+Used on write; a violation rejects the request with 400.
 
 ## Data model
 
@@ -82,7 +83,7 @@ slots whose character did not change; that is the items slice's concern.
 - `DeckPort` (`DECK_PORT`): `listByUser`, `findById`, `countByUser`, `create`, `update` (name + slots,
   transactional), `delete`. Implemented by `DeckRepository` over Prisma (no spec, per convention).
 - `DeckCoordinatorService`, using `DeckPort`, `CollectionPort` (ownership) and `CatalogPort`:
-  - `list(userId)` → `DeckDTO[]` with `isValid` and `errors`;
+  - `list(userId)` → `DeckDTO[]`;
   - `create(userId, dto)` → 400 on invalid composition, 409 when the user already has 5 decks;
   - `update(userId, deckId, dto)` → 404 when the deck is missing **or belongs to someone else** (no
     existence leak), 400 on invalid composition;
@@ -103,8 +104,6 @@ type DeckDTO = {
     id: string;
     name: string;
     characterIds: string[];   // slot order
-    isValid: boolean;
-    errors: string[];         // why it is invalid; [] when valid
     createdAt: string;        // ISO
     updatedAt: string;        // ISO
 };
@@ -124,7 +123,7 @@ rules (ownership, catalog, duplicates) are checked by the coordinator, not the D
 TDD bottom-up; domain specs import no NestJS.
 
 1. **Domain** — `validateDeck`: valid deck, wrong size, duplicates, unknown id, unowned id, several errors.
-2. **Application** — `DeckCoordinatorService` with mocked ports: list computes `isValid`/`errors`;
+2. **Application** — `DeckCoordinatorService` with mocked ports: list maps records to DTOs;
    create/update reject bad compositions; limit of 5; 404 for another user's deck; last deck not deletable;
    `ensureStarterDeck` creates once, uses the first 7 sorted ids, does nothing when a deck exists.
 3. **Application** — `AuthCoordinator`: starter deck after grant on register and login; failures logged.
