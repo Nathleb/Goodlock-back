@@ -6,3 +6,4 @@ export type CharacterId = string & { readonly __brand: 'CharacterId' };
 export type DeviceId = string & { readonly __brand: 'DeviceId' };
 export type UserId = string & { readonly __brand: 'UserId' };
 export type CatalogId = string & { readonly __brand: 'CatalogId' };
+export type DeckId = string & { readonly __brand: 'DeckId' };
