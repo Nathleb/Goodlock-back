@@ -8,8 +8,6 @@ import Damage from "../strategies/Damage.class";
 import Heal from "../strategies/Heal.class";
 import Shield from "../strategies/Shield.class";
 import Swap from "../strategies/Swap.class";
-import Character from "../types/Character.type";
-import { createCharacterFromJsonTemplate } from "./CharacterGeneration.service";
 
 export function createGameState(player1: Player, player2: Player): GameState {
     return {
@@ -20,10 +18,6 @@ export function createGameState(player1: Player, player2: Player): GameState {
         priorityQueue: createPriorityQueue(),
         players: [player1, player2],
     };
-}
-
-export function createTeamsFromTemplates(templateContents: string[], factory: EffectFactory): Character[] {
-    return templateContents.map(t => createCharacterFromJsonTemplate(t, factory));
 }
 
 export function buildEffectFactory(): EffectFactory {
