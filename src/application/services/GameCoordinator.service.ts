@@ -15,10 +15,8 @@ import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { assertPhase, assertNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
 import EffectFactory from '@domain/factories/EffectFactory.class';
-import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
-import { createGameState } from '@domain/services/GameInit.service';
-import { createPlayer, rearrangeTeam } from '@domain/services/Player.service';
-import { isRoomReady, resolvePlayerIndex } from '@domain/services/Room.service';
+import { rearrangeTeam } from '@domain/services/Player.service';
+import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
 import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
 import {
@@ -27,7 +25,10 @@ import {
     cancelPlacement as domainCancelPlacement,
     cancelKeep as domainCancelKeep,
     performResolve,
+    createSelectionState,
 } from '@domain/services/GameLoop.service';
+import CharacterTemplate from '@domain/types/CharacterTemplate.type';
+import { CatalogId } from '@shared/branded.types';
 
 type GameContext = { session: Session; room: Room; playerIndex: PlayerIndex };
 
@@ -116,13 +117,26 @@ export class GameCoordinatorService {
         }
     }
 
-    private shuffle<T>(arr: T[]): T[] {
-        const result = [...arr];
-        for (let i = result.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [result[i], result[j]] = [result[j], result[i]];
-        }
-        return result;
+    /** Deck snapshot -> templates. A missing id can only mean a broken snapshot: refuse to start. */
+    private templatesFor(deck: readonly CatalogId[]): CharacterTemplate[] {
+        return deck.map(id => {
+            const template = this.catalogPort.get(id);
+            if (!template) throw new Error(`Unknown character in deck: ${id}`);
+            return template;
+        });
+    }
+
+    /**
+     * Team preview and placement are secret: each player gets their own view (opponent's pick and
+     * team hidden). A room-wide broadcast can't differ per viewer, so emit to each socket.
+     */
+    private emitPerViewer(roomId: string, players: readonly string[], gs: GameState): void {
+        players.forEach((playerSessionId, idx) => {
+            const playerSession = this.sessionPort.getSessionById(playerSessionId);
+            if (!playerSession) return;
+            const view = GameStateMapper.toDTOForViewer(gs, idx as PlayerIndex);
+            this.wsPort.emitToSocket(playerSession.socketId, 'gameStateUpdated', this.withTimers(roomId, view, gs));
+        });
     }
 
     startGame(socketId: string): void {
@@ -135,23 +149,11 @@ export class GameCoordinatorService {
             if (room.ownerId !== session.sessionId) throw new Error('Only the room owner can start the game');
             if (!isRoomReady(room)) throw new Error('Room is not ready to start');
 
-            const templates = this.shuffle([...this.catalogPort.list()]);
-            if (templates.length < 10) throw new Error('Not enough character templates');
-
-            const player0 = createPlayer(templates.slice(0, 5).map(t => createCharacterFromTemplate(t, this.effectFactory)), 0);
-            const player1 = createPlayer(templates.slice(5, 10).map(t => createCharacterFromTemplate(t, this.effectFactory)), 1);
-            const gameState = createGameState(player0, player1);
+            const [deck0, deck1] = assertDecksSelected(room);
+            const gameState = createSelectionState([this.templatesFor(deck0), this.templatesFor(deck1)]);
 
             this.roomPort.startGame(room.roomId, gameState);
-            // Placement is secret: each player must receive their own team in real
-            // order with the enemy masked. A room-wide broadcast can't differ per
-            // viewer, so emit a per-viewer placement view to each player's socket.
-            room.playersId.forEach((playerSessionId, idx) => {
-                const playerSession = this.sessionPort.getSessionById(playerSessionId);
-                if (!playerSession) return;
-                const viewerIndex = idx as PlayerIndex;
-                this.wsPort.emitToSocket(playerSession.socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gameState, viewerIndex), gameState));
-            });
+            this.emitPerViewer(room.roomId, room.playersId, gameState);
         } catch (e: unknown) {
             this.emitError(socketId, (e as Error).message);
         }

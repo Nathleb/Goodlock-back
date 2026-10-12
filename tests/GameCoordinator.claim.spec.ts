@@ -1,3 +1,4 @@
+import { CatalogId } from '@shared/branded.types';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
 import { makeTestCatalog } from './helpers/catalog';
@@ -104,7 +105,8 @@ describe('stable player identity', () => {
 
 describe('afkClaimInMs in emitted game state', () => {
     it('startGame emits a payload containing afkClaimInMs', () => {
-        const lobby = room({ isStarted: false, playerOrder: undefined, presence: undefined, gameState: undefined });
+        const deck = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'] as CatalogId[];
+        const lobby = room({ isStarted: false, playerOrder: undefined, presence: undefined, gameState: undefined, deckSelections: { p0: deck, p1: deck } });
         mockRoom.getRoom.mockReturnValue(lobby);
         mockRoom.startGame.mockImplementation((_id: string, state: GameState) => {
             const started = room({ gameState: state, phaseStartedAt: NOW });
@@ -116,7 +118,7 @@ describe('afkClaimInMs in emitted game state', () => {
             : id === 'p1' ? { sessionId: 'p1', socketId: 'sock-1', userId: 'u2', roomId: 'room-1' }
             : undefined);
         coordinator.startGame(SOCKET);
-        // Per-viewer placement emit still carries the timer fields (afkClaimInMs).
+        // Per-viewer selection emit carries the timer fields (afkClaimInMs).
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'gameStateUpdated',
             expect.objectContaining({ afkClaimInMs: 120_000 }));
     });

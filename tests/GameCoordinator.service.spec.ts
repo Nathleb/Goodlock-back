@@ -12,7 +12,7 @@ import { createGameState, buildEffectFactory } from '@domain/services/GameInit.s
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
-import { UserId } from '@shared/branded.types';
+import { UserId, CatalogId } from '@shared/branded.types';
 import { EFFECT_FACTORY, CATALOG_PORT } from '@application/ports/tokens';
 import GameState from '@domain/types/GameState.type';
 
@@ -55,7 +55,9 @@ const makeRoom = (gameState: typeof baseGs): Room => ({
     roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: true, gameState,
 });
 
-const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
+const DECK_P0 = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'] as CatalogId[];
+const DECK_P1 = ['c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'] as CatalogId[];
+const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false, deckSelections: { p0: DECK_P0, p1: DECK_P1 } };
 const singlePlayerRoom: Room = { ...lobbyRoom, playersId: ['p0'] };
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -163,28 +165,36 @@ describe('startGame', () => {
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
-    it('builds two teams of five distinct catalog characters', () => {
+    it('opens team preview: SELECTION with both chosen decks, no teams yet', () => {
         coordinator.startGame(SOCKET_0);
         const state: GameState = mockRoom.startGame.mock.calls[0][1];
-        const ids = state.players.flatMap(p => p.team.map(c => c.catalogId));
-        expect(state.players.map(p => p.team.length)).toEqual([5, 5]);
-        expect(new Set(ids).size).toBe(10);
-        ids.forEach(id => expect(catalog.has(id)).toBe(true));
+        expect(state.phase).toBe(GamePhase.SELECTION);
+        expect(state.selection?.decks[0].map(t => t.id)).toEqual(DECK_P0);
+        expect(state.selection?.decks[1].map(t => t.id)).toEqual(DECK_P1);
+        expect(state.players.map(p => p.team.length)).toEqual([0, 0]);
     });
 
-    it('emits error when the catalog has fewer than ten characters', async () => {
-        const small = await Test.createTestingModule({
-            providers: [
-                GameCoordinatorService,
-                { provide: SESSION_PORT, useValue: mockSession },
-                { provide: ROOM_PORT, useValue: mockRoom },
-                { provide: WEBSOCKET_PORT, useValue: mockWs },
-                { provide: EFFECT_FACTORY, useValue: factory },
-                { provide: CATALOG_PORT, useValue: makeTestCatalog(9) },
-                { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
-            ],
-        }).compile();
-        small.get(GameCoordinatorService).startGame(SOCKET_0);
+    it('sends each player a selection view with both decks', () => {
+        mockRoom.startGame.mockReturnValue({ ...lobbyRoom, isStarted: true });
+        mockSession.getSessionById.mockImplementation((id: string) =>
+            id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
+        coordinator.startGame(SOCKET_0);
+        const toP1 = mockWs.emitToSocket.mock.calls.find(c => c[0] === SOCKET_1)?.[2];
+        expect(toP1.phase).toBe('SELECTION_PHASE');
+        expect(toP1.selection.decks[0].map((c: { id: string }) => c.id)).toEqual(DECK_P0);
+        expect(toP1.selection.myPicks).toBeNull();
+    });
+
+    it('emits error until both players have chosen a deck', () => {
+        mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0 } });
+        coordinator.startGame(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Both players must choose a deck' });
+        expect(mockRoom.startGame).not.toHaveBeenCalled();
+    });
+
+    it('emits error when a chosen deck references a character the catalog does not have', () => {
+        mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0, p1: [...DECK_P1.slice(0, 6), 'ghost' as CatalogId] } });
+        coordinator.startGame(SOCKET_0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
