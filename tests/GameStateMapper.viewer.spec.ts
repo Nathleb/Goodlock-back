@@ -1,6 +1,8 @@
-import { TEST_CATALOG_ID } from './helpers/catalog';
+import { TEST_CATALOG_ID, testTemplate } from './helpers/catalog';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
-import GameState from '@domain/types/GameState.type';
+import GameState, { SelectionState } from '@domain/types/GameState.type';
+import { createSelectionState } from '@domain/services/GameLoop.service';
+import { CatalogId } from '@shared/branded.types';
 import GamePhase from '@domain/types/GamePhase.type';
 import Character from '@domain/types/Character.type';
 import { Player } from '@domain/types/Player.type';
@@ -46,16 +48,59 @@ describe('toDTOForViewer', () => {
         expect(dto.players[1].team[0].isFaceLocked).toBe(true);
     });
 
-    it('delegates to placement masking during PLACEMENT', () => {
-        const viewer = GameStateMapper.toDTOForViewer(gs(GamePhase.PLACEMENT, [false, false]), 0);
-        const placement = GameStateMapper.toDTOForPlacement(gs(GamePhase.PLACEMENT, [false, false]), 0);
-        expect(viewer.players[1].team.map(c => c.position.slot))
-            .toEqual(placement.players[1].team.map(c => c.position.slot));
+    it('hides the opponent team entirely during PLACEMENT (picks stay secret until combat)', () => {
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.PLACEMENT, [false, false]), 0);
+        expect(dto.players[0].team.map(c => c.id)).toEqual(['c00', 'c01']);
+        expect(dto.players[1].team).toEqual([]);
+        expect(JSON.stringify(dto)).not.toContain('c10');
+    });
+
+    it('hides player 0 from viewer 1 during PLACEMENT', () => {
+        const dto = GameStateMapper.toDTOForPlacement(gs(GamePhase.PLACEMENT, [false, false]), 1);
+        expect(dto.players[0].team).toEqual([]);
+        expect(dto.players[1].team).toHaveLength(2);
+    });
+
+    it('reveals both teams from ROLL on', () => {
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.ROLL, [false, false]), 0);
+        expect(dto.players[1].team).toHaveLength(2);
     });
 
     it('masks player 0 when the viewer is player 1', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [true, false]), 1);
         expect(dto.players[0].team.every(c => c.isFaceLocked === false)).toBe(true);
+    });
+});
+
+describe('team selection view', () => {
+    const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
+    const PICK_1 = ['b0', 'b1', 'b2', 'b3', 'b4'] as CatalogId[];
+    const selecting = (picks: SelectionState['picks'], ready: [boolean, boolean]): GameState => ({
+        ...createSelectionState([deck('a'), deck('b')]),
+        playersReady: ready,
+        selection: { decks: [deck('a'), deck('b')], picks },
+    });
+
+    it('reveals both full decks to the viewer', () => {
+        const dto = GameStateMapper.toDTOForViewer(selecting([null, null], [false, false]), 0);
+        expect(dto.selection?.decks[0].map(c => c.id)).toEqual(['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6']);
+        expect(dto.selection?.decks[1].map(c => c.id)).toEqual(['b0', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6']);
+        expect(dto.selection?.decks[1][0].baseDie).toHaveLength(6);
+    });
+
+    it("gives the viewer their own pick, never the opponent's", () => {
+        const mine = ['a0', 'a1', 'a2', 'a3', 'a4'] as CatalogId[];
+        const forViewer0 = GameStateMapper.toDTOForViewer(selecting([mine, PICK_1], [true, true]), 0);
+        expect(forViewer0.selection?.myPicks).toEqual(mine);
+        expect(Object.keys(forViewer0.selection ?? {}).sort()).toEqual(['decks', 'myPicks']);
+        expect(JSON.stringify(forViewer0)).not.toContain('"picks"');
+
+        const forViewer1 = GameStateMapper.toDTOForViewer(selecting([mine, null], [true, false]), 1);
+        expect(forViewer1.selection?.myPicks).toBeNull();
+    });
+
+    it('the room-wide DTO never carries selection data', () => {
+        expect(GameStateMapper.toDTO(selecting([null, PICK_1], [false, true])).selection).toBeUndefined();
     });
 });
 

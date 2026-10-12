@@ -19,7 +19,7 @@ Reuse: confirm/cancel helpers in `src/domain/services/GameLoop.service.ts` (`mar
 
 ### Mapping (no leaks)
 - [x] 4. **`CatalogCharacterDTO` + `CatalogMapper`** — extract template → DTO from `CollectionMapper` (which keeps adding `acquiredAt`); existing collection tests stay green.
-- [ ] 5. **Viewer masking** — `toDTOForViewer` in SELECTION: `selection: { decks, myPicks }`, opponent pick never present; `toDTOForPlacement`: opponent team `[]`. `RoomDTO.players[].hasDeck` in `RoomMapper`. Tests in `tests/GameStateMapper.viewer.spec.ts` (update the placement test that expected a sorted enemy team) + a JSON-level assertion that the opponent's pick ids appear nowhere in the viewer payload.
+- [x] 5. **Viewer masking** — `toDTOForViewer` in SELECTION: `selection: { decks, myPicks }`, opponent pick never present; `toDTOForPlacement`: opponent team `[]`. `RoomDTO.players[].hasDeck` in `RoomMapper`. Tests in `tests/GameStateMapper.viewer.spec.ts` (update the placement test that expected a sorted enemy team) + a JSON-level assertion that the opponent's pick ids appear nowhere in the viewer payload.
 
 ### Coordinators
 - [ ] 6. **`selectDeck`** — `DeckCoordinatorService.getOwnDeckCharacterIds`; `RoomCoordinatorService.selectDeck(socketId, deckId)` async: load, re-read room, refuse if player left / game started, store, emit `roomUpdated`; errors → `error` event. RoomCoordinator gets `DeckCoordinatorService` (already exported by `DeckModule`, imported by `AppModule`). Tests in `tests/RoomCoordinator.service.spec.ts`, incl. the two await races.

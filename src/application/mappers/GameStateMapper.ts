@@ -6,6 +6,7 @@ import { Player } from '@domain/types/Player.type';
 import { ResolveStep } from '@domain/types/PriorityQueue.type';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { GameStateDTO, PlayerGameStateDTO, CharacterDTO, DieFaceDTO, ResolveStepDTO } from '@application/dtos/GameState.dto';
+import { CatalogMapper } from './CatalogMapper';
 
 export class GameStateMapper {
     static toDTO(gameState: GameState): GameStateDTO {
@@ -18,19 +19,37 @@ export class GameStateMapper {
         };
     }
 
+    /** PLACEMENT: the opponent's picks stay secret until combat, so their team is sent empty. */
     static toDTOForPlacement(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
-        const dto = GameStateMapper.toDTO(gameState);
+        return GameStateMapper.hideOpponentTeam(GameStateMapper.toDTO(gameState), viewerIndex);
+    }
+
+    /** SELECTION: both decks are revealed; only the viewer's own pick is included. */
+    static toDTOForSelection(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
+        const dto = GameStateMapper.hideOpponentTeam(GameStateMapper.toDTO(gameState), viewerIndex);
+        const selection = gameState.selection;
+        if (!selection) return dto;
+        const myPicks = selection.picks[viewerIndex];
+        return {
+            ...dto,
+            selection: {
+                decks: [selection.decks[0].map(CatalogMapper.toDTO), selection.decks[1].map(CatalogMapper.toDTO)],
+                myPicks: myPicks ? [...myPicks] : null,
+            },
+        };
+    }
+
+    private static hideOpponentTeam(dto: GameStateDTO, viewerIndex: PlayerIndex): GameStateDTO {
         const enemyIndex = (1 - viewerIndex) as 0 | 1;
-        const enemyPlayer = dto.players[enemyIndex];
-        const sortedTeam = [...enemyPlayer.team]
-            .sort((a, b) => a.id.localeCompare(b.id))
-            .map((char, i) => ({ ...char, position: { ...char.position, slot: i } }));
         const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
-        players[enemyIndex] = { ...enemyPlayer, team: sortedTeam };
+        players[enemyIndex] = { ...players[enemyIndex], team: [] };
         return { ...dto, players };
     }
 
     static toDTOForViewer(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
+        if (gameState.phase === GamePhase.SELECTION) {
+            return GameStateMapper.toDTOForSelection(gameState, viewerIndex);
+        }
         if (gameState.phase === GamePhase.PLACEMENT) {
             return GameStateMapper.toDTOForPlacement(gameState, viewerIndex);
         }

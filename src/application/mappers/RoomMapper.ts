@@ -8,6 +8,7 @@ export class RoomMapper {
             players: room.playersId.map(id => ({
                 playerId: id,
                 isOwner: id === room.ownerId,
+                hasDeck: room.deckSelections?.[id] !== undefined,
             })),
             ownerId: room.ownerId,
             isStarted: room.isStarted,

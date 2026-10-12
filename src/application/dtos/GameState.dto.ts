@@ -1,3 +1,5 @@
+import { CatalogCharacterDTO } from './Catalog.dto';
+
 export type TargetGroupDTO = { side: string; mode: string; n: number[] };
 
 export type FaceEffectDTO = { effect: string; magnitude: number; targets: TargetGroupDTO[] };
@@ -49,6 +51,13 @@ export type GameStateDTO = {
     rollsLeft: number;
     playersReady: [boolean, boolean];
     players: [PlayerGameStateDTO, PlayerGameStateDTO];
+    /** SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's). */
+    selection?: SelectionViewDTO;
+};
+
+export type SelectionViewDTO = {
+    decks: [CatalogCharacterDTO[], CatalogCharacterDTO[]];
+    myPicks: string[] | null;
 };
 
 export type GameStateUpdatePayload = GameStateDTO & {
