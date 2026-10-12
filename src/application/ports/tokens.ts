@@ -7,3 +7,4 @@ export const EFFECT_FACTORY = Symbol('EffectFactory');
 export const CLAIM_CONFIG = Symbol('ClaimConfig');
 export const CATALOG_PORT = Symbol('CatalogPort');
 export const CATALOG_DIR = Symbol('CatalogDir');
+export const COLLECTION_PORT = Symbol('CollectionPort');

@@ -33,7 +33,7 @@ Approved 2026-10-12. Steps are ticked as they land.
 
 ### Persistence
 - [x] 7. **Prisma** — `UserCharacter` model as in the spec (`@@unique([userId, characterId])`, cascade) + `User.characters` back-relation; `npx prisma migrate dev --name add_user_character` (needs the docker Postgres up).
-- [ ] 8. **`CollectionPort`** (`listOwned`, `grantMany` idempotent, `listUnknownIds(known)`) + `COLLECTION_PORT`; **`UserCharacterRepository`** over Prisma (`createMany({ skipDuplicates: true })`). No spec, per repository convention.
+- [x] 8. **`CollectionPort`** (`listOwned`, `grantMany` idempotent, `listUnknownIds(known)`) + `COLLECTION_PORT`; **`UserCharacterRepository`** over Prisma (`createMany({ skipDuplicates: true })`). No spec, per repository convention.
 
 ### Collection use case
 - [ ] 9. **`CollectionCoordinatorService`** + `CollectionMapper` (template → `CollectionCharacterDTO`, reusing `DieFaceDTO` from `GameState.dto.ts`, no effect instantiation). Methods: `getCollection(userId)` (skips ids the catalog can't resolve), `grant(userId, ids)` (rejects unknown ids), `checkConsistency()` on `onApplicationBootstrap` (warns with orphan ids via Nest `Logger`). New `tests/CollectionCoordinator.service.spec.ts` with mocked ports: maps owned → DTOs, skips unknown, empty → `[]`, rejects unknown grant, warns on orphans.
