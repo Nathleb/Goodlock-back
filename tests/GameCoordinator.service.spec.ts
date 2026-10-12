@@ -260,6 +260,19 @@ describe('team selection', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
+    it('cancelSelection outside SELECTION emits an error and changes nothing', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(baseGs)); // PLACEMENT
+        coordinator.cancelSelection(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: expect.stringContaining('SELECTION_PHASE') });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('cancelSelection is silent when the player had not picked', () => {
+        coordinator.cancelSelection(SOCKET_0);
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
     it('cancelSelection un-readies the player and echoes to them only', () => {
         mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
         coordinator.cancelSelection(SOCKET_0);
