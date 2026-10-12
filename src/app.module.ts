@@ -17,8 +17,10 @@ import { PrismaModule } from '@infrastructure/prisma/prisma.module';
 import { AuthModule } from '@infrastructure/auth.module';
 import { CatalogModule } from '@infrastructure/catalog.module';
 import { CollectionModule } from '@infrastructure/collection.module';
+import { DeckModule } from '@infrastructure/deck.module';
 import { RoomController } from '@infrastructure/adapters/http/RoomController';
 import { CollectionController } from '@infrastructure/adapters/http/CollectionController';
+import { DeckController } from '@infrastructure/adapters/http/DeckController';
 
 @Module({
     imports: [
@@ -28,8 +30,9 @@ import { CollectionController } from '@infrastructure/adapters/http/CollectionCo
         AuthModule,
         CatalogModule,
         CollectionModule,
+        DeckModule,
     ],
-    controllers: [RoomController, CollectionController],
+    controllers: [RoomController, CollectionController, DeckController],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
         {
