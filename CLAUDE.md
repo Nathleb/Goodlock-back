@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Goodlock is the backend for a tactical PvP dice game. Each player fields a team of 5 characters (each represented by a 6-faced die). Players secretly roll and lock die faces each round, then all actions resolve in priority order (each face carries its own target cells — see Auto-targeting below). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** persists authentication (`User`, `RefreshToken`) and player data (`UserCharacter`: which catalog characters a user owns; `Deck` + `DeckSlot`: decks of 7 characters, max 5 per user). Character definitions are not in the database: they are git-authored in `tmplt/*.json`. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
+Goodlock is the backend for a tactical PvP dice game. Each player brings a deck of 7 characters, keeps 5 of them for the match after seeing the opponent's deck (team preview), and fields that team of 5 (each character is a 6-faced die). Players secretly roll and lock die faces each round, then all actions resolve in priority order (each face carries its own target cells — see Auto-targeting below). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** persists authentication (`User`, `RefreshToken`) and player data (`UserCharacter`: which catalog characters a user owns; `Deck` + `DeckSlot`: decks of 7 characters, max 5 per user). Character definitions are not in the database: they are git-authored in `tmplt/*.json`. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
 
 ## Tooling
 
@@ -78,7 +78,7 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 - `adapters/catalog/` `FileCharacterCatalog`: reads and validates `tmplt/*.json` at boot (`CatalogModule`, which also owns `EFFECT_FACTORY`); a bad catalog stops the app from starting
 - `adapters/http/` `AuthController`, `RoomController`, `CollectionController` (`GET /collection`), `DeckController` (`GET/POST /decks`, `PUT/DELETE /decks/:id`): REST endpoints
 - `catalog.module.ts`, `collection.module.ts`, `deck.module.ts`, `auth.module.ts`: `AuthModule` imports `CollectionModule` and `DeckModule` (starter collection + deck on register/login), so `CollectionController` and `DeckController` are declared in `AppModule` to avoid a cycle
-- `websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: `createRoom`, `joinRoom`, `quitRoom`
+- `websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: lobby `createRoom`, `joinRoom`, `quitRoom`, `selectDeck`; game `startGame`, `confirmSelection`/`cancelSelection`, `rearrangeTeam`, `confirmPlacement`/`cancelPlacement`, `confirmKeep`/`cancelKeep`, `claimVictory`
 - `websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
 - `websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
 - `websocket/services/` `WebSocketService` (emit helpers), `RoomWebSocketHandlerService`, `SessionWebSocketHandlerService`, `ErrorWebSocketHandlerService`
@@ -94,7 +94,8 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) + `deviceIdentifier` are persistent. `SessionService.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
 4. **Priority resolution (Pokemon-style)**: two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Equal `(bracket, speed)` pairs are shuffled (random tiebreak). Speed never crosses brackets. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
-5. **Auto-targeting**: players never choose targets. Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. Off-board cells are dropped; no cell = fizzle. Phases: PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT (no ASSIGN).
+5. **Match entry and secrecy**: each player picks a deck in the room (`selectDeck`, loaded from the DB and snapshotted in the in-memory room — the only `await` on the WebSocket path). `startGame` opens SELECTION: both 7-decks are revealed, each player secretly keeps 5. The opponent's picks and team stay hidden (sent as `[]`) through SELECTION and PLACEMENT; the first room-wide state is the ROLL. Any emission before ROLL must go through the per-viewer mappers (`GameStateMapper.toDTOForViewer`).
+6. **Auto-targeting**: players never choose targets. Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. Off-board cells are dropped; no cell = fizzle. Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT (no ASSIGN).
 
 ## Workflow for any non-trivial task
 

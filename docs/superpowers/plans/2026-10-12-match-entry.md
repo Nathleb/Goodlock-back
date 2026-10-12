@@ -30,7 +30,7 @@ Reuse: confirm/cancel helpers in `src/domain/services/GameLoop.service.ts` (`mar
 - [x] 9. **Events** — `selectDeck`, `confirmSelection`, `cancelSelection` in `session.gateway.ts` with payload types next to the existing ones; existing gateway/guard tests patterns.
 
 ### Wrap-up
-- [ ] 10. **Docs + memory** — `CLAUDE.md` (phases now SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT, new events), spec → implemented + notes, memory entry (frontend must catch up), Decision lines.
+- [x] 10. **Docs + memory** — `CLAUDE.md` (phases now SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT, new events), spec → implemented + notes, memory entry (frontend must catch up), Decision lines.
 
 ## Verification
 

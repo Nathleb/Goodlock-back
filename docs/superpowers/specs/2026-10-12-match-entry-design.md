@@ -1,7 +1,7 @@
 # Match entry: deck choice and team preview — design
 
 Date: 2026-10-12
-Status: validated, ready for planning
+Status: implemented 2026-10-12 (plan: `docs/superpowers/plans/2026-10-12-match-entry.md`)
 Slice: **C** of three (A: catalog + collection — done, B: decks — done, C: match entry). Matchmaking queue,
 items and deck-based lobby browsing are out of scope: rooms stay as they are.
 
@@ -76,6 +76,15 @@ both confirm placement -> ROLL: first room-wide state, both teams revealed (unch
 `startGame` now fails with an error until both players have selected a deck; `roomUpdated` gains
 `players[].hasDeck`; `gameStateUpdated` gains `phase: "SELECTION_PHASE"` and `selection`; in PLACEMENT the
 opponent's `team` is empty. **The current frontend cannot start a match until it handles these.**
+
+## Implementation notes (2026-10-12)
+
+- `startGame` no longer shuffles the catalog: the 10-random-characters path is gone. Starting needs both
+  deck snapshots (`Both players must choose a deck` otherwise).
+- The coordinator also checks `confirmSelection` input is an array of strings (defensive: the gateway's
+  class-validator payload is not relied on alone).
+- PLACEMENT now hides the opponent's team entirely (it used to send it in sorted order). This is the
+  only behaviour change for code paths that existed before this slice.
 
 ## Testing strategy
 
