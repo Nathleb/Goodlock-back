@@ -26,10 +26,21 @@ serve the phone experience, not the other way around.
 - Auth: JWT access + refresh tokens. Postgres via Prisma holds auth + player data (`UserCharacter`,
   `Deck`, `DeckSlot`); live game state stays in-memory. Session reconnect, AFK/forfeit claims.
 - 44 test files / 529 tests, lint covers `src/` and `tests/`.
-- **Not yet done on a real database:** the two Oct 2026 migrations (`add_user_character`, `add_decks`)
-  were generated offline and still need `prisma migrate deploy` + a manual two-client QA.
+- The Oct 2026 migrations are applied and verified against a real Postgres (no drift); deck rules and
+  full matches checked end to end with bots.
 
-**Frontend (`Goodlock-frontend`) — behind the backend protocol; the blocker right now.**
+**New client (`Goodlock-app`, Oct 2026) — Flutter + Flame prototype, chosen to replace React.**
+- Chosen for the most UI + mobile game-feel headroom (TypeScript was not a criterion). Talks to the
+  unchanged Socket.IO backend; a headless two-bot match (`tool/bot_match.dart`) plays full games
+  end to end and doubles as the protocol QA.
+- Has: login (runtime server URL), collection, deck editor, an animated Flame Resolve scene (impacts,
+  floating numbers, shakes, hit-stop, haptics), an offline demo of a recorded match and a live
+  two-bot match. **Pending: the user's on-device verdict.** Not yet: human input for team preview,
+  placement and dice (the live screen only watches bots).
+- Backend additions made for it: `sessionStarted { sessionId }` on connect (clients find their seat
+  in `room.players` instead of guessing creator=0), and `catalogId` on in-match characters.
+
+**Legacy frontend (`Goodlock-frontend`) — superseded if the Flutter prototype is adopted.**
 - React full loop (Login → Lobby → GameScreen). Capacitor Android is set up with an `android:apk`
   build script; `vitest` is back with ~10 test files — on branch `feat/board-redesign`
   (26 commits ahead of its `main`, last touched 2026-06-18, pending device QA).
@@ -50,11 +61,10 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 
 ### Phase 0 — Get on a phone (foundation) ⭐ first — IN PROGRESS
 *Establish the mobile feedback loop immediately — nothing later counts until we can feel it on a device.*
-- **Frontend protocol catch-up (blocking):** auto-targeting (drop ASSIGN), deck choice in the room
-  (`selectDeck`), team preview (`SELECTION_PHASE`, `confirmSelection`/`cancelSelection`), empty
-  opponent team during PLACEMENT; minimal collection/deck screens over `/collection` and `/decks`.
-  Decide whether to land `feat/board-redesign` first.
-- Backend side: apply the Oct 2026 migrations and run a two-client QA of deck → preview → match.
+- **Client:** validate the Flutter + Flame prototype on a phone; if adopted, build the human-input
+  phases (team preview, placement, dice keep) and a real lobby in `Goodlock-app`, and retire
+  `Goodlock-frontend`.
+- ~~Backend side: apply the Oct 2026 migrations and run a two-client QA~~ (done Oct 13: migrations applied, no schema drift; REST rules and full bot matches verified).
 - ~~Stand up Capacitor properly~~ (Android done: `npm run android:apk`; iOS needs a Mac — see Risks).
   Keep the **build → installable APK** step repeatable.
 - Responsive/portrait pass on the React UI: the game is 1080×1920 portrait — make it genuinely

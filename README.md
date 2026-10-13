@@ -1,13 +1,17 @@
 # Goodlock
 
-Backend for a tactical PvP dice game. Each player fields a team of 5 characters (each a
-6-faced die); players secretly assign die-face effects each round, then all actions resolve in
-priority order.
+Backend for a tactical PvP dice game. Each player brings a deck of 7 characters, keeps 5 after
+seeing the opponent's deck (team preview), and fields them as a team of 5 (each character is a
+6-faced die). Each round players roll and lock dice, then every action resolves in priority order
+with automatic targeting.
 
-- **Backend** (`Goodlock-back`, this repo): NestJS + Socket.io. Game state is **in-memory**;
-  Postgres (via Prisma) is used **only for auth** (users + refresh tokens).
-- **Frontend** (`Goodlock-frontend`, sibling repo): React + Vite + TypeScript, packaged for
-  Android via Capacitor.
+- **Backend** (`Goodlock-back`, this repo): NestJS + Socket.io. Live game state is **in-memory**;
+  Postgres (via Prisma) stores auth (users, refresh tokens) and player data (owned characters, decks).
+- **Mobile client — prototype** (`Goodlock-app`, sibling repo): **Flutter + Flame**, started Oct 2026
+  to replace the React client. See its `CLAUDE.md`; `dart run tool/bot_match.dart` plays a full
+  match against this backend.
+- **Legacy frontend** (`Goodlock-frontend`, sibling repo): React + Vite + Capacitor. **Behind the
+  current protocol** (no team preview, no deck choice); kept until the Flutter client is adopted.
 
 > Roadmap & direction: [`docs/ROADMAP.md`](docs/ROADMAP.md) (mobile-first, to v1.0).
 > Architecture & conventions: [`CLAUDE.md`](CLAUDE.md).
@@ -17,7 +21,8 @@ This document assumes both repos sit side by side:
 ```
 projects/
   Goodlock-back/      # this repo
-  Goodlock-frontend/
+  Goodlock-app/       # Flutter + Flame client (prototype)
+  Goodlock-frontend/  # legacy React client
 ```
 
 ---
@@ -25,7 +30,8 @@ projects/
 ## Prerequisites
 
 - **Node.js 20+** and npm
-- **Docker** + Docker Compose (for the Postgres auth database)
+- **Docker** + Docker Compose (for the Postgres database). On WSL2 with Docker Desktop, start
+  Docker Desktop first so the `docker` CLI and WSL integration are available.
 - For **Android builds only**: a JDK (17 or 21) and the Android SDK (see [Mobile](#mobile-android)).
 
 ---
@@ -119,7 +125,23 @@ cd Goodlock-frontend && npm test   # once configured
 
 ---
 
-## Mobile (Android)
+## Mobile — Flutter client (prototype, `Goodlock-app`)
+
+Requires the Flutter SDK (`~/development/flutter`, on `PATH`) and the Android SDK with platform
+`android-36` + `build-tools;36.0.0`.
+
+```bash
+cd Goodlock-app
+flutter test                                   # unit + widget tests
+dart run tool/bot_match.dart --server http://localhost:3000   # end-to-end: two bots play a match
+flutter build apk --debug                      # build/app/outputs/flutter-apk/app-debug.apk
+```
+
+One APK works with any backend: the server URL is entered on the login screen (*Serveur*) and
+remembered. To reach the backend from a phone, use the cloudflared tunnel below and paste its
+`https://…trycloudflare.com` URL. The *Démo Resolve hors ligne* button needs no server at all.
+
+## Mobile — legacy React client (Android)
 
 Goodlock is **mobile-first**; the Android build is the primary distribution target. iOS is
 deferred (requires a Mac for signing).
