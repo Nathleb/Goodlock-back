@@ -23,6 +23,8 @@ export class SessionCoordinatorService {
 
     handleConnect(socketId: string, userId: UserId): void {
         const { session, evictedSocketId } = this.sessionPort.createOrReconnectSession(socketId, userId);
+        // The client finds its seat (player index) by locating this id in room.players.
+        this.wsPort.emitToSocket(socketId, 'sessionStarted', { sessionId: session.sessionId });
         if (evictedSocketId) {
             this.wsPort.emitToSocket(evictedSocketId, 'sessionEvicted', { reason: 'signed-in-elsewhere' });
             this.wsPort.disconnectSocket(evictedSocketId);

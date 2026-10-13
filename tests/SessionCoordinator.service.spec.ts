@@ -59,6 +59,20 @@ beforeEach(async () => {
 });
 
 describe('handleConnect', () => {
+    it('tells the client its session id first, so it can find its seat in room.players', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
+        mockRoom.setPresence.mockReturnValue(STARTED_ROOM);
+        coordinator.handleConnect(SOCKET, USER_ID);
+        expect(mockWs.emitToSocket.mock.calls[0]).toEqual([SOCKET, 'sessionStarted', { sessionId: 'p0' }]);
+    });
+
+    it('sends the session id even when not in a room', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION, evictedSocketId: null });
+        coordinator.handleConnect(SOCKET, USER_ID);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'sessionStarted', { sessionId: 'p0' });
+    });
+
     it('creates a new session without joining a WS room when not in any room', () => {
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION, evictedSocketId: null });
         coordinator.handleConnect(SOCKET, USER_ID);
