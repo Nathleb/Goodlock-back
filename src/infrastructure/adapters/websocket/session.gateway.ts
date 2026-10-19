@@ -109,7 +109,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: RearrangeTeamPayload,
     ): void {
-        this.gameCoordinator.rearrangeTeam(client.id, data.characterIds);
+        this.gameCoordinator.rearrangeTeam(client.id, data.slots);
     }
 
     @SubscribeMessage('confirmPlacement')

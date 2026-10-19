@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
 
 const room = { selectDeck: jest.fn().mockResolvedValue(undefined) };
-const game = { confirmSelection: jest.fn(), cancelSelection: jest.fn() };
+const game = { confirmSelection: jest.fn(), cancelSelection: jest.fn(), rearrangeTeam: jest.fn() };
 const client = { id: 'socket-1' } as Socket;
 
 const gateway = new SessionGateway(
@@ -27,12 +27,17 @@ describe('SessionGateway — match entry events', () => {
     });
 
     it('confirmSelection forwards the picked catalog ids', () => {
-        gateway.handleConfirmSelection(client, { characterIds: ['a', 'b', 'c', 'd', 'e'] });
-        expect(game.confirmSelection).toHaveBeenCalledWith('socket-1', ['a', 'b', 'c', 'd', 'e']);
+        gateway.handleConfirmSelection(client, { characterIds: ['a', 'b', 'c', 'd'] });
+        expect(game.confirmSelection).toHaveBeenCalledWith('socket-1', ['a', 'b', 'c', 'd']);
     });
 
     it('cancelSelection forwards the socket', () => {
         gateway.handleCancelSelection(client);
         expect(game.cancelSelection).toHaveBeenCalledWith('socket-1');
+    });
+
+    it('rearrangeTeam forwards the board layout, empty cell included', () => {
+        gateway.handleRearrangeTeam(client, { slots: ['a', null, 'b', 'c', 'd'] });
+        expect(game.rearrangeTeam).toHaveBeenCalledWith('socket-1', ['a', null, 'b', 'c', 'd']);
     });
 });

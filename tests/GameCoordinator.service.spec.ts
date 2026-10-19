@@ -39,7 +39,7 @@ const die = generateFullDie([
 ] satisfies BaseDieInstructions, factory);
 
 const makeTeam = (pi: 0 | 1): Player =>
-    createPlayer([0, 1, 2, 3, 4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
+    createPlayer([0, 1, 2, 3].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
 
 const baseGs = createGameState(makeTeam(0), makeTeam(1));
 const keepGs  = beginKeepPhase(baseGs);
@@ -93,35 +93,35 @@ beforeEach(async () => {
 describe('context guards (tested via rearrangeTeam)', () => {
     it('emits error when session is not found', () => {
         mockSession.getSession.mockReturnValue(undefined);
-        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when session has no roomId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, roomId: undefined });
-        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when room is not found', () => {
         mockRoom.getRoom.mockReturnValue(undefined);
-        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when room has no game state', () => {
         mockRoom.getRoom.mockReturnValue(lobbyRoom);
-        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when sessionId is not in room.playersId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, sessionId: 'unknown' });
-        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', 'e']);
+        coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
@@ -285,37 +285,33 @@ describe('team selection', () => {
 // ── rearrangeTeam ────────────────────────────────────────────────────────────
 
 describe('rearrangeTeam', () => {
-    const validIds = () => baseGs.players[0].team.map(c => c.id);
+    const [a, b, c, d] = baseGs.players[0].team.map(ch => ch.id);
+    const placedSlots = (): (string | null)[] => {
+        const team = (mockRoom.updateGameState.mock.calls.at(-1)[1] as GameState).players[0].team;
+        return [0, 1, 2, 3, 4].map(slot => team.find(ch => ch.position.slot === slot)?.id ?? null);
+    };
 
     it('emits error when not in PLACEMENT phase', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
-        coordinator.rearrangeTeam(SOCKET_0, validIds());
+        coordinator.rearrangeTeam(SOCKET_0, [a, b, c, d, null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
     });
 
-    it('emits error when fewer than 5 IDs are provided', () => {
-        coordinator.rearrangeTeam(SOCKET_0, validIds().slice(0, 4));
+    it.each([
+        ['no empty cell', () => [a, b, c, d, a]],
+        ['a duplicate', () => [a, a, c, d, null]],
+        ['an unknown character ID', () => [a, b, c, 'unknown-id', null]],
+        ['not an array', () => 'nope'],
+    ])('emits error for %s, saving nothing', (_label, slots) => {
+        coordinator.rearrangeTeam(SOCKET_0, slots() as unknown as (string | null)[]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('emits error when duplicate IDs are provided', () => {
-        const ids = validIds();
-        ids[4] = ids[0];
-        coordinator.rearrangeTeam(SOCKET_0, ids);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('emits error when an unknown character ID is provided', () => {
-        const ids = validIds();
-        ids[4] = 'unknown-id';
-        coordinator.rearrangeTeam(SOCKET_0, ids);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
-    });
-
-    it('saves state and echoes masked gameStateUpdated to the acting socket only', () => {
-        coordinator.rearrangeTeam(SOCKET_0, validIds().reverse());
-        expect(mockRoom.updateGameState).toHaveBeenCalled();
-        // The actor must receive the persisted order back, otherwise the
+    it('saves the layout, empty cell included, and echoes masked gameStateUpdated to the acting socket only', () => {
+        coordinator.rearrangeTeam(SOCKET_0, [d, null, c, b, a]);
+        expect(placedSlots()).toEqual([d, null, c, b, a]);
+        // The actor must receive the persisted layout back, otherwise the
         // prop-controlled client reverts the drag. Opponent gets nothing —
         // placement arrangement stays secret.
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
@@ -436,7 +432,7 @@ describe('double-confirm guards', () => {
 describe('post-confirm mutation guards', () => {
     it('emits error when rearrangeTeam called after confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
-        coordinator.rearrangeTeam(SOCKET_0, ['id0', 'id1', 'id2', 'id3', 'id4']);
+        coordinator.rearrangeTeam(SOCKET_0, ['id0', 'id1', 'id2', 'id3', null]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });

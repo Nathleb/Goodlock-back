@@ -10,7 +10,7 @@ Design: `design.md` in this folder. TDD, one commit per step.
 - [x] 3. Board: `BOARD_SIZE = 5` shared by target resolution; `createPlayer` puts the 4 characters on slots 0..3, slot 4 empty.
 - [x] 4. Swap by `position.slot`: occupant + empty moves, two empties fizzle, two occupants exchange.
 - [x] 5. Domain placement `placeTeam(player, slots)` replacing `rearrangeTeam`, with validation.
-- [ ] 6. Coordinator + gateway: `rearrangeTeam` takes `{ slots }` and delegates to `placeTeam`.
+- [x] 6. Coordinator + gateway: `rearrangeTeam` takes `{ slots }` and delegates to `placeTeam`.
 - [ ] 7. Prisma migration dropping `DeckSlot` rows at position >= 6; schema comment 0..5; applied locally.
 - [ ] 8. Docs (`CLAUDE.md`, `README.md`, `docs/ROADMAP.md`), feature folder to `implemented/`, memory.
 

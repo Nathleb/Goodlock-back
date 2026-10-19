@@ -10,12 +10,12 @@ import { GameStateDTO, GameStateUpdatePayload, GameOverDTO } from '@application/
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import { PlayerIndex, SlotIndex } from '@domain/types/Position.type';
+import { PlayerIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { assertPhase, assertNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
 import EffectFactory from '@domain/factories/EffectFactory.class';
-import { rearrangeTeam } from '@domain/services/Player.service';
+import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
 import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
@@ -203,30 +203,19 @@ export class GameCoordinatorService {
         }
     }
 
-    rearrangeTeam(socketId: string, characterIds: string[]): void {
+    rearrangeTeam(socketId: string, slots: (string | null)[]): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
             assertPhase(room.gameState, GamePhase.PLACEMENT);
             assertNotReady(room.gameState, playerIndex);
-            const player = room.gameState.players[playerIndex];
-
-            if (characterIds.length !== 5) throw new Error('Order must contain exactly 5 character IDs');
-            const uniqueIds = new Set(characterIds);
-            if (uniqueIds.size !== 5) throw new Error('Duplicate character IDs in order');
-            const teamIds = new Set(player.team.map(c => c.id));
-            if (characterIds.some(id => !teamIds.has(id))) throw new Error('Unknown character ID in order');
-
-            const order = characterIds.map(id =>
-                player.team.findIndex(c => c.id === id) as SlotIndex
-            );
-            const updatedPlayer = rearrangeTeam(player, order);
+            const updatedPlayer = placeTeam(room.gameState.players[playerIndex], slots);
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;
             const updatedGs = { ...room.gameState, players };
             this.roomPort.updateGameState(room.roomId, updatedGs);
-            // Echo the persisted order back to the actor only: the client is
+            // Echo the persisted layout back to the actor only: the client is
             // prop-controlled and would otherwise snap the drag back. The
             // opponent is not notified, so the arrangement stays secret.
             this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(updatedGs, playerIndex), updatedGs));

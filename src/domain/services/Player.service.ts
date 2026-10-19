@@ -30,14 +30,6 @@ export function rollDieFromPlayer(player: Player, position: Position): Player {
     return { ...player, team: newTeam };
 }
 
-export function rearrangeTeam(player: Player, order: SlotIndex[]): Player {
-    const newTeam = order.map((fromSlot, toSlot) => ({
-        ...player.team[fromSlot],
-        position: { ...player.team[fromSlot].position, slot: toSlot as SlotIndex },
-    }));
-    return { ...player, team: newTeam };
-}
-
 /**
  * Lays the team out on the board: `slots` reads like the board (BOARD_SIZE
  * cells), each team character exactly once, `null` for the empty cells.
