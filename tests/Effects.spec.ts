@@ -87,6 +87,31 @@ describe('Damage', () => {
     });
 });
 
+describe('an empty cell', () => {
+    // 4 characters on slots 0..3, slot 4 empty, as after team preview.
+    const holed = (): GameState => {
+        const four = (pi: PlayerIndex, prefix: string) => createPlayer([0, 1, 2, 3].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `${prefix}${i}`, maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
+        return createGameState(four(0, 'A'), four(1, 'B'));
+    };
+    const occupant = (s: GameState, pi: PlayerIndex, slot: number) => s.players[pi].team.find(c => c.position.slot === slot);
+
+    it('is left empty by createPlayer for a team of 4', () => {
+        expect(occupant(holed(), 0, 4)).toBeUndefined();
+    });
+
+    it('does nothing for its own cell while the rest of the pattern applies (cleave)', () => {
+        const s = holed();
+        const { state, affected } = new Damage(5).solve(s, [pos(1, 3), pos(1, 4)], occupant(s, 0, 0)!.id);
+        expect(occupant(state, 1, 3)!.hp).toBe(15);
+        expect(affected).toEqual([occupant(s, 1, 3)!.id]);
+    });
+
+    it('alone, leaves the state untouched', () => {
+        const s = holed();
+        expect(new Shield(3).solve(s, [pos(0, 4)], occupant(s, 0, 0)!.id).affected).toEqual([]);
+    });
+});
+
 describe('Heal', () => {
     it('heals occupants up to maxHp', () => {
         const hurt = withHp(gs, 0, 1, 10);

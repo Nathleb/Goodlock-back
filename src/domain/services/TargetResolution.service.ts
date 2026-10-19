@@ -1,11 +1,11 @@
-import Position, { PlayerIndex, SlotIndex } from "../types/Position.type";
+import Position, { BOARD_SIZE, PlayerIndex, SlotIndex } from "../types/Position.type";
 import TargetGroup from "../types/TargetGroup.type";
 import EffectLabel from "../types/EffectLabels.type";
 
 const MIN_SLOT = 0;
-const MAX_SLOT = 4;
-const MIN_OFFSET = -4;
-const MAX_OFFSET = 4;
+const MAX_SLOT = BOARD_SIZE - 1;
+const MIN_OFFSET = -MAX_SLOT;
+const MAX_OFFSET = MAX_SLOT;
 
 export function resolveTargets(groups: readonly TargetGroup[], actor: Position): Position[] {
     // Repeated cells are kept on purpose: overlapping patterns stack.
