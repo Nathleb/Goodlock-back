@@ -16,8 +16,11 @@ export function allDiceLocked(player: Player): boolean {
     return player.team.every(char => char.isFaceLocked);
 }
 
+/** Dead characters that lose the match (out of TEAM_SIZE). */
+export const LOSS_DEATHS = 2;
+
 export function hasLost(player: Player): boolean {
-    return player.team.filter(char => isDead(char)).length >= 3;
+    return player.team.filter(char => isDead(char)).length >= LOSS_DEATHS;
 }
 
 export function rollDieFromPlayer(player: Player, position: Position): Player {

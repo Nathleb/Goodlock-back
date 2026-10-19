@@ -29,19 +29,19 @@ describe('PlayerService', () => {
     expect(updatedPlayer.team[0].face).toBeDefined();
   });
 
-  it('should not have lost with fewer than 3 dead characters', () => {
+  it('should not have lost with no dead character', () => {
     expect(hasLost(player)).toBe(false);
   });
 
-  it('should have lost when 3 or more characters are dead', () => {
+  it('should have lost when 2 of the 4 characters are dead', () => {
     const dead = loseHp(makeChar(), 100);
-    const bigTeam: Player = { playerIndex: 0, team: [dead, dead, dead, makeChar(), makeChar()] };
-    expect(hasLost(bigTeam)).toBe(true);
+    const team: Player = { playerIndex: 0, team: [dead, dead, makeChar(), makeChar()] };
+    expect(hasLost(team)).toBe(true);
   });
 
-  it('should not have lost with only 2 dead characters', () => {
+  it('should not have lost with only 1 dead character', () => {
     const dead = loseHp(makeChar(), 100);
-    const bigTeam: Player = { playerIndex: 0, team: [dead, dead, makeChar(), makeChar(), makeChar()] };
-    expect(hasLost(bigTeam)).toBe(false);
+    const team: Player = { playerIndex: 0, team: [dead, makeChar(), makeChar(), makeChar()] };
+    expect(hasLost(team)).toBe(false);
   });
 });

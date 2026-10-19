@@ -89,30 +89,30 @@ describe('Round.service', () => {
 describe('checkWinner', () => {
     const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
     const dead = () => loseHp(makeChar(), 100);
-    const alive5 = () => [makeChar(), makeChar(), makeChar(), makeChar(), makeChar()];
-    const dead3 = () => [dead(), dead(), dead(), makeChar(), makeChar()];
+    const alive4 = () => [makeChar(), makeChar(), makeChar(), makeChar()];
+    const dead2 = () => [dead(), dead(), makeChar(), makeChar()];
 
     it('should return null when neither player has lost', () => {
-        const p1 = createPlayer(alive5(), 0);
-        const p2 = createPlayer(alive5(), 1);
+        const p1 = createPlayer(alive4(), 0);
+        const p2 = createPlayer(alive4(), 1);
         expect(checkWinner(createGameState(p1, p2))).toBeNull();
     });
 
-    it('should return 1 when player 0 has 3+ dead characters', () => {
-        const p1 = createPlayer(dead3(), 0);
-        const p2 = createPlayer(alive5(), 1);
+    it('should return 1 when player 0 has 2+ dead characters', () => {
+        const p1 = createPlayer(dead2(), 0);
+        const p2 = createPlayer(alive4(), 1);
         expect(checkWinner(createGameState(p1, p2))).toBe(1);
     });
 
-    it('should return 0 when player 1 has 3+ dead characters', () => {
-        const p1 = createPlayer(alive5(), 0);
-        const p2 = createPlayer(dead3(), 1);
+    it('should return 0 when player 1 has 2+ dead characters', () => {
+        const p1 = createPlayer(alive4(), 0);
+        const p2 = createPlayer(dead2(), 1);
         expect(checkWinner(createGameState(p1, p2))).toBe(0);
     });
 
-    it('should return draw when both players have 3+ dead characters', () => {
-        const p1 = createPlayer(dead3(), 0);
-        const p2 = createPlayer(dead3(), 1);
+    it('should return draw when both players have 2+ dead characters', () => {
+        const p1 = createPlayer(dead2(), 0);
+        const p2 = createPlayer(dead2(), 1);
         expect(checkWinner(createGameState(p1, p2))).toBe('draw');
     });
 });
