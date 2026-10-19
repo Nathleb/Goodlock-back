@@ -11,7 +11,7 @@ Design: `design.md` in this folder. TDD, one commit per step.
 - [x] 4. Swap by `position.slot`: occupant + empty moves, two empties fizzle, two occupants exchange.
 - [x] 5. Domain placement `placeTeam(player, slots)` replacing `rearrangeTeam`, with validation.
 - [x] 6. Coordinator + gateway: `rearrangeTeam` takes `{ slots }` and delegates to `placeTeam`.
-- [ ] 7. Prisma migration dropping `DeckSlot` rows at position >= 6; schema comment 0..5; applied locally.
+- [x] 7. Prisma migration dropping `DeckSlot` rows at position >= 6; schema comment 0..5; applied locally.
 - [ ] 8. Docs (`CLAUDE.md`, `README.md`, `docs/ROADMAP.md`), feature folder to `implemented/`, memory.
 
 Client follow-up (Goodlock-app): bot keeps 4 and sends `{ slots }`, regenerate `test/fixtures/round_resolved.json`; then forced landscape as its own feature.

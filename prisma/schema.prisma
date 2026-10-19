@@ -52,7 +52,7 @@ model Deck {
 model DeckSlot {
   id          String @id @default(uuid())
   deckId      String
-  position    Int // 0..6, stable slot identity for future items; not a play order
+  position    Int // 0..5, stable slot identity for future items; not a play order
   characterId String // catalog id, validated on write, deliberately not a FK
   deck        Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
