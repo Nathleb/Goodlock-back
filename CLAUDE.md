@@ -102,7 +102,7 @@ Applies to any change touching domain logic, application services, the WebSocket
 
 ### 1. Recover context
 
-Read the memory injected at session start (Claude-Mem observations + `MEMORY.md`). If the task touches past work (an effect, a refactor in progress, a known bug, a pending spec), run `mem-search` and check `docs/superpowers/specs/` and `docs/superpowers/plans/` before proposing anything.
+Read the memory injected at session start (Claude-Mem observations + `MEMORY.md`). If the task touches past work (an effect, a refactor in progress, a known bug, a pending spec), run `mem-search` and check `docs/features/` (`active/` first) before proposing anything.
 
 ### 2. Plan — always, before any code
 
@@ -114,7 +114,11 @@ Work in plan mode. The plan states:
 
 Each step is one testable unit: one failing test, the minimum code, tests green, one commit. A step that touches more than one layer or would take more than ~30 minutes gets split.
 
-Wait for explicit approval. For a feature spanning several commits or sessions, save the approved spec/plan as `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and `docs/superpowers/plans/YYYY-MM-DD-<topic>.md` (existing location, kept for continuity) and update the plan's checkboxes as steps land.
+Wait for explicit approval. For a feature spanning several commits or sessions, save the approved spec and plan as `docs/features/active/YYYY-MM-DD-<topic>/design.md` and `plan.md` and update the plan's checkboxes as steps land. Each file starts with a `**Status:**` line under its title. The folder tells the lifecycle, moved with `git mv` (paths that reference it get updated):
+
+- `active/`: approved, in progress.
+- `implemented/`: shipped; status reads `implemented YYYY-MM-DD`.
+- `superseded/`: replaced by a later feature; status reads `superseded by <path>` with what changed. A spec partly made obsolete stays in `implemented/` and says which part in its status.
 
 ### 3. Implement in TDD
 
@@ -128,6 +132,7 @@ Run `npm run test` then `npm run lint`. Never claim done without passing output.
 
 - State architectural decisions as "Decision: [choice] rather than [alternative] because [reason]." so Claude-Mem captures them.
 - Update the auto-memory: mark the feature's `project_*` entry as done (absolute date, what shipped, what is still pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync. Create the entry if none exists.
+- If the feature has a `docs/features/active/` folder, move it to `implemented/` and set its status lines; move any feature it replaces to `superseded/`.
 - Commit with a conventional message.
 
 ## Subagents
