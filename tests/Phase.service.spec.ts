@@ -2,7 +2,7 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import { SlotIndex, PlayerIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
-import { createPlayer, rearrangeTeam } from "@domain/services/Player.service";
+import { createPlayer, placeTeam } from "@domain/services/Player.service";
 import {
     assertPhase,
     assertNotReady,
@@ -59,30 +59,39 @@ describe('assertPhase', () => {
     });
 });
 
-describe('rearrangeTeam', () => {
-    const player = createPlayer(team1, 0);
-    const names = () => player.team.map(c => c.name);
+describe('placeTeam', () => {
+    // A team of 4 after team preview: slots 0..3, slot 4 empty.
+    const player = createPlayer(team1.slice(0, 4), 0);
+    const [a, b, c, d] = player.team.map(ch => ch.id);
+    const layout = (p: ReturnType<typeof placeTeam>) => [0, 1, 2, 3, 4].map(slot => p.team.find(ch => ch.position.slot === slot)?.id ?? null);
 
-    it('reorders characters according to the given slot order', () => {
-        const reordered = rearrangeTeam(player, [4, 3, 2, 1, 0]);
-        expect(reordered.team.map(c => c.name)).toEqual([...names()].reverse());
+    it('puts each character on its cell and leaves the null cell empty', () => {
+        const placed = placeTeam(player, [null, d, c, b, a]);
+        expect(layout(placed)).toEqual([null, d, c, b, a]);
     });
 
-    it('updates position.slot to match the new index', () => {
-        const reordered = rearrangeTeam(player, [4, 3, 2, 1, 0]);
-        reordered.team.forEach((char, i) => {
-            expect(char.position.slot).toBe(i);
-        });
-    });
-
-    it('identity order leaves the team unchanged', () => {
-        const reordered = rearrangeTeam(player, [0, 1, 2, 3, 4]);
-        expect(reordered.team.map(c => c.name)).toEqual(names());
+    it('keeps the team ordered by slot', () => {
+        const placed = placeTeam(player, [d, null, a, c, b]);
+        expect(placed.team.map(ch => ch.id)).toEqual([d, a, c, b]);
+        expect(placed.team.map(ch => ch.position.slot)).toEqual([0, 2, 3, 4]);
     });
 
     it('does not mutate the original player', () => {
-        rearrangeTeam(player, [4, 3, 2, 1, 0]);
-        expect(player.team.map(c => c.name)).toEqual(names());
+        placeTeam(player, [null, d, c, b, a]);
+        expect(layout(player)).toEqual([a, b, c, d, null]);
+    });
+
+    it.each([
+        ['not an array', 'abc'],
+        ['4 cells', [a, b, c, d]],
+        ['6 cells', [a, b, c, d, null, null]],
+        ['no empty cell', [a, b, c, d, a]],
+        ['two empty cells', [a, b, c, null, null]],
+        ['a duplicate', [a, a, c, d, null]],
+        ['an unknown id', [a, b, c, 'ghost', null]],
+        ['a non-string id', [a, b, c, 4, null]],
+    ])('rejects %s', (_label, slots) => {
+        expect(() => placeTeam(player, slots as unknown as (string | null)[])).toThrow();
     });
 });
 
