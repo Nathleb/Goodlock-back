@@ -10,7 +10,6 @@ Goodlock is the backend for a tactical PvP dice game. Each player brings a deck 
 
 - **Plan mode** (Shift+Tab) enforces planning: no file can be modified until the plan is approved.
 - **Claude-Mem** persists observations across sessions and re-injects relevant context on session start. Query past work with the `mem-search` skill.
-- **Context-Mode** keeps the context window clean by sandboxing verbose tool output (`ctx_execute`, `ctx_batch_execute`, `ctx_search`).
 
 ## Commands
 
@@ -123,7 +122,7 @@ For each step: failing test (red) → minimum code (green) → refactor with tes
 
 ### 4. Verify
 
-Run `npm run test` then `npm run lint` (route full output through Context-Mode). Never claim done without passing output.
+Run `npm run test` then `npm run lint`. Never claim done without passing output.
 
 ### 5. Record
 
@@ -134,13 +133,6 @@ Run `npm run test` then `npm run lint` (route full output through Context-Mode).
 ## Subagents
 
 Use subagents only for: broad codebase searches where only the conclusion matters (`Explore`), an independent review before merging a large feature (`/code-review` or a reviewer agent given the spec + diff), or tasks with no shared state (e.g. mirroring a protocol change in Goodlock-app). TDD implementation stays in the main session, which holds the plan and the conventions.
-
-## Context hygiene (Context-Mode)
-
-- Verbose output (listings, logs, full test runs, external API calls, large files) goes through `ctx_execute` / `ctx_batch_execute`; only the summary enters the conversation.
-- Never read a file longer than 200 lines in full unless editing it; use `ctx_index` + `ctx_search`.
-- Batch multiple searches in one `ctx_batch_execute`.
-- External docs (NestJS, Socket.io): `ctx_fetch_and_index`, not `WebFetch`.
 
 ## Sensitive data
 
