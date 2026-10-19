@@ -35,7 +35,7 @@ serve the phone experience, not the other way around.
   end to end and doubles as the protocol QA.
 - Has: login (runtime server URL), collection, deck editor, an animated Flame Resolve scene (impacts,
   floating numbers, shakes, hit-stop, haptics), an offline demo of a recorded match and a live
-  two-bot match. **Pending: the user's on-device verdict.** Not yet: human input for team preview,
+  two-bot match. **On-device verdict (2026-10-19): positive on the offline demo** (release APK); Flutter + Flame is kept. Not yet: human input for team preview,
   placement and dice (the live screen only watches bots).
 - Backend additions made for it: `sessionStarted { sessionId }` on connect (clients find their seat
   in `room.players` instead of guessing creator=0), and `catalogId` on in-match characters.
