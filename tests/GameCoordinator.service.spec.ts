@@ -56,8 +56,8 @@ const makeRoom = (gameState: typeof baseGs): Room => ({
     roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: true, gameState,
 });
 
-const DECK_P0 = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'] as CatalogId[];
-const DECK_P1 = ['c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9'] as CatalogId[];
+const DECK_P0 = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'] as CatalogId[];
+const DECK_P1 = ['c4', 'c5', 'c6', 'c7', 'c8', 'c9'] as CatalogId[];
 const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false, deckSelections: { p0: DECK_P0, p1: DECK_P1 } };
 const singlePlayerRoom: Room = { ...lobbyRoom, playersId: ['p0'] };
 
@@ -194,7 +194,7 @@ describe('startGame', () => {
     });
 
     it('emits error when a chosen deck references a character the catalog does not have', () => {
-        mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0, p1: [...DECK_P1.slice(0, 6), 'ghost' as CatalogId] } });
+        mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0, p1: [...DECK_P1.slice(0, 5), 'ghost' as CatalogId] } });
         coordinator.startGame(SOCKET_0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
         expect(mockRoom.startGame).not.toHaveBeenCalled();
@@ -204,8 +204,8 @@ describe('startGame', () => {
 // ── team selection ───────────────────────────────────────────────────────────
 
 describe('team selection', () => {
-    const PICK_P0 = ['c6', 'c0', 'c1', 'c2', 'c3'];
-    const PICK_P1 = ['c9', 'c8', 'c7', 'c6', 'c5'];
+    const PICK_P0 = ['c5', 'c0', 'c1', 'c2'];
+    const PICK_P1 = ['c9', 'c8', 'c7', 'c6'];
     const selectingRoom = (gs: GameState): Room => ({ ...makeRoom(gs), playerOrder: ['p0', 'p1'] });
     const fresh = () => createSelectionState([
         DECK_P0.map(id => catalog.get(id)!),
@@ -243,7 +243,7 @@ describe('team selection', () => {
     it("never sends a player the opponent's pick during SELECTION", () => {
         mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
         coordinator.cancelSelection(SOCKET_1); // no-op for p1, must not leak anything either
-        coordinator.confirmSelection(SOCKET_1, ['c3', 'c4', 'c5', 'c6', 'c7']);
+        coordinator.confirmSelection(SOCKET_1, ['c4', 'c5', 'c6', 'c7']);
         for (const payload of sentTo(SOCKET_1)) {
             expect(payload.selection?.myPicks ?? []).not.toEqual(PICK_P0);
             expect(JSON.stringify(payload)).not.toContain('"picks"');
@@ -253,7 +253,7 @@ describe('team selection', () => {
     it.each([
         ['not an array', 'c0'],
         ['non-string ids', [1, 2, 3, 4, 5]],
-        ['an invalid pick', ['c0', 'c0', 'c1', 'c2', 'c3']],
+        ['an invalid pick', ['c0', 'c0', 'c1', 'c2']],
     ])('emits error for %s', (_label, input) => {
         coordinator.confirmSelection(SOCKET_0, input as unknown as string[]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());

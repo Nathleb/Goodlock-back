@@ -2,43 +2,43 @@ import { DECK_SIZE, MAX_DECKS_PER_USER, validateDeck } from '@domain/services/De
 import { CatalogId } from '@shared/branded.types';
 
 const ids = (...xs: string[]) => xs as CatalogId[];
-const SEVEN = ids('a', 'b', 'c', 'd', 'e', 'f', 'g');
+const SIX = ids('a', 'b', 'c', 'd', 'e', 'f');
 const everythingKnownAndOwned = { isKnown: () => true, isOwned: () => true };
 
 describe('deck rules', () => {
-    it('a deck holds 7 characters and a user has at most 5 decks', () => {
-        expect(DECK_SIZE).toBe(7);
+    it('a deck holds 6 characters and a user has at most 5 decks', () => {
+        expect(DECK_SIZE).toBe(6);
         expect(MAX_DECKS_PER_USER).toBe(5);
     });
 });
 
 describe('validateDeck', () => {
-    it('accepts 7 distinct known, owned characters', () => {
-        expect(validateDeck(SEVEN, everythingKnownAndOwned)).toEqual([]);
+    it('accepts 6 distinct known, owned characters', () => {
+        expect(validateDeck(SIX, everythingKnownAndOwned)).toEqual([]);
     });
 
-    it.each([[6], [8], [0]])('rejects a deck of %i characters', (n) => {
+    it.each([[5], [7], [0]])('rejects a deck of %i characters', (n) => {
         const deck = ids(...'abcdefgh'.split('').slice(0, n));
-        expect(validateDeck(deck, everythingKnownAndOwned)).toEqual([expect.stringMatching(/7/)]);
+        expect(validateDeck(deck, everythingKnownAndOwned)).toEqual([expect.stringMatching(/6/)]);
     });
 
     it('rejects duplicates, naming them once', () => {
-        const errors = validateDeck(ids('a', 'a', 'a', 'b', 'c', 'd', 'e'), everythingKnownAndOwned);
+        const errors = validateDeck(ids('a', 'a', 'a', 'b', 'c', 'd'), everythingKnownAndOwned);
         expect(errors).toEqual([expect.stringContaining('"a"')]);
     });
 
     it('rejects ids the catalog does not know', () => {
-        const errors = validateDeck(SEVEN, { isKnown: id => id !== 'c', isOwned: () => true });
+        const errors = validateDeck(SIX, { isKnown: id => id !== 'c', isOwned: () => true });
         expect(errors).toEqual([expect.stringContaining('"c"')]);
     });
 
     it('rejects characters the user does not own', () => {
-        const errors = validateDeck(SEVEN, { isKnown: () => true, isOwned: id => id !== 'g' });
-        expect(errors).toEqual([expect.stringContaining('"g"')]);
+        const errors = validateDeck(SIX, { isKnown: () => true, isOwned: id => id !== 'f' });
+        expect(errors).toEqual([expect.stringContaining('"f"')]);
     });
 
     it('does not report an unknown id as also unowned', () => {
-        const errors = validateDeck(SEVEN, { isKnown: id => id !== 'c', isOwned: id => id !== 'c' });
+        const errors = validateDeck(SIX, { isKnown: id => id !== 'c', isOwned: id => id !== 'c' });
         expect(errors).toHaveLength(1);
     });
 

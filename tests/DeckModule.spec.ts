@@ -27,7 +27,7 @@ describe('DeckModule', () => {
 
         const created = prisma.deck.create.mock.calls[0][0].data;
         expect(created.userId).toBe('u1');
-        expect(created.slots.create.map((s: { characterId: string }) => s.characterId)).toEqual(allIds.slice(0, 7));
+        expect(created.slots.create.map((s: { characterId: string }) => s.characterId)).toEqual(allIds.slice(0, 6));
 
         await module.close();
     });

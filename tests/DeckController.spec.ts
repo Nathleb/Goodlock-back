@@ -10,7 +10,7 @@ class AllowAllGuard { canActivate(_ctx: ExecutionContext) { return true; } }
 
 const mockCoordinator = { list: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() };
 const request = (sub: string) => ({ user: { sub, username: 'u' } }) as never;
-const body = { name: 'Aggro', characterIds: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] };
+const body = { name: 'Aggro', characterIds: ['a', 'b', 'c', 'd', 'e', 'f'] };
 const DECK: DeckDTO = { id: 'd1', ...body, createdAt: '2026-10-12T10:00:00.000Z', updatedAt: '2026-10-12T10:00:00.000Z' };
 
 let controller: DeckController;
@@ -70,9 +70,9 @@ describe('SaveDeckDto through the global ValidationPipe', () => {
     });
 
     it.each([
-        ['6 ids', { ...body, characterIds: body.characterIds.slice(0, 6) }],
-        ['8 ids', { ...body, characterIds: [...body.characterIds, 'h'] }],
-        ['non-string id', { ...body, characterIds: [1, 2, 3, 4, 5, 6, 7] }],
+        ['5 ids', { ...body, characterIds: body.characterIds.slice(0, 5) }],
+        ['7 ids', { ...body, characterIds: [...body.characterIds, 'g'] }],
+        ['non-string id', { ...body, characterIds: [1, 2, 3, 4, 5, 6] }],
         ['missing name', { characterIds: body.characterIds }],
         ['unknown field', { ...body, userId: 'someone-else' }],
     ])('rejects %s', async (_label, value) => {

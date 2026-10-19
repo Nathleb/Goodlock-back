@@ -5,7 +5,7 @@
 Design: `design.md` in this folder. TDD, one commit per step.
 
 - [x] 0. Feature docs (this folder).
-- [ ] 1. Sizes: `DECK_SIZE = 6`, `TEAM_SIZE = 4` (`src/domain/services/Deck.service.ts`); DTO validation and starter deck follow the constants.
+- [x] 1. Sizes: `DECK_SIZE = 6`, `TEAM_SIZE = 4` (`src/domain/services/Deck.service.ts`); DTO validation and starter deck follow the constants.
 - [ ] 2. Defeat: `hasLost` at 2 dead (`LOSS_DEATHS`).
 - [ ] 3. Board: `BOARD_SIZE = 5` shared by target resolution; `createPlayer` puts the 4 characters on slots 0..3, slot 4 empty.
 - [ ] 4. Swap by `position.slot`: occupant + empty moves, two empties fizzle, two occupants exchange.

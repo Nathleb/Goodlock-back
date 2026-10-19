@@ -113,9 +113,9 @@ describe('handleConnect — started game reconnect', () => {
 describe('handleConnect — reconnect before combat keeps secrets', () => {
     const factory = buildEffectFactory();
     const build = (t: ReturnType<typeof testTemplate>) => createCharacterFromTemplate(t, factory);
-    const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
-    const PICK_P0 = ['a0', 'a1', 'a2', 'a3', 'a4'] as CatalogId[];
-    const PICK_P1 = ['b6', 'b5', 'b4', 'b3', 'b2'] as CatalogId[];
+    const deck = (p: string) => Array.from({ length: 6 }, (_, i) => testTemplate(`${p}${i}`));
+    const PICK_P0 = ['a0', 'a1', 'a2', 'a3'] as CatalogId[];
+    const PICK_P1 = ['b5', 'b4', 'b3', 'b2'] as CatalogId[];
     const reconnectInto = (gameState: GameState) => {
         const room: Room = { ...STARTED_ROOM, gameState, deckSelections: { p0: [], p1: [] } };
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
@@ -133,7 +133,7 @@ describe('handleConnect — reconnect before combat keeps secrets', () => {
 
         expect(snapshot.phase).toBe('SELECTION_PHASE');
         expect(snapshot.selection.myPicks).toBeNull();
-        expect(snapshot.selection.decks[1]).toHaveLength(7);
+        expect(snapshot.selection.decks[1]).toHaveLength(6);
         expect(JSON.stringify(snapshot)).not.toContain('"picks"');
         expect(snapshot.players[1].team).toEqual([]);
     });
@@ -144,9 +144,9 @@ describe('handleConnect — reconnect before combat keeps secrets', () => {
         const snapshot = reconnectInto(placing);
 
         expect(snapshot.phase).toBe('PLACEMENT_PHASE');
-        expect(snapshot.players[0].team).toHaveLength(5);
+        expect(snapshot.players[0].team).toHaveLength(4);
         expect(snapshot.players[1].team).toEqual([]);
-        expect(JSON.stringify(snapshot)).not.toContain('Name-b6');
+        expect(JSON.stringify(snapshot)).not.toContain('Name-b5');
     });
 });
 

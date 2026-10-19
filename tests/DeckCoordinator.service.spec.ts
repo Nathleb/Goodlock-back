@@ -7,7 +7,7 @@ import { makeTestCatalog } from './helpers/catalog';
 
 const ALICE = 'alice' as UserId;
 const BOB = 'bob' as UserId;
-const SEVEN = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
+const SIX = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'];
 
 /** In-memory DeckPort: enough behaviour to test the coordinator's rules. */
 class FakeDeckPort implements DeckPort {
@@ -36,7 +36,7 @@ let owned: Set<string>;
 let coordinator: DeckCoordinatorService;
 
 const collection = { ownedIds: jest.fn(async () => owned as unknown as ReadonlySet<CatalogId>) };
-const save = (name: string, characterIds: string[] = SEVEN) => ({ name, characterIds });
+const save = (name: string, characterIds: string[] = SIX) => ({ name, characterIds });
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -47,12 +47,12 @@ beforeEach(() => {
 
 describe('list', () => {
     it("returns only the user's decks, as DTOs", async () => {
-        await decks.create(ALICE, { name: 'Mine', characterIds: SEVEN as CatalogId[] });
-        await decks.create(BOB, { name: 'Theirs', characterIds: SEVEN as CatalogId[] });
+        await decks.create(ALICE, { name: 'Mine', characterIds: SIX as CatalogId[] });
+        await decks.create(BOB, { name: 'Theirs', characterIds: SIX as CatalogId[] });
 
         const { decks: list } = await coordinator.list(ALICE);
 
-        expect(list).toEqual([{ id: 'd0', name: 'Mine', characterIds: SEVEN, createdAt: '2026-10-12T10:00:00.000Z', updatedAt: '2026-10-12T10:00:00.000Z' }]);
+        expect(list).toEqual([{ id: 'd0', name: 'Mine', characterIds: SIX, createdAt: '2026-10-12T10:00:00.000Z', updatedAt: '2026-10-12T10:00:00.000Z' }]);
     });
 });
 
@@ -60,13 +60,13 @@ describe('create', () => {
     it('saves a valid deck with a trimmed name', async () => {
         const dto = await coordinator.create(ALICE, save('  Aggro  '));
         expect(dto.name).toBe('Aggro');
-        expect(dto.characterIds).toEqual(SEVEN);
+        expect(dto.characterIds).toEqual(SIX);
         expect(collection.ownedIds).toHaveBeenCalledWith(ALICE);
     });
 
     it('rejects an invalid composition with every reason', async () => {
-        owned.delete('c6');
-        const attempt = coordinator.create(ALICE, save('Bad', ['c0', 'c0', 'c1', 'ghost', 'c6']));
+        owned.delete('c5');
+        const attempt = coordinator.create(ALICE, save('Bad', ['c0', 'c0', 'c1', 'ghost', 'c5']));
         await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
         await attempt.catch((e: BadRequestException) => {
             const messages = (e.getResponse() as { message: string[] }).message;
@@ -89,7 +89,7 @@ describe('create', () => {
 describe('update', () => {
     it('replaces name and characters', async () => {
         const { id } = await coordinator.create(ALICE, save('Old'));
-        const swapped = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7'];
+        const swapped = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
 
         const dto = await coordinator.update(ALICE, id as DeckId, save('New', swapped));
 
@@ -137,7 +137,7 @@ describe('delete', () => {
 describe('getOwnDeckCharacterIds', () => {
     it("returns the deck's characters for its owner", async () => {
         const { id } = await coordinator.create(ALICE, save('Mine'));
-        await expect(coordinator.getOwnDeckCharacterIds(ALICE, id as DeckId)).resolves.toEqual(SEVEN);
+        await expect(coordinator.getOwnDeckCharacterIds(ALICE, id as DeckId)).resolves.toEqual(SIX);
     });
 
     it("answers 404 for someone else's deck", async () => {
@@ -147,11 +147,11 @@ describe('getOwnDeckCharacterIds', () => {
 });
 
 describe('ensureStarterDeck', () => {
-    it('creates a starter deck from the first 7 catalog ids, sorted', async () => {
+    it('creates a starter deck from the first 6 catalog ids, sorted', async () => {
         await coordinator.ensureStarterDeck(ALICE);
         const { decks: list } = await coordinator.list(ALICE);
         expect(list).toHaveLength(1);
-        expect(list[0].characterIds).toEqual(SEVEN);
+        expect(list[0].characterIds).toEqual(SIX);
     });
 
     it('does nothing when the user already has a deck', async () => {

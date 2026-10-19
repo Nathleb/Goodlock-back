@@ -12,18 +12,18 @@ const factory = buildEffectFactory();
 const build = (t: CharacterTemplate) => createCharacterFromTemplate(t, factory);
 const ids = (...xs: string[]) => xs as CatalogId[];
 
-const deck = (prefix: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${prefix}${i}`));
+const deck = (prefix: string) => Array.from({ length: 6 }, (_, i) => testTemplate(`${prefix}${i}`));
 const DECK_0 = deck('a');
 const DECK_1 = deck('b');
-const PICK_0 = ids('a6', 'a0', 'a1', 'a2', 'a3');
-const PICK_1 = ids('b0', 'b1', 'b2', 'b3', 'b4');
+const PICK_0 = ids('a5', 'a0', 'a1', 'a2');
+const PICK_1 = ids('b0', 'b1', 'b2', 'b3');
 
 let gs: GameState;
 beforeEach(() => { gs = createSelectionState([DECK_0, DECK_1]); });
 
 describe('createSelectionState', () => {
     it('starts in SELECTION with both decks revealed, no picks and empty teams', () => {
-        expect(TEAM_SIZE).toBe(5);
+        expect(TEAM_SIZE).toBe(4);
         expect(gs.phase).toBe(GamePhase.SELECTION);
         expect(gs.selection?.decks[0].map(t => t.id)).toEqual(DECK_0.map(t => t.id));
         expect(gs.selection?.picks).toEqual([null, null]);
@@ -50,7 +50,7 @@ describe('confirmSelection', () => {
         expect(next.playersReady).toEqual([false, false]);
         expect(next.players[0].team.map(c => c.catalogId)).toEqual(PICK_0);
         expect(next.players[1].team.map(c => c.catalogId)).toEqual(PICK_1);
-        expect(next.players[0].team.map(c => c.position)).toEqual([0, 1, 2, 3, 4].map(slot => ({ playerIndex: 0, slot })));
+        expect(next.players[0].team.map(c => c.position)).toEqual([0, 1, 2, 3].map(slot => ({ playerIndex: 0, slot })));
         expect(next.players[1].team[0].position.playerIndex).toBe(1);
     });
 
@@ -64,11 +64,11 @@ describe('confirmSelection', () => {
     });
 
     it.each([
-        ['4 characters', ids('a0', 'a1', 'a2', 'a3')],
-        ['6 characters', ids('a0', 'a1', 'a2', 'a3', 'a4', 'a5')],
-        ['a duplicate', ids('a0', 'a0', 'a1', 'a2', 'a3')],
-        ["a character from the opponent's deck", ids('b0', 'a1', 'a2', 'a3', 'a4')],
-        ['an unknown character', ids('zz', 'a1', 'a2', 'a3', 'a4')],
+        ['3 characters', ids('a0', 'a1', 'a2')],
+        ['5 characters', ids('a0', 'a1', 'a2', 'a3', 'a4')],
+        ['a duplicate', ids('a0', 'a0', 'a1', 'a2')],
+        ["a character from the opponent's deck", ids('b0', 'a1', 'a2', 'a3')],
+        ['an unknown character', ids('zz', 'a1', 'a2', 'a3')],
     ])('rejects a pick with %s, leaving state untouched', (_label, pick) => {
         expect(() => confirmSelection(gs, 0, pick, build)).toThrow();
         expect(gs.selection?.picks).toEqual([null, null]);
