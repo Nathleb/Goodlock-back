@@ -110,6 +110,30 @@ describe('an empty cell', () => {
         const s = holed();
         expect(new Shield(3).solve(s, [pos(0, 4)], occupant(s, 0, 0)!.id).affected).toEqual([]);
     });
+
+    it.each([
+        ['occupied cell first', [1, 4]],
+        ['empty cell first', [4, 1]],
+    ])('Swap moves the character into it, leaving its old cell empty (%s)', (_label, [x, y]) => {
+        const s = holed();
+        const mover = occupant(s, 1, 1)!;
+        const { state, affected } = new Swap().solve(s, [pos(1, x), pos(1, y)], occupant(s, 0, 0)!.id);
+        expect(occupant(state, 1, 4)!.id).toBe(mover.id);
+        expect(occupant(state, 1, 1)).toBeUndefined();
+        expect(state.players[1].team).toHaveLength(4);
+        expect(affected).toEqual([mover.id]);
+    });
+
+    it('Swap keeps the team ordered by slot after a move', () => {
+        const s = holed();
+        const { state } = new Swap().solve(s, [pos(0, 0), pos(0, 4)], occupant(s, 0, 1)!.id);
+        expect(state.players[0].team.map(c => c.position.slot)).toEqual([1, 2, 3, 4]);
+    });
+
+    it('Swap fizzles when both cells are empty', () => {
+        const s = holed();
+        expect(new Swap().solve(s, [pos(0, 4), pos(0, 4)], occupant(s, 0, 0)!.id)).toEqual({ state: s, affected: [] });
+    });
 });
 
 describe('Heal', () => {
