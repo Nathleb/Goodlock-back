@@ -7,11 +7,8 @@ with automatic targeting.
 
 - **Backend** (`Goodlock-back`, this repo): NestJS + Socket.io. Live game state is **in-memory**;
   Postgres (via Prisma) stores auth (users, refresh tokens) and player data (owned characters, decks).
-- **Mobile client — prototype** (`Goodlock-app`, sibling repo): **Flutter + Flame**, started Oct 2026
-  to replace the React client. See its `CLAUDE.md`; `dart run tool/bot_match.dart` plays a full
-  match against this backend.
-- **Legacy frontend** (`Goodlock-frontend`, sibling repo): React + Vite + Capacitor. **Behind the
-  current protocol** (no team preview, no deck choice); kept until the Flutter client is adopted.
+- **Mobile client** (`Goodlock-app`, sibling repo): **Flutter + Flame** (prototype, Oct 2026). See
+  its `CLAUDE.md`; `dart run tool/bot_match.dart` plays a full match against this backend.
 
 > Roadmap & direction: [`docs/ROADMAP.md`](docs/ROADMAP.md) (mobile-first, to v1.0).
 > Architecture & conventions: [`CLAUDE.md`](CLAUDE.md).
@@ -22,7 +19,6 @@ This document assumes both repos sit side by side:
 projects/
   Goodlock-back/      # this repo
   Goodlock-app/       # Flutter + Flame client (prototype)
-  Goodlock-frontend/  # legacy React client
 ```
 
 ---
@@ -32,7 +28,7 @@ projects/
 - **Node.js 20+** and npm
 - **Docker** + Docker Compose (for the Postgres database). On WSL2 with Docker Desktop, start
   Docker Desktop first so the `docker` CLI and WSL integration are available.
-- For **Android builds only**: a JDK (17 or 21) and the Android SDK (see [Mobile](#mobile-android)).
+- For the **client**: the Flutter SDK and the Android SDK (see [Client](#2-client-goodlock-app-flutter--flame)).
 
 ---
 
@@ -75,57 +71,11 @@ npm run lint         # eslint --fix
 and optional `CORS_ORIGIN` (omit to allow all origins).
 
 > Note: game state lives in memory in the `Manager` classes — restarting the backend wipes all
-> rooms and in-progress games. Only `User`/`RefreshToken` are persisted.
+> rooms and in-progress games. Only auth and player data (users, tokens, collection, decks) are persisted.
 
 ---
 
-## 2. Frontend (`Goodlock-frontend`)
-
-```bash
-cd Goodlock-frontend
-npm install
-npm run dev          # Vite dev server → http://localhost:5173
-```
-
-The client reads the backend URL from env (defaults to `http://localhost:3000`):
-
-| Var            | Default                 | Purpose                  |
-|----------------|-------------------------|--------------------------|
-| `VITE_API_URL` | `http://localhost:3000` | REST (auth)              |
-| `VITE_WS_URL`  | `http://localhost:3000` | Socket.io (game)         |
-
-```bash
-# Example: point at a different backend
-VITE_API_URL=http://192.168.1.50:3000 VITE_WS_URL=http://192.168.1.50:3000 npm run dev
-```
-
----
-
-## 3. Play a local match (two players)
-
-1. Backend running (step 1) and frontend running (step 2).
-2. Open `http://localhost:5173` in a **normal window** and again in an **incognito/private
-   window** (two separate sessions — two tabs in the same browser may share one).
-3. Register/log in on each.
-4. In one window create a room; in the other join with the room code.
-5. Start the game and play through the phases (Placement → Roll → Keep → Assign → Resolve →
-   Result).
-
----
-
-## 4. Tests
-
-```bash
-# Backend
-cd Goodlock-back && npm test
-
-# Frontend (vitest harness is being re-stood up; see ROADMAP Phase 0)
-cd Goodlock-frontend && npm test   # once configured
-```
-
----
-
-## Mobile — Flutter client (prototype, `Goodlock-app`)
+## 2. Client (`Goodlock-app`, Flutter + Flame)
 
 Requires the Flutter SDK (`~/development/flutter`, on `PATH`) and the Android SDK with platform
 `android-36` + `build-tools;36.0.0`.
@@ -137,42 +87,25 @@ dart run tool/bot_match.dart --server http://localhost:3000   # end-to-end: two 
 flutter build apk --debug                      # build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-One APK works with any backend: the server URL is entered on the login screen (*Serveur*) and
-remembered. To reach the backend from a phone, use the cloudflared tunnel below and paste its
-`https://…trycloudflare.com` URL. The *Démo Resolve hors ligne* button needs no server at all.
+The server URL is entered on the login screen (*Serveur*) and remembered; a default can be baked
+at build time with `--dart-define=SERVER_URL=<url>`. The *Démo Resolve hors ligne* button needs no
+server at all. See the app's own `CLAUDE.md` for details.
 
-## Mobile — legacy React client (Android)
+---
 
-Goodlock is **mobile-first**; the Android build is the primary distribution target. iOS is
-deferred (requires a Mac for signing).
-
-### One-time setup
-
-- A JDK on `PATH` (JDK 17 or 21; the `android/` Gradle wrapper is pinned to 8.7 for JDK-21
-  compatibility).
-- Android SDK (command-line tools). With the SDK installed, point Gradle at it via
-  `android/local.properties` (gitignored):
-  ```
-  sdk.dir=/absolute/path/to/Android/Sdk
-  ```
-  and ensure platform `android-34` + `build-tools;34.0.0` are installed.
-
-### Build an installable APK
+## 3. Tests
 
 ```bash
-cd Goodlock-frontend
-npm run android:apk
-# → android/app/build/outputs/apk/debug/app-debug.apk
+cd Goodlock-back && npm test    # backend (Jest)
+cd Goodlock-app && flutter test # client
 ```
 
-`android:apk` = build web → `cap sync android` → `gradlew assembleDebug`.
+---
 
-The backend URL is baked at build time, so build with the URL the **phone** can reach (not
-`localhost`):
+## Mobile (Android)
 
-```bash
-VITE_API_URL=<backend-url> VITE_WS_URL=<backend-url> npm run android:apk
-```
+Goodlock is **mobile-first**; Android is the primary distribution target. iOS is deferred
+(requires a Mac for signing).
 
 ### Letting the phone reach the backend (dev)
 
@@ -187,18 +120,8 @@ cloudflared tunnel --url http://localhost:3000
 # → copy the printed https://<random>.trycloudflare.com URL
 ```
 
-Then build the APK pointed at that URL and install it on the phone (enable "install from
-unknown sources"):
-
-```bash
-VITE_API_URL=https://<random>.trycloudflare.com \
-VITE_WS_URL=https://<random>.trycloudflare.com \
-npm run android:apk
-```
-
-> The free tunnel URL changes each run, so the APK is rebuilt per session. A planned
-> improvement (ROADMAP Phase 0) makes the server URL settable at runtime on the phone so one
-> APK works across sessions.
+Install the APK on the phone (enable "install from unknown sources") and paste the tunnel URL
+into the login screen's server field.
 
 ---
 
@@ -216,11 +139,6 @@ Goodlock-back/
   tests/             # Jest specs mirroring src/
   docker-compose.yml # Postgres
   Dockerfile         # app container
-
-Goodlock-frontend/
-  src/               # React app (game phases, services, dtos)
-  android/           # Capacitor Android native project (committed)
-  capacitor.config.ts
 ```
 
 ---
@@ -231,9 +149,6 @@ Goodlock-frontend/
   the `POSTGRES_*` values? (`docker compose ps` to check the container.)
 - **Prisma "migrations" / client errors** — re-run `npx prisma migrate deploy && npx prisma
   generate`.
-- **Phone shows a blank screen / can't connect** — the APK's baked URL must be reachable from
-  the phone (use the tunnel URL, not `localhost`); confirm the backend and tunnel are both up.
-- **Android build fails on JDK** — the wrapper is pinned to Gradle 8.7 (JDK 21 OK). If you see
-  "Unsupported class file major version", confirm `android/gradle/wrapper/gradle-wrapper.properties`
-  uses `gradle-8.7-all.zip`.
+- **Phone can't connect** — the server URL on the login screen must be reachable from the phone
+  (use the tunnel URL, not `localhost`); confirm the backend and tunnel are both up.
 - **Restarted backend, game vanished** — expected: game state is in-memory by design.

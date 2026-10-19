@@ -18,10 +18,10 @@ the input for the roadmap's open decision on scaling (Phase 4); nothing here is 
 | Collection, decks | Postgres | Yes |
 | Character catalog | Loaded from `tmplt/` at boot, read-only | Yes — every instance loads the same build |
 
-Transport: the frontend uses Socket.io defaults (`io(WS_URL, { auth, reconnection… })`, no
-`transports` option), so each connection **starts on HTTP long-polling and then upgrades to
-WebSocket**. With more than one instance behind a load balancer, the polling phase requires
-**sticky sessions**, independently of any game-state question.
+Transport: the Flutter client (`Goodlock-app`, `lib/net/game_socket.dart`) connects with
+`transports: ['websocket']`, so there is no HTTP long-polling phase and no sticky sessions are
+needed just to hold a connection. (The deleted React client used Socket.io defaults, which start
+on long-polling and need sticky sessions behind a load balancer.)
 
 ## Why "just add Redis" is two different things
 
@@ -50,11 +50,8 @@ progress**. Mitigations, in order of cost:
 - deploy at low-traffic times, and tell clients a maintenance is coming.
 
 ### Stage 1 — cheap preparation (worth doing early)
-- Client: `transports: ['websocket']` to drop the long-polling phase, so no sticky sessions are needed
-  just to hold a connection. Check first that every target network allows WebSockets — and the dev
-  setup: the early HTML test client had to force polling because Firefox under WSL2 could not upgrade
-  to WebSocket from a cross-origin page. Verify on the Capacitor build and in the browser dev loop
-  before switching (or switch for the device build only).
+- ~~Client: `transports: ['websocket']`~~ (done in the Flutter client). Check that every target
+  network allows WebSockets.
 - Keep all state access behind `RoomPort` / `SessionPort` (already the case).
 - Add the metrics above (Phase 4 observability).
 

@@ -128,12 +128,12 @@ Run `npm run test` then `npm run lint` (route full output through Context-Mode).
 ### 5. Record
 
 - State architectural decisions as "Decision: [choice] rather than [alternative] because [reason]." so Claude-Mem captures them.
-- Update the auto-memory: mark the feature's `project_*` entry as done (absolute date, what shipped, what is still pending, e.g. frontend follow-up) and keep its `MEMORY.md` line in sync. Create the entry if none exists.
+- Update the auto-memory: mark the feature's `project_*` entry as done (absolute date, what shipped, what is still pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync. Create the entry if none exists.
 - Commit with a conventional message.
 
 ## Subagents
 
-Use subagents only for: broad codebase searches where only the conclusion matters (`Explore`), an independent review before merging a large feature (`/code-review` or a reviewer agent given the spec + diff), or tasks with no shared state (e.g. mirroring a protocol change in Goodlock-frontend). TDD implementation stays in the main session, which holds the plan and the conventions.
+Use subagents only for: broad codebase searches where only the conclusion matters (`Explore`), an independent review before merging a large feature (`/code-review` or a reviewer agent given the spec + diff), or tasks with no shared state (e.g. mirroring a protocol change in Goodlock-app). TDD implementation stays in the main session, which holds the plan and the conventions.
 
 ## Context hygiene (Context-Mode)
 
