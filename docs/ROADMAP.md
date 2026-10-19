@@ -1,6 +1,9 @@
 # Goodlock — Roadmap to v1.0 (mobile-first)
 
 **North star:** a tactical PvP dice game you play on your phone.
+**Backlog:** this roadmap is the only backlog (the old `BACKLOG.md` was folded into it on
+2026-10-20). Deferred work goes in the phase it belongs to, open questions under *Open decisions*.
+
 **v1.0 target:** a signed, **installable build** (sideload / TestFlight) that two strangers can
 download and play a full match on real devices. *Store submission is out of scope for v1.0.*
 
@@ -69,7 +72,8 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 
 ### Phase 1 — Matchmaking (two strangers can actually play)
 - Backend: a **quick-match queue** on top of the existing room system (in-memory queue manager,
-  consistent with the architecture); keep room-codes for friends.
+  consistent with the architecture); keep room-codes for friends. A found match starts the game
+  by itself (today the room owner sends `startGame`).
 - Client: mobile lobby with "Quick Match" + "Play with a friend (code)".
 - Polished **game-over → rematch / back-to-lobby** flow (mobile-shaped).
 - **Exit:** tap Quick Match on two phones → matched → full game → rematch, all on device.
@@ -111,6 +115,7 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 ### Phase 5 — v1.0 (installable launch)
 - First-run onboarding/tutorial (mobile-shaped), app icon + splash, content pass (10 placeholder
   characters today; with decks of 6 and a pick of 4 the roster needs depth and real balance).
+  `Character.modifiers` exists in the type but no modifier effect is implemented yet.
 - Produce the **signed installable build** (sideload / TestFlight) — the agreed v1.0 target.
 - Beta with real users on real phones; fix what they hit.
 - **Exit:** v1.0 installable build, validated by external testers on their own devices.

@@ -9,7 +9,8 @@ with automatic targeting.
   Postgres (via Prisma) stores auth (users, refresh tokens) and player data (owned characters, decks).
 - **Mobile client** (`Goodlock-app`, sibling repo): **Flutter + Flame** (prototype, Oct 2026). See
   its `CLAUDE.md`; `dart run tool/bot_match.dart` plays a full match against this backend.
-  Phone dev loop (Wi-Fi debugging, hot reload, LAN access to this backend): `Goodlock-app/docs/DEVELOPMENT.md`.
+  Phone dev loop (Wi-Fi debugging, hot reload, LAN access to this backend): `Goodlock-app/docs/DEVELOPMENT.md`,
+  driven by `Goodlock-app/tool/phone.sh` (`pair`, `connect`, `run`).
 
 > Roadmap & direction: [`docs/ROADMAP.md`](docs/ROADMAP.md) (mobile-first, to v1.0).
 > Architecture & conventions: [`CLAUDE.md`](CLAUDE.md).
