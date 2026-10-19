@@ -18,9 +18,11 @@ serve the phone experience, not the other way around.
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
   bracket, then base speed, random tiebreak). 10 character templates (placeholder balance).
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
-  boot; `UserCharacter` ownership (grant-all for now); decks of **7**, max 5 per user, starter deck;
+  boot; `UserCharacter` ownership (grant-all for now); decks of **6**, max 5 per user, starter deck;
   in a room each player picks a deck, then **team preview**: both decks revealed, each secretly keeps
-  **5**; the opponent's picks stay hidden until the first ROLL.
+  **4**; the opponent's picks stay hidden until the first ROLL.
+- **Four of six** (Oct 19 2026): deck 6, keep 4, 5-cell board with one empty cell chosen at placement
+  (Swap moves into it), defeat at 2 dead. See `docs/features/implemented/2026-10-19-four-of-six/`.
 - Phases: SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT. WS protocol: 13 gateway events.
   REST: `auth/*`, `rooms`, `collection`, `decks`.
 - Auth: JWT access + refresh tokens. Postgres via Prisma holds auth + player data (`UserCharacter`,
@@ -108,7 +110,7 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 
 ### Phase 5 — v1.0 (installable launch)
 - First-run onboarding/tutorial (mobile-shaped), app icon + splash, content pass (10 placeholder
-  characters today; with decks of 7 and a pick of 5 the roster needs depth and real balance).
+  characters today; with decks of 6 and a pick of 4 the roster needs depth and real balance).
 - Produce the **signed installable build** (sideload / TestFlight) — the agreed v1.0 target.
 - Beta with real users on real phones; fix what they hit.
 - **Exit:** v1.0 installable build, validated by external testers on their own devices.

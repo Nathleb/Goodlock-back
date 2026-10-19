@@ -1,6 +1,6 @@
 # Four of six: deck of 6, team of 4, a 5-cell board with one empty cell — design
 
-**Status:** approved 2026-10-19
+**Status:** implemented 2026-10-19 (client follow-up pending in Goodlock-app)
 
 ## Rules
 

@@ -1,8 +1,8 @@
 # Goodlock
 
-Backend for a tactical PvP dice game. Each player brings a deck of 7 characters, keeps 5 after
-seeing the opponent's deck (team preview), and fields them as a team of 5 (each character is a
-6-faced die). Each round players roll and lock dice, then every action resolves in priority order
+Backend for a tactical PvP dice game. Each player brings a deck of 6 characters, keeps 4 after
+seeing the opponent's deck (team preview), and lays them out on a 5-cell board with one cell left
+empty (each character is a 6-faced die). Two dead characters lose the match. Each round players roll and lock dice, then every action resolves in priority order
 with automatic targeting.
 
 - **Backend** (`Goodlock-back`, this repo): NestJS + Socket.io. Live game state is **in-memory**;
