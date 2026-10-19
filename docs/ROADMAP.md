@@ -5,7 +5,7 @@
 download and play a full match on real devices. *Store submission is out of scope for v1.0.*
 
 **Guiding principle — mobile is always prioritized.** Every feature is "done" only when it
-works on a real-device build: touch-first UX, portrait layout, ≥44px targets, no hover
+works on a real-device build: touch-first UX, forced landscape layout, ≥44px targets, no hover
 dependence, resilient to backgrounding and flaky networks. The online PvP plumbing exists to
 serve the phone experience, not the other way around.
 
@@ -60,7 +60,7 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
   phases (team preview, placement, dice keep) and a real lobby in `Goodlock-app`.
 - ~~Backend side: apply the Oct 2026 migrations and run a two-client QA~~ (done Oct 13: migrations applied, no schema drift; REST rules and full bot matches verified).
 - Keep the **build → installable APK** step repeatable (`flutter build apk`; iOS needs a Mac — see Risks).
-- Portrait layout on phone sizes: safe-area insets (notch), touch targets ≥44px.
+- ~~Forced landscape~~ (done Oct 19 2026: whole app, board in two facing columns). Still: safe-area insets (notch) on real phones, touch targets ≥44px.
 - **Reconnection hardening for mobile:** verify session reconnect survives app
   background/foreground (Flutter `AppLifecycleState`) and network flaps. Phones drop connections
   constantly; this is non-negotiable.
