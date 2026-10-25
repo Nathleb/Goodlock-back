@@ -4,258 +4,84 @@
 
 ## Goal
 
-Add persistent user identity to Goodlock. A user registers and logs in via HTTP, receives a JWT pair, and connects to the WebSocket game server using that JWT. The current ephemeral `deviceIdentifier` reconnection mechanism is replaced by `userId`.
+Persistent user identity. A user registers and logs in over HTTP, receives an access JWT and an opaque refresh token, and connects to the WebSocket game server with the access JWT. The session is keyed by `userId`, which is what makes a reconnect land on the same player.
 
-## Scope
-
-This is the first sub-project in a larger account/collection platform. It delivers:
-- User registration and login (HTTP)
-- JWT access + refresh token pair with rotation
-- Authenticated WebSocket connection
-- GDPR baseline: right to access (`GET /auth/me`), right to erasure (`DELETE /auth/account`)
-
-Collection, character ownership, and other meta-game features are out of scope for this sub-project.
-
----
+Out of scope for this feature: character ownership and the meta game (see the collection and decks specs, which build on it).
 
 ## Architecture
 
 Two transports, one identity:
 
 ```
-HTTP  POST /auth/register  →  creates User, returns JWT pair
-HTTP  POST /auth/login     →  validates credentials, returns JWT pair
-HTTP  POST /auth/refresh   →  rotates refresh token, returns new JWT pair
-HTTP  POST /auth/logout    →  invalidates refresh token
-HTTP  GET  /auth/me        →  returns own profile (GDPR: right to access)
-HTTP  DELETE /auth/account →  hard-deletes account (GDPR: right to erasure)
+HTTP  POST   /auth/register  -> creates User, returns { accessToken, refreshToken }
+HTTP  POST   /auth/login     -> validates credentials, returns a token pair
+HTTP  POST   /auth/refresh   -> rotates the refresh token, returns a new pair
+HTTP  POST   /auth/logout    -> deletes the given refresh token (204)
+HTTP  GET    /auth/me        -> own profile (GDPR: right to access)
+HTTP  DELETE /auth/account   -> hard-deletes the account (GDPR: right to erasure, 204)
 
 WS    connect({ auth: { token: <accessToken> } })
-      → gateway validates JWT, extracts userId, creates/reconnects session
+      -> gateway verifies the JWT, extracts userId, creates or re-binds the session
 ```
 
-**Key principle:** The access token is sent on every WS connection. The refresh token is only sent to `POST /auth/refresh`. Two separate JWT secrets ensure a refresh token cannot masquerade as an access token.
+The access token is sent on every WS connection. The refresh token is only ever sent to `/auth/refresh` and `/auth/logout`. `logout`, `me` and `account` require a valid access token (`JwtAccessGuard`, `Authorization: Bearer ...`).
 
-**New NestJS modules:**
-- `PrismaModule` (global) — wraps PrismaClient, injectable everywhere
-- `AuthModule` — `AuthController` + `AuthCoordinatorService` + `JwtModule`
+Decision: the refresh token is an opaque random string (64 random bytes, hex) stored hashed, rather than a second JWT, because it carries no claims and a leaked database row cannot be replayed. There is a single JWT secret, for access tokens only.
 
----
+Modules: `PrismaModule` (global, wraps the Prisma client) and `AuthModule` (`AuthController`, `AuthCoordinatorService`, `JwtModule`, the two repositories). `AuthModule` imports `CollectionModule` and `DeckModule` to grant starter content (see below).
 
-## Domain Layer
+## Domain and application
 
-### `src/shared/branded.types.ts`
-Add `UserId` brand:
-```ts
-export type UserId = string & { readonly __brand: 'UserId' };
-```
+- `User` (`src/domain/types/User.type.ts`): `{ id: UserId, username, passwordHash, createdAt }`. `UserId` is a branded id.
+- `Session` (`src/application/dtos/Session.dto.ts`): `{ sessionId, socketId, userId, roomId? }`.
+- Ports (tokens `USER_PORT`, `REFRESH_TOKEN_PORT`):
+  - `UserPort`: `findByUsername`, `findById`, `save`, `delete`.
+  - `RefreshTokenPort`: `save(tokenHash, userId, expiresAt)`, `findByHash` (returns `userId`, `expiresAt`, `isRevoked`), `revokeByHash`, `deleteByHash`, `deleteAllForUser`.
 
-### `src/domain/types/User.type.ts` (new)
-```ts
-import { UserId } from "@shared/branded.types";
-
-type User = {
-    id: UserId;
-    username: string;
-    passwordHash: string;
-    createdAt: Date;
-};
-
-export default User;
-```
-
-### `src/application/dtos/Session.dto.ts` (modify)
-Replace `deviceIdentifier: string` with `userId: UserId`:
-```ts
-export type Session = {
-    sessionId: string;
-    socketId: string;
-    userId: UserId;
-    roomId?: string;
-};
-```
-
-**Security note:** `passwordHash` never appears in any response DTO, log, or error message.
-
----
-
-## Application Layer
-
-### Ports
-
-**`src/application/ports/UserPort.ts`**
-```ts
-interface UserPort {
-    findByUsername(username: string): Promise<User | undefined>;
-    findById(id: UserId): Promise<User | undefined>;
-    save(user: User): Promise<void>;
-    delete(id: UserId): Promise<void>;
-}
-```
-
-**`src/application/ports/RefreshTokenPort.ts`**
-```ts
-interface RefreshTokenPort {
-    save(tokenHash: string, userId: UserId, expiresAt: Date): Promise<void>;
-    findByHash(tokenHash: string): Promise<{ userId: UserId; expiresAt: Date } | undefined>;
-    deleteByHash(tokenHash: string): Promise<void>;
-    deleteAllForUser(userId: UserId): Promise<void>;
-}
-```
-
-Refresh tokens are stored **hashed** in the DB (bcrypt, cost 10) — a leaked DB row cannot be replayed.
-
-### Tokens
-
-Add to `src/application/ports/tokens.ts`:
-```ts
-export const USER_PORT = 'USER_PORT';
-export const REFRESH_TOKEN_PORT = 'REFRESH_TOKEN_PORT';
-```
-
-### `AuthCoordinatorService`
-
-`src/application/services/AuthCoordinator.service.ts`
+`AuthCoordinatorService` (`src/application/services/AuthCoordinator.service.ts`):
 
 | Method | Behaviour |
-|--------|-----------|
-| `register(username, password)` | Reject duplicate usernames. Hash password with bcrypt cost 12. Save User. Issue token pair. |
-| `login(username, password)` | On any failure (unknown username or wrong password): throw generic `UnauthorizedException('Invalid credentials')` — never reveal which field is wrong. |
-| `refresh(rawToken)` | Hash incoming token, find in DB, check expiry. **Rotate**: delete old token record, issue new pair. On reuse of an already-rotated token: `deleteAllForUser` (compromise signal). |
-| `logout(rawToken)` | Delete that single refresh token record. |
-| `getMe(userId)` | Return `{ id, username, createdAt }`. Never return `passwordHash`. |
-| `deleteAccount(userId)` | `deleteAllForUser(userId)` then `UserPort.delete(userId)`. Hard delete — no soft delete. |
+|---|---|
+| `register` | Reject a taken username (409). Hash the password with bcrypt (cost 12). Save the user, grant starter content, issue a token pair. |
+| `login` | Unknown username or wrong password both throw the same `UnauthorizedException('Invalid credentials')`: never reveal which was wrong. Then grant starter content (idempotent) and issue a pair. |
+| `refresh` | Hash the incoming token (SHA-256) and look it up. Unknown: 401. Already revoked (reuse of a rotated token): `deleteAllForUser` as a compromise signal, then 401. Expired: delete it, 401. Otherwise revoke it (kept as a tombstone so reuse is detectable) and issue a new pair. |
+| `logout` | Delete that one refresh token record. |
+| `getMe` | `{ id, username, createdAt }`, never `passwordHash`. |
+| `deleteAccount` | `deleteAllForUser`, then `UserPort.delete`. Hard delete. |
 
-### DTOs
+Refresh tokens live 7 days. Access tokens use `JWT_ACCESS_EXPIRES_IN`. Decision: refresh tokens are hashed with SHA-256 rather than bcrypt, because they are already 512 bits of entropy, so a slow hash adds nothing and would make every refresh expensive.
 
-- `RegisterDto`: `username: string` (3–20 chars, alphanumeric+underscore), `password: string` (8–72 chars)
-- `LoginDto`: same fields
-- `RefreshDto`: `refreshToken: string`
-- `AuthResponseDto`: `{ accessToken: string, refreshToken: string }`
-- `MeDto`: `{ id: string, username: string, createdAt: Date }`
+Starter content: on register and login, every user is granted the whole catalog and a starter deck (`CollectionCoordinatorService.grantAll`, `DeckCoordinatorService.ensureStarterDeck`). This is temporary until acquisition exists. It is idempotent, and a failure there is logged and never fails authentication: the account already exists, and the next login heals it.
 
-`passwordHash` is never present in any response DTO.
+DTOs (class-validator, global `ValidationPipe` with `whitelist` and `forbidNonWhitelisted`): `RegisterDto` and `LoginDto` take `username` (3-20 chars, letters, digits, underscore) and `password` (8-72 chars); `RefreshDto` takes `refreshToken`; responses are `AuthResponseDto { accessToken, refreshToken }` and `MeDto { id, username, createdAt }`. `passwordHash` is never in a response, log or error.
 
----
+## Infrastructure
 
-## Infrastructure Layer
+- Prisma schema (`prisma/schema.prisma`): `User` (id uuid, unique `username`, `passwordHash`, `createdAt`) and `RefreshToken` (id, unique `tokenHash`, `userId`, `isRevoked`, `expiresAt`, `createdAt`) with `onDelete: Cascade` from `User`, so deleting a user wipes its tokens (and, by the same cascade, its collection and decks).
+- Repositories `UserRepository` and `RefreshTokenRepository` implement the ports through `PrismaService`.
+- `AuthController` (`/auth`) with `@nestjs/throttler`: `register` 5 requests/min/IP, `login` and `refresh` 10 requests/min/IP, plus a global default of 100/min.
+- Gateway `handleConnection` reads `handshake.auth.token`, verifies it with `JwtService`, and calls `SessionCoordinatorService.handleConnect(socketId, userId)`. A missing or invalid token disconnects the socket.
+- `SessionManager` keeps one live session per user (`byUserId`); `createOrReconnectSession(socketId, userId)` re-binds the existing session to the new socket and reports the previous socket for eviction (see the reconnect-lifecycle spec).
+- Config (`.env`, git-ignored; `.env.example` documents every variable): `DATABASE_URL`, `POSTGRES_*` (read by `docker-compose.yml`, Postgres 16), `JWT_ACCESS_SECRET` (at least 32 characters, checked at boot by `jwtConfigFromEnv`), `JWT_ACCESS_EXPIRES_IN` (e.g. `15m`), `CORS_ORIGIN`, `CLAIM_*`.
 
-### Prisma Schema
-
-`prisma/schema.prisma`:
-```prisma
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model User {
-    id           String         @id @default(uuid())
-    username     String         @unique
-    passwordHash String
-    createdAt    DateTime       @default(now())
-    refreshTokens RefreshToken[]
-}
-
-model RefreshToken {
-    id        String   @id @default(uuid())
-    tokenHash String   @unique
-    userId    String
-    expiresAt DateTime
-    createdAt DateTime @default(now())
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-```
-
-`onDelete: Cascade` on `RefreshToken` ensures GDPR erasure is complete — deleting a User row wipes all their tokens automatically.
-
-### Docker Compose
-
-`docker-compose.yml`:
-```yaml
-services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: goodlock
-      POSTGRES_USER: goodlock
-      POSTGRES_PASSWORD: goodlock
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-volumes:
-  postgres_data:
-```
-
-### Environment
-
-`.env` (git-ignored, add to `.gitignore`):
-```
-DATABASE_URL="postgresql://goodlock:goodlock@localhost:5432/goodlock"
-JWT_ACCESS_SECRET=<strong-random-32+-chars>
-JWT_REFRESH_SECRET=<different-strong-random-32+-chars>
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-```
-
-Two separate secrets: a refresh token cannot be validated as an access token even if the signing algorithm matches.
-
-### Repositories
-
-- `src/infrastructure/adapters/repositories/UserRepository.ts` — implements `UserPort` via `PrismaService`
-- `src/infrastructure/adapters/repositories/RefreshTokenRepository.ts` — implements `RefreshTokenPort` via `PrismaService`
-
-### HTTP Controller
-
-`src/infrastructure/adapters/http/AuthController.ts`
-
-| Method | Route | Guard | Rate limit |
-|--------|-------|-------|------------|
-| POST | `/auth/register` | None | 5 req/min/IP |
-| POST | `/auth/login` | None | 5 req/min/IP |
-| POST | `/auth/refresh` | None | 10 req/min/IP |
-| POST | `/auth/logout` | `JwtAccessGuard` | — |
-| GET | `/auth/me` | `JwtAccessGuard` | — |
-| DELETE | `/auth/account` | `JwtAccessGuard` | — |
-
-Rate limiting via `@nestjs/throttler`.
-
-### WebSocket Integration
-
-`SessionGateway.handleConnection` changes:
-- **Before:** reads `client.handshake.auth.deviceIdentifier`, calls `handleConnect(socketId, deviceIdentifier)`
-- **After:** reads `client.handshake.auth.token`, validates via `JwtService` using `JWT_ACCESS_SECRET`, extracts `userId`. On invalid/missing token: `client.disconnect()`. Calls `handleConnect(socketId, userId)`
-
-`SessionManager`:
-- `byDeviceId` map renamed to `byUserId: Map<UserId, Session>`
-- `createOrReconnectSession(socketId, userId)` replaces `createOrReconnectSession(socketId, deviceIdentifier)`
-
----
-
-## Security Summary
+## Security summary
 
 | Concern | Mitigation |
-|---------|------------|
+|---|---|
 | Password storage | bcrypt cost 12 |
-| Refresh token storage | bcrypt cost 10 (hashed in DB) |
-| Token theft (access) | 15-minute expiry |
-| Token theft (refresh) | Rotation + reuse detection → full session wipe |
-| Username enumeration | Generic "Invalid credentials" on login failure |
-| Brute force | Rate limiting: 5 req/min on register + login |
-| Secret leakage | Two separate JWT secrets, loaded from env |
+| Refresh token storage | SHA-256 hash of a 512-bit random token |
+| Access token theft | short expiry |
+| Refresh token theft | rotation plus reuse detection that deletes all of the user's tokens |
+| Username enumeration | generic "Invalid credentials" on login |
+| Brute force | throttling on register, login, refresh |
+| Secret handling | secret from env, length validated at boot |
 | SQL injection | Prisma parameterised queries |
-| Over-collection | No email, no real name — username only |
+| Over-collection | username only: no email, no real name |
 
-## GDPR Summary
+## GDPR
 
 | Right | Implementation |
-|-------|----------------|
-| Right to access | `GET /auth/me` returns own data |
-| Right to erasure | `DELETE /auth/account` hard-deletes User + cascades RefreshTokens |
-| Data minimisation | Only `username`, `passwordHash`, `createdAt` stored |
-| No sensitive exposure | `passwordHash` never in any response, log, or error |
+|---|---|
+| Access | `GET /auth/me` |
+| Erasure | `DELETE /auth/account` hard-deletes the user, cascading to tokens and player data |
+| Minimisation | only `username`, `passwordHash`, `createdAt` |
