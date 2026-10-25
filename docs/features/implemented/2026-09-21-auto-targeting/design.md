@@ -1,27 +1,22 @@
-# Auto-targeting: remove the ASSIGN phase — design
+# Auto-targeting: no ASSIGN phase — design
 
 **Status:** implemented 2026-09-22
 
-**Date:** 2026-09-21
-**Scope:** backend only (Goodlock-back). Frontend adaptation is a separate project, started after `feat/board-redesign` is merged.
-
 ## Goal
 
-Simplify the game: players no longer choose targets. Every die face carries predefined target cells in its template; targets are computed by the server at the moment each effect resolves. The ASSIGN phase disappears.
+Players do not choose targets. Every die face carries predefined target cells in its template, and the server computes them at the moment each effect resolves. There is no ASSIGN phase and no target-related client event.
 
 ## Decisions
 
 - Decision: targets are **cells (positions)**, never characters, because characters move (Swap) and the design targets board positions.
 - Decision: targets are computed **at resolution time of each effect**, from the actor's **current** position, rather than frozen at the start of RESOLVE, because movement must keep its tactical weight.
 - Decision: each **effect** (not face) carries its own targets, because one face can mix targets (e.g. "Sacrifice 3 HP to deal 9": self + enemy).
-- Decision: an effect's targets are a **list of groups**; each group has a side, a mode — **absolute** (fixed slots) or **relative** (offsets from the actor's slot) — and an array of numbers. One effect can mix sides and modes (e.g. `[ENEMY ABS 0 1 2, ALLY REL 0]`). Patterns (single, cleave, full team, split, one-of-each-team) are just recognisable cell sets, not types.
+- Decision: an effect's targets are a **list of groups**; each group has a side, a mode (**absolute**: fixed slots; **relative**: offsets from the actor's slot) and an array of numbers. One effect can mix sides and modes (e.g. `[ENEMY ABS 0 1 2, ALLY REL 0]`). Patterns (single, cleave, full team, split, one-of-each-team) are just recognisable cell sets, not types.
 - Decision: numbers are a JSON **array** (`[-1, 0, 1]`) rather than a concatenated string (`"-101"`), because relative offsets are negative and concatenation becomes ambiguous; arrays need no parser.
-- Decision: a relative cell outside the board (slot < 0 or > 4) is **dropped**; an effect with no remaining cell **fizzles** (no-op).
+- Decision: a relative cell outside the board (slot < 0 or >= `BOARD_SIZE`) is **dropped**; an effect with no remaining cell **fizzles** (no-op).
 - Decision: a cell reached several times by one effect is **hit once per occurrence** rather than deduplicated, because overlapping patterns stacking is part of the game.
-- Decision: conditional targeting ("weakest enemy") is **out of scope** — it targets characters, not cells.
-- Decision: the 15 effect strategies collapse into **4 generic effects: `Damage`, `Heal`, `Shield`, `Swap`**, because the "who" moved into `targets`; only the "what" remains in the effect.
-- Decision: `Swap`, `PushLeft/Right`, `MoveToSlot` all already reduce to `swapSlotsOnSameTeam(a, b)` → a single `Swap` effect exchanging the occupants of exactly 2 cells on the same side.
-- Decision: `TargetConstraint` (`NONE` / `ALLY_ONLY` / `ENEMY_ONLY`) is **removed** — it only described what the player was allowed to pick during ASSIGN.
+- Decision: conditional targeting ("weakest enemy") is **out of scope**: it targets characters, not cells.
+- Decision: the effect strategies are **four generic effects, `Damage`, `Heal`, `Shield`, `Swap`**, because the "who" lives in `targets`; only the "what" remains in the effect.
 
 ## 1. Domain model
 
@@ -33,35 +28,15 @@ type TargetMode = 'ABSOLUTE' | 'RELATIVE';
 type TargetGroup = {
     readonly side: Side;
     readonly mode: TargetMode;
-    readonly n: readonly number[];       // ABSOLUTE: slots 0..4 — RELATIVE: offsets -4..4
-};
-
-// src/domain/types/EffectLabels.type.ts
-enum EffectLabel { Damage = "Damage", Heal = "Heal", Shield = "Shield", Swap = "Swap" }
-
-// Effect instruction as stored on a DieFace
-type EffectInstruction = {
-    readonly effect: EffectLabel;
-    readonly magnitude: number;          // ignored by Swap
-    readonly targets: readonly TargetGroup[];
-};
-
-// DieFace
-type DieFace = {
-    readonly priority: number;
-    readonly description: string;
-    readonly effects: readonly EffectInstruction[];   // targetConstraint removed
-};
-
-// Effect strategy interface
-type Effect = {
-    solve(gs: GameState, targets: readonly Position[], actorId: string): { state: GameState; affected: string[] };
+    readonly n: readonly number[];       // ABSOLUTE: slots 0..4, RELATIVE: offsets -4..4
 };
 ```
 
-Board convention: `ENEMY` relative offset `0` = the enemy in the same slot index as the actor ("the one facing me").
+`EffectLabel` is `Damage | Heal | Shield | Swap`. A `DieFace` is `{ priority, description, effects: FaceEffect[] }`, and each `FaceEffect` is `{ label, magnitude, targets: TargetGroup[], impl }` where `impl` is the strategy registered for the label in `EffectFactory` (`magnitude` is ignored by `Swap`). The strategy interface is `solve(gs, targets: readonly Position[], actorId) -> { state, affected }`.
 
-Template JSON example — "Sacrifice 3 HP to deal 9 to the first three enemies":
+Board convention: `ENEMY` relative offset `0` is the enemy in the same slot index as the actor ("the one facing me"). `BOARD_SIZE` is 5 cells per side; the team has fewer characters than cells, so some cells are empty (see below).
+
+Template JSON example, "Sacrifice 3 HP to deal 9 to the first three enemies":
 
 ```json
 "effects": [
@@ -70,7 +45,7 @@ Template JSON example — "Sacrifice 3 HP to deal 9 to the first three enemies":
 ]
 ```
 
-Mixed example — one effect hitting enemies 0–2 and the actor itself:
+Mixed example, one effect hitting enemies 0-2 and the actor itself:
 
 ```json
 "targets": [
@@ -79,58 +54,53 @@ Mixed example — one effect hitting enemies 0–2 and the actor itself:
 ]
 ```
 
-Removed: `Character.target`, `TargetConstraint`, `TargetValidator`, `selectTargetOfCharacter`, and the old strategy classes (`SingleTarget*`, `Cleave*`, `FullTeam*`, `Self*`, `SwapAlly`, `PushLeft/Right`, `MoveToSlot`).
-
 ### Target resolution (pure)
 
-```ts
-// src/domain/services/TargetResolution.service.ts
-resolveTargets(groups: readonly TargetGroup[], actor: Position): Position[]
-```
+`resolveTargets(groups, actor: Position): Position[]` in `src/domain/services/TargetResolution.service.ts`:
 
 - Groups are flattened into cells, one per number in `n`.
-- `playerIndex` = actor's for `ALLY`, the other one for `ENEMY`.
-- `slot` = `n` (ABSOLUTE) or `actor.slot + n` (RELATIVE).
-- Cells outside 0..4 are dropped. Order (groups, then numbers) is preserved.
-- A cell reached several times is **kept every time**: the effect applies once per occurrence, in order. E.g. `ENEMY ABS [1, 1]` hits enemy slot 1 twice; `ENEMY REL [0]` + `ENEMY ABS [2]` with the actor in slot 2 hits enemy slot 2 twice. This is part of the game (overlapping patterns stack).
-- Never fails: an empty result is a legitimate "fizzle".
+- `playerIndex` is the actor's for `ALLY`, the other one for `ENEMY`.
+- `slot` is `n` (ABSOLUTE) or `actor.slot + n` (RELATIVE).
+- Cells outside the board are dropped. Order (groups, then numbers) is preserved.
+- A cell reached several times is **kept every time**: the effect applies once per occurrence, in order (`ENEMY ABS [1, 1]` hits slot 1 twice).
+- It never fails: an empty result is a legitimate fizzle.
+- Empty cells are kept as targets; each effect decides what an empty cell means.
 
 ### Generic effects
 
-| Effect | Behaviour on resolved positions |
+| Effect | Behaviour on the resolved positions |
 |---|---|
-| `Damage` | apply damage (shield first, current rules) to the occupant of each position, once per occurrence (a repeated cell is hit again) |
-| `Heal` | heal the occupant of each position, once per occurrence (cap at maxHp, current rules) |
+| `Damage` | damage (shield first) to the occupant of each position, once per occurrence |
+| `Heal` | heal the occupant of each position, once per occurrence (capped at `maxHp`; a dead occupant is not healed) |
 | `Shield` | add shield to the occupant of each position, once per occurrence |
-| `Swap` | if exactly 2 positions resolved on the same team: `swapSlotsOnSameTeam`; otherwise fizzle (never swap with the void) |
+| `Swap` | needs exactly 2 positions on the same side; exchanges their occupants. If one cell is empty the occupant **moves** there (the hole travels); two empty cells, a repeated cell, or cells on different sides fizzle |
 
-Dead characters stay targetable (current rule): a damage on a dead occupant is wasted, not redirected. Existing heal/shield-on-dead behaviour is preserved as-is.
+An empty cell does nothing for `Damage`/`Heal`/`Shield`, and the rest of the pattern still applies. Dead characters stay targetable: damage on a dead occupant is wasted, not redirected.
 
-### Template validation (at load, `CharacterGeneration`)
+### Template validation (at catalog load)
 
-- `effect` is one of the 4 labels; `targets` non-empty; each group's `n` non-empty integers.
-- ABSOLUTE `n` in 0..4; RELATIVE `n` in -4..4.
-- Repeated cells are allowed (they stack, see above).
-- `Swap`: exactly 2 numbers in total across its groups, all groups on the same `side` (modes may differ, e.g. `[ALLY REL [0], ALLY ABS [0]]` = move self to slot 0).
-- Invalid template → load error (existing throw-at-load behaviour kept; it is a startup failure, not a domain flow).
+`validateEffectTargets` is called while building characters from templates:
+
+- `effect` is one of the four labels; `targets` is non-empty; each group's `n` is a non-empty array of integers.
+- ABSOLUTE `n` within 0..4; RELATIVE `n` within -4..4.
+- Repeated cells are allowed (they stack).
+- `Swap`: exactly 2 numbers in total across its groups, all groups on the same `side` (modes may differ, e.g. `[ALLY REL [0], ALLY ABS [0]]` moves the actor to slot 0).
+- An invalid template is a startup failure, not a domain flow: a bad catalog stops the app from starting.
 
 ## 2. Phase flow and engine
 
-Phases: `PLACEMENT → ROLL → KEEP → RESOLVE → RESULT`.
+Phases: `SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT`. There is no ASSIGN phase.
 
-- `confirmKeep`: when both are ready and (no rolls left or all dice locked, or the final reroll just happened) → `beginResolvePhase` (was `beginAssignPhase`).
-- `GameCoordinator`: the resolution trigger that ran after `confirmAssignment` now runs when `confirmKeep` lands in RESOLVE.
-- Removed: `GamePhase.ASSIGN`, `beginAssignPhase`, domain `confirmAssignment` / `cancelAssignment`, coordinator `confirmAssignment` / `cancelAssignment`, `ASSIGN` in `Claim.service` `CONFIRM_PHASES`.
+- `confirmKeep`: when both players are ready and either no rolls are left, all dice are locked, or the final reroll just happened, the game moves to RESOLVE.
+- `GameCoordinatorService`: the confirm that lands the game in RESOLVE resolves the round immediately and emits `roundResolved`.
 
-Engine (`PriorityQueue.service`):
+Engine (`PriorityQueue.service.ts`; ordering rules are in the pokemon-speed-system spec):
 
-- `QueueEntry` becomes `readonly [DieFace, actorId, actorSpeed]` — the queue only carries ordering. Ordering rules unchanged (bracket, then speed, random tiebreak).
-- `addAllEffectsToPriorityQueue`: every character with a face is queued (no more target-null skip).
-- `unstackPriorityQueueWithLog`, for each entry in order:
-  1. Skip dead actor (unchanged).
-  2. For each effect of the face, **in JSON order**: look up the actor's **current** position, `resolveTargets(effect.targets, position)`, then `effect.solve(state, positions, actorId)`. An earlier effect that moves the actor shifts the later effects' relative cells.
+- `QueueEntry = [DieFace, actorId, actorSpeed]`: the queue carries only ordering information.
+- `addAllEffectsToPriorityQueue` queues every character's face.
+- `unstackPriorityQueueWithLog`, for each entry in order: skip a dead actor; otherwise, for each effect of the face **in JSON order**, look up the actor's **current** position, `resolveTargets(effect.targets, position)`, then `effect.solve(state, positions, actorId)`. An earlier effect that moves the actor shifts the later effects' relative cells.
 
-`ResolveStep` gains per-effect resolved targets so the client can animate without guessing post-swap positions:
+`ResolveStep` records per-effect resolved targets so the client can animate without guessing post-swap positions:
 
 ```ts
 type ResolveStep = {
@@ -143,51 +113,29 @@ type ResolveStep = {
 
 ## 3. Application / protocol
 
-- `DieFaceDTO`: `targetConstraint` → `effects: { effect: string; magnitude: number; targets: { side; mode; n: number[] }[] }[]`.
-- `CharacterDTO`: `target` removed.
-- `roundResolved` log: `ResolveStep.effects` mapped through as-is.
-- Gateway: `confirmAssignment` and `cancelAssignment` handlers removed. No new client → server event.
+- `DieFaceDTO`: `{ description, priority, effects: { effect, magnitude, targets: { side, mode, n }[] }[] }`.
+- `CharacterDTO` has no `target`.
+- The `roundResolved` log maps `ResolveStep.effects` as is (target cells as `{ playerIndex, slot }`).
+- The gateway has no assignment event; there is no client -> server event for targeting.
 
-**Breaking change for the frontend** (AssignPanel, `targetConstraint`, `ASSIGN_PHASE`). The frontend is adapted in a separate project; until then the current frontend cannot play past KEEP.
+## 4. Templates
 
-## 4. Template migration (placeholder values, to tune later)
+Every effect in `tmplt/*.json` carries `targets`. Descriptions name the cell ("Deal 5 damage to the enemy in front.", "Heal the ally on the right for 5 HP."). Template values are placeholders to be tuned, not balanced.
 
-Mechanical translation rule, applied to all 10 templates in `tmplt/`:
+## 5. Tests
 
-| Old effect | New effect | targets |
-|---|---|---|
-| `SingleTargetDamage` | `Damage` | `[{ ENEMY, RELATIVE, [0] }]` |
-| `CleaveDamage` | `Damage` | `[{ ENEMY, RELATIVE, [-1, 0, 1] }]` |
-| `FullTeamDamage` | `Damage` | `[{ ENEMY, ABSOLUTE, [0, 1, 2, 3, 4] }]` |
-| `SelfDamage` / `SelfHeal` / `SelfShield` | `Damage` / `Heal` / `Shield` | `[{ ALLY, RELATIVE, [0] }]` |
-| `SingleTargetHeal` / `SingleTargetShield` | `Heal` / `Shield` | `[{ ALLY, RELATIVE, [1] }]` |
-| `CleaveHeal` / `CleaveShield` | `Heal` / `Shield` | `[{ ALLY, RELATIVE, [-1, 0, 1] }]` |
-| `FullTeamHeal` / `FullTeamShield` | `Heal` / `Shield` | `[{ ALLY, ABSOLUTE, [0, 1, 2, 3, 4] }]` |
-| `PushLeft` (Diana) | `Swap` | `[{ ENEMY, RELATIVE, [0, -1] }]` |
-| `PushRight` (Diana) | `Swap` | `[{ ENEMY, RELATIVE, [0, 1] }]` |
+Domain, no NestJS:
 
-`"targetConstraint"` keys are removed (this also removes the invalid `"ANY"` value on Diana's push faces). Descriptions are reworded to name the cell ("Deal 5 damage to the enemy in front.", "Heal the ally on the right for 5 HP.").
+- `TargetResolution.service.spec.ts`: ALLY/ENEMY side mapping, absolute, relative, multi-number groups flattened, out-of-board dropped, repeated cells kept, empty result, order preserved, mixed sides and modes in one effect; `validateEffectTargets` errors.
+- `Effects.spec.ts`: `Damage`/`Heal`/`Shield` over several positions, a repeated position applying twice, dead occupants, empty cells; `Swap` with 2 positions, with a different count (fizzle), moving into an empty cell.
+- `Swap.spec.ts`: push, move and swap scenarios expressed as `Swap` plus cells.
+- `PriorityQueue.service.spec.ts`: a relative target follows an actor swapped earlier in the round; effect order within a face (move, then hit); a fizzle is logged with `targets: []`.
+- `GameLoop.service.spec.ts` / `Phase.service.spec.ts`: KEEP leads directly to RESOLVE.
+- `CharacterGeneration.service.spec.ts` / `templates.spec.ts`: template shape and validation errors (bad label, empty targets, empty `n`, out-of-range n, `Swap` with other than 2 numbers or mixed sides); every template loads.
 
-## 5. Tests (TDD, bottom-up — tests updated/written before each layer)
-
-Domain:
-- **New** `TargetResolution.service.spec.ts`: ALLY/ENEMY side mapping, absolute, relative, multi-number groups flattened, out-of-bounds dropped, repeated cells kept, empty → `[]`, order preserved, mixed sides and modes across groups in one effect.
-- **New** `Effects.spec.ts` (replaces `SingleTargetHeal.spec`, `SelfEffects.spec`, `CleaveAndFullTeam.spec`): `Damage`/`Heal`/`Shield` over 1, 3, 5, 10 positions; a repeated position applies twice; dead occupant; `Swap` with 2 positions, with ≠2 → fizzle.
-- **Update** `Swap.spec.ts`: push/move/swap scenarios expressed as `Swap` + cells.
-- **Delete** `TargetValidator.spec.ts`.
-- **Update** `PriorityQueue.service.spec.ts`: new `QueueEntry` shape; relative target follows an actor swapped earlier in the round; effect order within a face (move then hit); fizzle logged with `targets: []`; `ResolveStep.effects`.
-- **Update** `GameLoop.service.spec.ts` / `Phase.service.spec.ts`: KEEP → RESOLVE directly; no ASSIGN.
-- **Update** `CharacterGeneration.service.spec.ts` / `templates.spec.ts`: new JSON shape, validation errors (bad label, empty targets, empty `n`, out-of-range n, Swap ≠2 numbers or mixed sides), all 10 templates load.
-- **Update** `DomainIntegration.spec.ts`, `Claim.service.spec.ts`, `Round.service.spec.ts`, `Player.service.spec.ts`, `EffectFactory.spec.ts` as needed.
-
-Application:
-- **Update** `GameCoordinator.service.spec.ts`: last `confirmKeep` triggers resolution + `roundResolved`; no `confirmAssignment`.
-- **Update** `GameStateMapper.viewer.spec.ts`: face DTO exposes `effects[].targets`; no `target` / `targetConstraint`.
-
-Verification: `npm run test`, `npm run lint`, `npm run build`.
+Application: `GameCoordinator.service.spec.ts` (the last `confirmKeep` triggers resolution and `roundResolved`), `GameStateMapper.viewer.spec.ts` (face DTO exposes `effects[].targets`).
 
 ## Out of scope
 
-- Frontend (separate project).
 - Conditional targeting.
-- Re-balancing template values beyond the mechanical mapping.
+- Balancing template values.
