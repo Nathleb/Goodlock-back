@@ -26,7 +26,9 @@ npm run test:failed     # re-run only failed tests
 npx jest tests/Room.service.spec.ts
 
 # Lint & format
-npm run lint
+npm run lint            # eslint --fix (rewrites files)
+npm run lint:check      # eslint without --fix
+npx tsc --noEmit        # typecheck src and tests
 npm run format
 ```
 
@@ -39,7 +41,7 @@ src/
   domain/          # Pure game logic, no framework, no I/O
   application/     # Use-case orchestration, ports, DTOs, mappers
   infrastructure/  # NestJS adapters: WebSocket gateway, in-memory managers
-  shared/          # Cross-layer utilities (Result type, branded IDs)
+  shared/          # Cross-layer utilities (branded IDs; no Result type yet)
 ```
 
 **TypeScript path aliases** (defined in `tsconfig.json`):
@@ -67,18 +69,18 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 - `mappers/` `RoomMapper`: domain `Room` -> `RoomDTO`; `CollectionMapper`: template -> `CollectionCharacterDTO`; `DeckMapper`
 - `dtos/` `RoomDTO`, `PlayerDTO`, `GameStateDTO`, `CollectionDTO`, `DeckDTO`/`SaveDeckDto`
 
-### Infrastructure layer (`src/infrastructure/adapters/`)
+### Infrastructure layer (`src/infrastructure/`)
 
-- `managers/` `SessionManager`, `RoomManager`: in-memory `Map`-based state stores (the source of truth for all game state)
+- `adapters/managers/` `SessionManager`, `RoomManager`: in-memory `Map`-based state stores (the source of truth for all game state)
 - `prisma/` `PrismaModule` + `PrismaService`: the Prisma client wrapper used by the repositories
 - `adapters/repositories/` `UserRepository`, `RefreshTokenRepository`, `UserCharacterRepository`, `DeckRepository`: the only DB-backed code
 - `adapters/catalog/` `FileCharacterCatalog`: reads and validates `tmplt/*.json` at boot (`CatalogModule`, which also owns `EFFECT_FACTORY`); a bad catalog stops the app from starting
 - `adapters/http/` `AuthController`, `RoomController`, `CollectionController` (`GET /collection`), `DeckController` (`GET/POST /decks`, `PUT/DELETE /decks/:id`): REST endpoints
 - `catalog.module.ts`, `collection.module.ts`, `deck.module.ts`, `auth.module.ts`: `AuthModule` imports `CollectionModule` and `DeckModule` (starter collection + deck on register/login), so `CollectionController` and `DeckController` are declared in `AppModule` to avoid a cycle
-- `websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: lobby `createRoom`, `joinRoom`, `quitRoom`, `selectDeck`; game `startGame`, `confirmSelection`/`cancelSelection`, `rearrangeTeam` (`{ slots }`: the 5 cells, one `null`), `confirmPlacement`/`cancelPlacement`, `confirmKeep`/`cancelKeep`, `claimVictory`
-- `websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
-- `websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
-- `websocket/services/` `WebSocketService` (emit helpers), `RoomWebSocketHandlerService`, `SessionWebSocketHandlerService`, `ErrorWebSocketHandlerService`
+- `adapters/websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: lobby `createRoom`, `joinRoom`, `quitRoom`, `selectDeck`; game `startGame`, `confirmSelection`/`cancelSelection`, `rearrangeTeam` (`{ slots }`: the 5 cells, one `null`), `confirmPlacement`/`cancelPlacement`, `confirmKeep`/`cancelKeep`, `claimVictory`
+- `adapters/websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
+- `adapters/websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
+- `adapters/websocket/services/` `WebSocketService` (emit helpers), `RoomWebSocketHandlerService`, `SessionWebSocketHandlerService`, `ErrorWebSocketHandlerService`
 
 ### Shared utilities (`src/shared/`)
 
@@ -87,7 +89,7 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 
 ### Key design rules
 
-1. **Coordinator pattern**: Application-layer coordinators (`RoomCoordinatorService`, `SessionCoordinatorService`) call domain services then dispatch WebSocket events. The gateway calls coordinators, never domain services directly.
+1. **Coordinator pattern**: Application-layer coordinators (`*CoordinatorService`) call domain services then dispatch WebSocket events. The gateway calls coordinators, never domain services directly.
 2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) + `deviceIdentifier` are persistent. `SessionService.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
 4. **Priority resolution (Pokemon-style)**: two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Equal `(bracket, speed)` pairs are shuffled (random tiebreak). Speed never crosses brackets. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
@@ -96,23 +98,20 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 
 ## Workflow (Goodlock specifics)
 
-The general workflow (plan, TDD, verify, review, record, git rules, conventional commits, trivial-task bypass) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. What follows is only what Goodlock adds.
+The general workflow (plan, TDD, verify, review, record, git rules, conventional commits, trivial-task bypass) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. Also covered by the workflow: `prisma/schema.prisma` and migrations (always the full workflow) and `tmplt/*.json` edits (no plan, but `npm run test` must pass, since the catalog is validated at boot). `Dockerfile`, `docker-compose.yml` and `docs/` are trivial unless they change behavior. What follows is only what Goodlock adds.
 
 - **Recover context**: besides `MEMORY.md`, run `mem-search` (Claude-Mem) when the task touches past work (an effect, a refactor in progress, a known bug, a pending spec).
-- **Plan**: state which layer the change belongs to and any new ports/adapters, error handling (see "Result over exceptions"), new branded IDs, new effects/templates. Order steps bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
-- **Step size**: one step = one tested behavior. If the red test needs two behaviors, split the step. A step never spans more than one layer.
-- **TDD**: domain tests live in `tests/` and never import NestJS.
-- **Verify**: `npm run test`, `npm run lint`, then `npm run build` (the Nest build typechecks, which tests and lint do not).
+- **Plan**: also state new ports/adapters, new branded IDs and new effects/templates. Order steps bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
+- **Step size**: a step never spans more than one layer.
+- **Verify**: `npm run test`, `npm run lint:check`, `npx tsc --noEmit` (typechecks src and tests together), and `npm run build` before a Docker build. Never use `npm run lint` (`--fix`) as a check: it rewrites files.
 - **Review**: the `reviewer` agent is defined globally in `~/.claude/agents/reviewer.md`. `/code-review` is the lighter alternative.
-- **Record**: state decisions as "Decision: [choice] rather than [alternative] because [reason]." so Claude-Mem captures them. Mark the feature's `project_*` memory entry as done (absolute date, what shipped, what is pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync; create the entry if none exists.
+- **Record**: mark the feature's `project_*` memory entry as done (absolute date, what shipped, what is pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync; create the entry if none exists.
 - **Subagents**: besides search and the review, a protocol change can be mirrored in Goodlock-app by a subagent (no shared state).
 
 ## Guardrails
 
-- Migrations: pre-release, the data is disposable and the schema history is not precious. Prefer adding a new migration, but squashing or rewriting migrations and resetting the dev DB is acceptable when the user asks. Once the game is released, never edit an applied migration. Never hand-edit the generated Prisma client.
-- Never hand-edit `package-lock.json`; change it only through npm.
+- Migrations: Released: no (flip to yes at v1.0, see docs/ROADMAP.md). While not released, the data is disposable and the schema history is not precious. Prefer adding a new migration, but squashing or rewriting migrations and resetting the dev DB is acceptable when the user asks. Once the game is released, never edit an applied migration. Never hand-edit the generated Prisma client.
 - Environment: the tests mock Prisma and need no database. Running the app needs the local Postgres (`docker-compose.yml`) and a `.env` (template: `.env.example`); do not commit `.env`.
-- Secrets, API keys and private data go in `<private>...</private>` tags if they must appear in a prompt; the Claude-Mem hook strips them before storage.
 
 ## Conventions for this codebase
 
