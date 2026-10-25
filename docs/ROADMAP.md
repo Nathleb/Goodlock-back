@@ -17,22 +17,19 @@ serve the phone experience, not the other way around.
 ## Where we are today (updated 2026-10-19)
 
 **Backend (`Goodlock-back`) — engine and player data are built; ahead of the client.**
-- Combat: 14 domain services, 4 generic effect strategies (Damage, Heal, Shield, Swap) driven by
+- Combat: 4 generic effect strategies (Damage, Heal, Shield, Swap) driven by
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
-  bracket, then base speed, random tiebreak). 10 character templates (placeholder balance).
+  bracket, then base speed, random tiebreak). Character templates are placeholder balance.
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
   boot; `UserCharacter` ownership (grant-all for now); decks of **6**, max 5 per user, starter deck;
   in a room each player picks a deck, then **team preview**: both decks revealed, each secretly keeps
   **4**; the opponent's picks stay hidden until the first ROLL.
 - **Four of six** (Oct 19 2026): deck 6, keep 4, 5-cell board with one empty cell chosen at placement
   (Swap moves into it), defeat at 2 dead. See `docs/features/implemented/2026-10-19-four-of-six/`.
-- Phases: SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT. WS protocol: 13 gateway events.
+- Phases: SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT.
   REST: `auth/*`, `rooms`, `collection`, `decks`.
 - Auth: JWT access + refresh tokens. Postgres via Prisma holds auth + player data (`UserCharacter`,
   `Deck`, `DeckSlot`); live game state stays in-memory. Session reconnect, AFK/forfeit claims.
-- 44 test files / 529 tests, lint covers `src/` and `tests/`.
-- The Oct 2026 migrations are applied and verified against a real Postgres (no drift); deck rules and
-  full matches checked end to end with bots.
 
 **Client (`Goodlock-app`, Oct 2026) — Flutter + Flame prototype.**
 - Chosen for the most UI + mobile game-feel headroom (TypeScript was not a criterion). Talks to the
@@ -113,7 +110,7 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
   installable APK from a tag.
 
 ### Phase 5 — v1.0 (installable launch)
-- First-run onboarding/tutorial (mobile-shaped), app icon + splash, content pass (10 placeholder
+- First-run onboarding/tutorial (mobile-shaped), app icon + splash, content pass (placeholder
   characters today; with decks of 6 and a pick of 4 the roster needs depth and real balance).
   `Character.modifiers` exists in the type but no modifier effect is implemented yet.
 - Produce the **signed installable build** (sideload / TestFlight) — the agreed v1.0 target.
@@ -124,16 +121,16 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 
 ## Cross-cutting (every phase)
 - **Mobile-first:** no feature ships until it's verified on a device build.
-- **Tests grow:** client coverage increases each phase; backend stays green (44 files / 529 tests today).
+- **Tests grow:** client coverage increases each phase; backend stays green.
 - **Reconnection resilience** is maintained as a standing requirement, not a one-time task.
 
 ## Open decisions (flagged, not yet made)
-2. **DB-backed results entity** — Phase 3; requires the explicit discussion CLAUDE.md mandates
+1. **DB-backed results entity** — Phase 3; requires the explicit discussion CLAUDE.md mandates
    before adding any new persistence (collection and decks were agreed in Oct 2026).
-4. **Items** — will attach to deck slots (`DeckSlot`), design not started.
-5. **`Result<T, E>`** — the convention exists in CLAUDE.md but the type is not implemented; adopt it in
+2. **Items** — will attach to deck slots (`DeckSlot`), design not started.
+3. **`Result<T, E>`** — the convention exists in CLAUDE.md but the type is not implemented; adopt it in
    a dedicated change or drop the convention.
-3. **Scaling** — proposed in [`docs/SCALING.md`](SCALING.md): single instance + graceful drain for
+4. **Scaling** — proposed in [`docs/SCALING.md`](SCALING.md): single instance + graceful drain for
    v1.0; one-match-per-instance with Redis for cross-instance traffic when needed. Awaiting sign-off.
 
 ## Risks

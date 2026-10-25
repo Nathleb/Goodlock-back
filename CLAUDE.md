@@ -50,10 +50,9 @@ Facts that the code does not make obvious:
 
 - Game state (rooms, sessions, live games) lives only in the in-memory managers `infrastructure/adapters/managers/`. The only DB-backed code is the repositories in `infrastructure/adapters/repositories/`.
 - Character definitions are read from `tmplt/*.json` at boot by `FileCharacterCatalog`, which validates them: a bad catalog stops the app from starting. Every runtime `Character` carries its `catalogId`.
-- `CollectionCoordinatorService` is the only write path into `UserCharacter`, validated against the catalog. `DeckCoordinatorService` answers 404 for another user's deck and refuses to delete the last deck.
+- Write to `UserCharacter` only through `CollectionCoordinatorService`, which validates against the catalog. `DeckCoordinatorService` answers 404 for another user's deck and refuses to delete the last deck.
 - `CollectionController` and `DeckController` are declared in `AppModule` (not in their own modules) because `AuthModule` imports `CollectionModule` and `DeckModule`; declaring them there would create a cycle.
 - The WebSocket events and their payloads are in `infrastructure/adapters/websocket/session.gateway.ts` and `payloads/`; read them there rather than from a list here.
-- `Result<T, E>` is **not implemented yet** (no `result.type.ts`). Introducing it is a dedicated change, not something to slip into a feature.
 
 ### Key design rules
 
@@ -64,6 +63,10 @@ Facts that the code does not make obvious:
 5. **Match entry and secrecy**: each player picks a deck in the room (`selectDeck`, loaded from the DB and snapshotted in the in-memory room — the only `await` on the WebSocket path). `startGame` opens SELECTION: both 6-decks are revealed, each player secretly keeps 4. The opponent's picks and team stay hidden (sent as `[]`) through SELECTION and PLACEMENT; the first room-wide state is the ROLL. Any emission before ROLL must go through the per-viewer mappers (`GameStateMapper.toDTOForViewer`). On connect the server sends `sessionStarted { sessionId }`; clients locate their seat (player index) in `room.players` with it.
 6. **Auto-targeting**: players never choose targets. Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. Off-board cells are dropped; no cell = fizzle. The empty cell is kept: each effect decides what it does there (Damage/Heal/Shield: nothing on that cell, the rest of the pattern still applies; Swap moves the character into it, so the hole travels). `team` holds 4 characters ordered by slot; `position.slot` (0..4, `BOARD_SIZE` = 5) is the truth, never the array index. Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT (no ASSIGN).
 7. **HTTP vs WebSocket**: player data (auth, collection, decks) goes over HTTP controllers; lobby and match flow goes over the WebSocket gateway. The one exception is `selectDeck`, a WebSocket event that loads the deck from the DB. A new feature goes on the side of the data it touches; do not split one use case across both without discussing it.
+
+## Reference docs
+
+Read only when relevant, they are not loaded automatically: `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
 
 ## Workflow (Goodlock specifics)
 
@@ -98,7 +101,7 @@ The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no 
 
 **Errors**: the subject of domain errors is not settled yet. Today the domain throws plain `Error`, the WebSocket coordinators catch it and emit `'error' { message }`, and the HTTP coordinators throw Nest exceptions. Do not introduce custom error classes or a new error scheme without discussing it first.
 
-**Result over exceptions** (target convention, pending `Result<T, E>`): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors.
+**Result over exceptions** (target convention; `Result<T, E>` is not implemented yet, and introducing it is a dedicated change, not something to slip into a feature): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors.
 
 **Randomness**: domain code calls `Math.random` directly (`domain/utils/Random.utils.ts`, `shuffled()` in `PriorityQueue.service.ts`). Tests make it deterministic with `jest.spyOn(Math, 'random')` and restore it with `jest.restoreAllMocks()` in `afterEach` (Jest's `restoreMocks` is off). A `mockReturnValueOnce` sequence depends on the number and order of calls, so changing the shuffle algorithm can break such tests without any behavior change.
 
