@@ -80,7 +80,7 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 - `adapters/websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: lobby `createRoom`, `joinRoom`, `quitRoom`, `selectDeck`; game `startGame`, `confirmSelection`/`cancelSelection`, `rearrangeTeam` (`{ slots }`: the 5 cells, one `null`), `confirmPlacement`/`cancelPlacement`, `confirmKeep`/`cancelKeep`, `claimVictory`
 - `adapters/websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
 - `adapters/websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
-- `adapters/websocket/services/` `WebSocketService` (emit helpers), `RoomWebSocketHandlerService`, `SessionWebSocketHandlerService`, `ErrorWebSocketHandlerService`
+- `adapters/websocket/services/` `WebSocketService` (emit helpers)
 
 ### Shared utilities (`src/shared/`)
 
@@ -95,18 +95,31 @@ Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (
 4. **Priority resolution (Pokemon-style)**: two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Equal `(bracket, speed)` pairs are shuffled (random tiebreak). Speed never crosses brackets. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
 5. **Match entry and secrecy**: each player picks a deck in the room (`selectDeck`, loaded from the DB and snapshotted in the in-memory room — the only `await` on the WebSocket path). `startGame` opens SELECTION: both 6-decks are revealed, each player secretly keeps 4. The opponent's picks and team stay hidden (sent as `[]`) through SELECTION and PLACEMENT; the first room-wide state is the ROLL. Any emission before ROLL must go through the per-viewer mappers (`GameStateMapper.toDTOForViewer`). On connect the server sends `sessionStarted { sessionId }`; clients locate their seat (player index) in `room.players` with it.
 6. **Auto-targeting**: players never choose targets. Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. Off-board cells are dropped; no cell = fizzle. The empty cell is kept: each effect decides what it does there (Damage/Heal/Shield: nothing on that cell, the rest of the pattern still applies; Swap moves the character into it, so the hole travels). `team` holds 4 characters ordered by slot; `position.slot` (0..4, `BOARD_SIZE` = 5) is the truth, never the array index. Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT (no ASSIGN).
+7. **HTTP vs WebSocket**: player data (auth, collection, decks) goes over HTTP controllers; lobby and match flow goes over the WebSocket gateway. The one exception is `selectDeck`, a WebSocket event that loads the deck from the DB. A new feature goes on the side of the data it touches; do not split one use case across both without discussing it.
 
 ## Workflow (Goodlock specifics)
 
 The general workflow (plan, TDD, verify, review, record, git rules, conventional commits, trivial-task bypass) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. Also covered by the workflow: `prisma/schema.prisma` and migrations (always the full workflow) and `tmplt/*.json` edits (no plan, but `npm run test` must pass, since the catalog is validated at boot). `Dockerfile`, `docker-compose.yml` and `docs/` are trivial unless they change behavior. What follows is only what Goodlock adds.
 
-- **Recover context**: besides `MEMORY.md`, run `mem-search` (Claude-Mem) when the task touches past work (an effect, a refactor in progress, a known bug, a pending spec).
+- **Memory roles**: the auto-memory (`MEMORY.md` and its `project_*` files) holds the state of features (what shipped, what is pending). Claude-Mem holds the history of decisions and observations. To recover context, read `MEMORY.md` for the state, then run `mem-search` for the why when the task touches past work (an effect, a refactor in progress, a known bug, a pending spec). Record state in the auto-memory only; decisions go in "Decision:" phrasing for Claude-Mem to capture.
 - **Plan**: also state new ports/adapters, new branded IDs and new effects/templates. Order steps bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
 - **Step size**: a step never spans more than one layer.
 - **Verify**: `npm run test`, `npm run lint:check`, `npx tsc --noEmit` (typechecks src and tests together), and `npm run build` before a Docker build. Never use `npm run lint` (`--fix`) as a check: it rewrites files.
 - **Review**: the `reviewer` agent is defined globally in `~/.claude/agents/reviewer.md`. `/code-review` is the lighter alternative.
-- **Record**: mark the feature's `project_*` memory entry as done (absolute date, what shipped, what is pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync; create the entry if none exists.
+- **Record**: mark the feature's `project_*` auto-memory entry as done (absolute date, what shipped, what is pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync; create the entry if none exists.
 - **Subagents**: besides search and the review, a protocol change can be mirrored in Goodlock-app by a subagent (no shared state).
+
+## Recurring tasks
+
+**Add an effect**: add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first, one spec per strategy); register it in `buildEffectFactory()` (`domain/services/GameInit.service.ts`; `CatalogModule` provides the result as `EFFECT_FACTORY`); check that `validateEffectTargets` accepts its target groups; use it in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
+
+**Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (it catches errors and emits them, see Conventions); handler in `session.gateway.ts` with the existing guards; payload type in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Then mirror the event in Goodlock-app (see Client contract).
+
+**Schema change** (`prisma/schema.prisma`): there is no natural red test for a schema step. Verify it with `npx prisma validate`, `npx prisma generate` and `npx tsc --noEmit`, plus a repository or module spec if behavior changes. Create the migration without applying it: `npx prisma migrate dev --create-only --name <topic>` (needs the local Postgres up). Applying it (`npx prisma migrate dev`) is a human-only step. Run `npx prisma generate` after any schema change, or `tsc` fails on the client types.
+
+## Client contract
+
+The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no shared package and no generated types: the protocol is mirrored by hand. WebSocket events are in `lib/net/game_socket.dart`, payload models in `lib/net/models.dart`, HTTP calls in `lib/net/api.dart`, game constants in `lib/net/rules.dart`. A protocol change here is not done until those files match; a subagent can do the mirroring.
 
 ## Guardrails
 
@@ -115,7 +128,11 @@ The general workflow (plan, TDD, verify, review, record, git rules, conventional
 
 ## Conventions for this codebase
 
-**Result over exceptions** (target convention, pending `Result<T, E>`): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors. Until then, follow the existing code's convention.
+**Errors today** (until `Result<T, E>` exists): the domain throws plain `Error` with a user-readable message (`Phase.service.ts`, `GameLoop.service.ts`). On the WebSocket path the coordinator catches it and emits `'error' { message }` to the socket (`emitError`). On the HTTP path the application coordinators (`Auth`, `Collection`, `Deck`) throw Nest exceptions (`BadRequestException`, `ConflictException`, `NotFoundException`, `UnauthorizedException`), which Nest maps to HTTP statuses. Do not introduce custom error classes.
+
+**Result over exceptions** (target convention, pending `Result<T, E>`): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors.
+
+**Randomness**: there is no injectable RNG. Domain code calls `Math.random` in `domain/utils/Random.utils.ts` and in `shuffled()` of `PriorityQueue.service.ts`. New randomness goes through `Random.utils.ts`, never `Math.random` elsewhere in `domain/`. Tests make it deterministic with `jest.spyOn(Math, 'random')`. Introducing an RNG port is a design change to discuss, not a drive-by.
 
 **Branded IDs**: never accept a raw `string` as an identifier in service signatures. Always use `SessionId`, `RoomId`, `PlayerId`, etc. If a new identifier type is needed, add it to `shared/branded.types.ts`.
 
