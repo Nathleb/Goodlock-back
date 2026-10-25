@@ -34,58 +34,26 @@ npm run format
 
 ## Architecture
 
-Follows Hexagonal Architecture with three layers:
+Hexagonal Architecture, three layers. Dependencies point inward only:
 
 ```
 src/
-  domain/          # Pure game logic, no framework, no I/O
-  application/     # Use-case orchestration, ports, DTOs, mappers
-  infrastructure/  # NestJS adapters: WebSocket gateway, in-memory managers
+  domain/          # Pure game logic and types. No NestJS, no I/O. Imports nothing from the other layers.
+  application/     # Use cases: coordinators, ports (interfaces), DTOs, mappers. Imports domain only.
+  infrastructure/  # NestJS adapters: WebSocket gateway, HTTP controllers, in-memory managers, Prisma repositories, catalog loader. Implements the ports.
   shared/          # Cross-layer utilities (branded IDs; no Result type yet)
 ```
 
-**TypeScript path aliases** (defined in `tsconfig.json`):
-- `@domain/*` -> `src/domain/*`
-- `@application/*` -> `src/application/*`
-- `@infrastructure/*` -> `src/infrastructure/*`
-- `@shared/*` -> `src/shared/*`
+**Path aliases** (`tsconfig.json`): `@domain/*`, `@application/*`, `@infrastructure/*`, `@shared/*` map to the matching `src/` folder.
 
-### Domain layer (`src/domain/`)
+Facts that the code does not make obvious:
 
-Contains all game logic with zero NestJS dependencies:
-- `types/` plain TypeScript types for `Character`, `Room`, `Session`, `GameState`, `Die`, `DieFace`, `Effect`, etc.
-- `entities/` `CharacterEntity` (JSON template shape read from `tmplt/*.json`)
-- `services/` `RoomService`, `SessionService`, `CharacterService`, `CharacterGeneration`, `CharacterCatalog` (`validateCatalog`: id presence/shape/uniqueness), `Deck` (`validateDeck`, `DECK_SIZE` = 6, `TEAM_SIZE` = 4, `MAX_DECKS_PER_USER` = 5), `PriorityQueue`, `Player`, `GameInit`
-- `services/TargetResolution.service.ts` `resolveTargets` (template target groups -> positions, from the actor's current slot) and `validateEffectTargets` (template validation)
-- `factories/` `EffectFactory`: registry pattern for creating effects by label; effects must be registered before use
-- `strategies/` `Damage`, `Heal`, `Shield`, `Swap`: generic effects applied to the cells resolved for them
-
-Character templates live in `tmplt/*.json`, each with a stable authored `"id"` (`[a-z0-9-]+`, branded `CatalogId`; it is stored in DB rows, so never rename it). They are loaded once at boot by the catalog and built with `createCharacterFromTemplate`; every runtime `Character` carries its `catalogId`. Characters are never removed from the catalog (pre-release, a replacement reuses the id), so stored ids never dangle: validate on write, no "retired character" handling.
-
-### Application layer (`src/application/`)
-
-- `ports/` interfaces `RoomPort`, `SessionPort`, `WebSocketPort`, `CatalogPort` (sync, in-memory), `CollectionPort` (async, DB), `DeckPort` (async, DB) (tokens in `tokens.ts`)
-- `services/` `RoomCoordinatorService`, `SessionCoordinatorService`, `AuthCoordinatorService`, `GameCoordinatorService`, `CollectionCoordinatorService` (the only write path into `UserCharacter`, validated against the catalog), `DeckCoordinatorService` (deck CRUD; another user's deck answers 404; last deck can't be deleted): bridge domain services with WebSocket/HTTP handlers
-- `mappers/` `RoomMapper`: domain `Room` -> `RoomDTO`; `CollectionMapper`: template -> `CollectionCharacterDTO`; `DeckMapper`
-- `dtos/` `RoomDTO`, `PlayerDTO`, `GameStateDTO`, `CollectionDTO`, `DeckDTO`/`SaveDeckDto`
-
-### Infrastructure layer (`src/infrastructure/`)
-
-- `adapters/managers/` `SessionManager`, `RoomManager`: in-memory `Map`-based state stores (the source of truth for all game state)
-- `prisma/` `PrismaModule` + `PrismaService`: the Prisma client wrapper used by the repositories
-- `adapters/repositories/` `UserRepository`, `RefreshTokenRepository`, `UserCharacterRepository`, `DeckRepository`: the only DB-backed code
-- `adapters/catalog/` `FileCharacterCatalog`: reads and validates `tmplt/*.json` at boot (`CatalogModule`, which also owns `EFFECT_FACTORY`); a bad catalog stops the app from starting
-- `adapters/http/` `AuthController`, `RoomController`, `CollectionController` (`GET /collection`), `DeckController` (`GET/POST /decks`, `PUT/DELETE /decks/:id`): REST endpoints
-- `catalog.module.ts`, `collection.module.ts`, `deck.module.ts`, `auth.module.ts`: `AuthModule` imports `CollectionModule` and `DeckModule` (starter collection + deck on register/login), so `CollectionController` and `DeckController` are declared in `AppModule` to avoid a cycle
-- `adapters/websocket/session.gateway.ts` single `@WebSocketGateway()` handling connection/disconnection and events: lobby `createRoom`, `joinRoom`, `quitRoom`, `selectDeck`; game `startGame`, `confirmSelection`/`cancelSelection`, `rearrangeTeam` (`{ slots }`: the 5 cells, one `null`), `confirmPlacement`/`cancelPlacement`, `confirmKeep`/`cancelKeep`, `claimVictory`
-- `adapters/websocket/shared.gateway.ts` `SharedWebSocketService` holds the Socket.io server instance (shared across services)
-- `adapters/websocket/guards/` `JwtAccessGuard`, `SessionGuard`: JWT-based auth guards
-- `adapters/websocket/services/` `WebSocketService` (emit helpers)
-
-### Shared utilities (`src/shared/`)
-
-- `branded.types.ts` `SessionId`, `SocketId`, `RoomId`, `PlayerId`, `CharacterId`, `DeviceId`, `UserId`, `CatalogId`, `DeckId` branded string types to prevent ID mix-ups
-- `Result<T, E>` is **not implemented yet** (no `result.type.ts`); existing code throws. Introducing it is a dedicated change, not something to slip into a feature.
+- Game state (rooms, sessions, live games) lives only in the in-memory managers `infrastructure/adapters/managers/`. The only DB-backed code is the repositories in `infrastructure/adapters/repositories/`.
+- Character definitions are read from `tmplt/*.json` at boot by `FileCharacterCatalog`, which validates them: a bad catalog stops the app from starting. Every runtime `Character` carries its `catalogId`.
+- `CollectionCoordinatorService` is the only write path into `UserCharacter`, validated against the catalog. `DeckCoordinatorService` answers 404 for another user's deck and refuses to delete the last deck.
+- `CollectionController` and `DeckController` are declared in `AppModule` (not in their own modules) because `AuthModule` imports `CollectionModule` and `DeckModule`; declaring them there would create a cycle.
+- The WebSocket events and their payloads are in `infrastructure/adapters/websocket/session.gateway.ts` and `payloads/`; read them there rather than from a list here.
+- `Result<T, E>` is **not implemented yet** (no `result.type.ts`). Introducing it is a dedicated change, not something to slip into a feature.
 
 ### Key design rules
 
@@ -128,11 +96,11 @@ The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no 
 
 ## Conventions for this codebase
 
-**Errors today** (until `Result<T, E>` exists): the domain throws plain `Error` with a user-readable message (`Phase.service.ts`, `GameLoop.service.ts`). On the WebSocket path the coordinator catches it and emits `'error' { message }` to the socket (`emitError`). On the HTTP path the application coordinators (`Auth`, `Collection`, `Deck`) throw Nest exceptions (`BadRequestException`, `ConflictException`, `NotFoundException`, `UnauthorizedException`), which Nest maps to HTTP statuses. Do not introduce custom error classes.
+**Errors**: the subject of domain errors is not settled yet. Today the domain throws plain `Error`, the WebSocket coordinators catch it and emit `'error' { message }`, and the HTTP coordinators throw Nest exceptions. Do not introduce custom error classes or a new error scheme without discussing it first.
 
 **Result over exceptions** (target convention, pending `Result<T, E>`): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors.
 
-**Randomness**: there is no injectable RNG. Domain code calls `Math.random` in `domain/utils/Random.utils.ts` and in `shuffled()` of `PriorityQueue.service.ts`. New randomness goes through `Random.utils.ts`, never `Math.random` elsewhere in `domain/`. Tests make it deterministic with `jest.spyOn(Math, 'random')`. Introducing an RNG port is a design change to discuss, not a drive-by.
+**Randomness**: domain code calls `Math.random` directly (`domain/utils/Random.utils.ts`, `shuffled()` in `PriorityQueue.service.ts`). Tests make it deterministic with `jest.spyOn(Math, 'random')` and restore it with `jest.restoreAllMocks()` in `afterEach` (Jest's `restoreMocks` is off). A `mockReturnValueOnce` sequence depends on the number and order of calls, so changing the shuffle algorithm can break such tests without any behavior change.
 
 **Branded IDs**: never accept a raw `string` as an identifier in service signatures. Always use `SessionId`, `RoomId`, `PlayerId`, etc. If a new identifier type is needed, add it to `shared/branded.types.ts`.
 
