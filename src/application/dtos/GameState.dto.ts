@@ -29,6 +29,8 @@ export type CharacterDTO = {
     modifiers: StatInstanceDTO[];
     /** Net value per stat, capped; computed by the server so clients do not duplicate the cap. */
     stats: Record<string, number>;
+    /** Signed duration counter per state axis (SPEED: + hasted / - slowed, ...), 0 when none. */
+    states: Record<string, number>;
 };
 
 export type PlayerGameStateDTO = {

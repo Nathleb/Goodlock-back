@@ -198,3 +198,37 @@ describe('stats in the DTO', () => {
         expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3, ARMOR: 0 });
     });
 });
+
+describe('states in the DTO', () => {
+    it('lists every axis with its signed counter, 0 when none', () => {
+        const dto = GameStateMapper.characterToDTO(char('a', 0, 0, false));
+        expect(dto.states).toEqual({ SPEED: 0, VITALITY: 0, STUN: 0, ROOT: 0, DIVINE_SHIELD: 0 });
+    });
+
+    it('carries the signed value without the internal touchedRound', () => {
+        const dto = GameStateMapper.characterToDTO({
+            ...char('a', 0, 0, false),
+            states: { SPEED: { value: -2, touchedRound: 3 }, STUN: { value: 1, touchedRound: 3 } },
+        });
+        expect(dto.states).toEqual({ SPEED: -2, VITALITY: 0, STUN: 1, ROOT: 0, DIVINE_SHIELD: 0 });
+    });
+
+    it('carries state and duration on an ApplyState face effect, and nothing extra on others', () => {
+        const apply = { label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1, targets: [], impl: { solve: jest.fn() } };
+        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [], impl: { solve: jest.fn() } };
+        const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
+
+        const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
+
+        expect(dto.face.effects[0]).toMatchObject({ effect: 'ApplyState', magnitude: 0, state: 'STUN', duration: 1 });
+        expect('state' in dto.face.effects[1]).toBe(false);
+    });
+
+    it('shows up in the resolve-step changes too', () => {
+        const dto = GameStateMapper.resolveStepsToDTO([{
+            characterId: 'a', skipped: false, effects: [],
+            changes: [{ characterId: 'a', character: { ...char('a', 0, 0, false), states: { ROOT: { value: 2, touchedRound: 1 } } } }],
+        }]);
+        expect(dto[0].changes[0].after.states.ROOT).toBe(2);
+    });
+});

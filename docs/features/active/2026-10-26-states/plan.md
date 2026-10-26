@@ -12,8 +12,8 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 3. Templates: entry union, factory params, registration, validation.
 - [x] 4. Tick of the axes.
 - [x] 5. STUN skips the action.
-- [ ] 6. DTO and catalog mapper.
-- [ ] 7. Review 1.
+- [x] 6. DTO and catalog mapper.
+- [x] 7. Review 1.
 
 5b ROOT
 - [ ] 8. Swap fizzles on a rooted occupant.
