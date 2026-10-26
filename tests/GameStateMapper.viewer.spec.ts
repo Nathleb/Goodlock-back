@@ -72,6 +72,21 @@ describe('toDTOForViewer', () => {
     });
 });
 
+describe('initiative in the public DTO', () => {
+    const phases = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.ROLL, GamePhase.KEEP, GamePhase.RESOLVE, GamePhase.RESULT];
+
+    it.each(phases)('is exposed to both viewers in %s', (phase) => {
+        const state: GameState = { ...gs(phase, [false, false]), initiativePlayerIndex: 1 };
+        expect(GameStateMapper.toDTOForViewer(state, 0).initiativePlayerIndex).toBe(1);
+        expect(GameStateMapper.toDTOForViewer(state, 1).initiativePlayerIndex).toBe(1);
+    });
+
+    it('is carried by the room-wide DTO', () => {
+        const state: GameState = { ...gs(GamePhase.ROLL, [false, false]), initiativePlayerIndex: 0 };
+        expect(GameStateMapper.toDTO(state).initiativePlayerIndex).toBe(0);
+    });
+});
+
 describe('team selection view', () => {
     const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_1 = ['b0', 'b1', 'b2', 'b3', 'b4'] as CatalogId[];

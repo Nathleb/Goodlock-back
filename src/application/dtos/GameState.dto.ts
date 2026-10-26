@@ -49,6 +49,8 @@ export type ResolveStepDTO = {
 export type GameStateDTO = {
     phase: string;
     currentRound: number;
+    /** Player index that wins exact ties in the resolution order this round. Public in every phase. */
+    initiativePlayerIndex: 0 | 1;
     rollsLeft: number;
     playersReady: [boolean, boolean];
     players: [PlayerGameStateDTO, PlayerGameStateDTO];

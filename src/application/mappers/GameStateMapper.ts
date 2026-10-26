@@ -13,6 +13,7 @@ export class GameStateMapper {
         return {
             phase: gameState.phase,
             currentRound: gameState.currentRound,
+            initiativePlayerIndex: gameState.initiativePlayerIndex,
             rollsLeft: gameState.rollsLeft,
             playersReady: [...gameState.playersReady] as [boolean, boolean],
             players: gameState.players.map(GameStateMapper.playerToDTO) as [PlayerGameStateDTO, PlayerGameStateDTO],
