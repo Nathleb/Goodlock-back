@@ -700,6 +700,65 @@ describe('PriorityQueueService', () => {
 
       expect(run([starter], [victim, lagging]).order).toEqual([starter.id, lagging.id, victim.id]);
     });
+
+    it('nobody plays twice: a HASTE on a character that already played adds no second action', () => {
+      const first = hero('first', 9, 0, 0);
+      const later = hero('later', 5, 1, 0, [apply('HASTE', 'ENEMY', 0, 3)]);
+
+      const { order } = run([first], [later]);
+
+      expect(order).toEqual([first.id, later.id]);
+      expect(new Set(order).size).toBe(2);
+    });
+
+    it('a character hasting itself acts once', () => {
+      const selfish = hero('selfish', 5, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'HASTE', duration: 2, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }]);
+      const other = hero('other', 1, 1, 0);
+
+      const { order } = run([selfish], [other]);
+
+      expect(order).toEqual([selfish.id, other.id]);
+    });
+
+    it('SPEED stays inside a bracket: a hasted low-bracket character does not overtake a same-bracket neutral one', () => {
+      const starter = hero('starter', 9, 0, 0, [apply('HASTE', 'ALLY', 2)]);
+      const neutralSameBracket = hero('neutral', 5, 0, 1);
+      const lowBracket = hero('low', 1, 0, 2, [], -1);
+
+      expect(run([starter, neutralSameBracket, lowBracket], [hero('dummy', 1, 1, 0, [], -2)]).order)
+        .toEqual([starter.id, neutralSameBracket.id, lowBracket.id, expect.any(String)]);
+    });
+
+    it('the initiative and slot ties are frozen when RESOLVE starts: a Swap mid-round does not reshuffle them', () => {
+      const swapper = hero('swapper', 9, 0, 0, [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyAbs(1), allyAbs(2)] }]);
+      const inSlot1 = hero('slot-1', 5, 0, 1);
+      const inSlot2 = hero('slot-2', 5, 0, 2);
+
+      const { order, state } = run([swapper, inSlot1, inSlot2], [hero('dummy', 1, 1, 0)]);
+
+      expect(state.players[0].team.find(c => c.id === inSlot1.id)!.position.slot).toBe(2);
+      expect(order.slice(0, 3)).toEqual([swapper.id, inSlot1.id, inSlot2.id]);
+    });
+
+    it('a stunned and hasted character is logged once, skipped', () => {
+      const starter = hero('starter', 9, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'STUN', duration: 1, targets: [{ side: 'ALLY', mode: 'ABSOLUTE', n: [1] }] }, apply('HASTE', 'ALLY', 1)]);
+      const target = hero('target', 1, 0, 1);
+
+      const { log } = run([starter, target], [hero('dummy', 5, 1, 0)]);
+
+      const steps = log.filter(step => step.characterId === target.id);
+      expect(steps).toHaveLength(1);
+      expect(steps[0].skipped).toBe(true);
+    });
+
+    it('a SLOW that cancels a HASTE exactly leaves the character neutral again', () => {
+      // Both are hasted at the start, so the faster starter plays first; its SLOW 1 then cancels the HASTE 1 of the lagging one.
+      const starter = { ...hero('starter', 9, 0, 0, [apply('SLOW', 'ALLY', 2)]), states: { SPEED: { value: 1, touchedRound: 0 } } };
+      const middle = hero('middle', 5, 0, 1);
+      const lagging = { ...hero('lagging', 1, 0, 2), states: { SPEED: { value: 1, touchedRound: 0 } } };
+
+      expect(run([starter, middle, lagging], [hero('dummy', 0, 1, 0)]).order.slice(0, 3)).toEqual([starter.id, middle.id, lagging.id]);
+    });
   });
 
   describe('auto-targeting at resolution time', () => {

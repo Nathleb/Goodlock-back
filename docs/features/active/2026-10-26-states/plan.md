@@ -31,7 +31,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 5e HASTE and SLOW
 - [x] 15. Sort key with the SPEED sign.
 - [x] 16. Re-sort of the unresolved entries after each step.
-- [ ] 17. Guards.
+- [x] 17. Guards.
 - [ ] 18. Wording of the old "computed once". Review 5.
 
 6 roster
