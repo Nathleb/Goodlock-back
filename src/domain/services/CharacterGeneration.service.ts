@@ -6,7 +6,7 @@ import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
-import { validateEffectTargets } from "./TargetResolution.service";
+import { validateEffectTargets, validateStatParams } from "./TargetResolution.service";
 import { CatalogId } from "@shared/branded.types";
 
 export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, factory: EffectFactory): Character {
@@ -82,6 +82,12 @@ export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: E
     const errors = validateEffectTargets(entry.effect, entry.targets ?? []);
     if (errors.length > 0) {
         throw new Error(`Invalid targets for effect "${entry.effect}" on face "${dieFace.description}": ${errors.join('; ')}`);
+    }
+    if (entry.effect === EffectLabel.ApplyStat) {
+        const statErrors = validateStatParams(entry);
+        if (statErrors.length > 0) {
+            throw new Error(`Invalid stat parameters for effect "${entry.effect}" on face "${dieFace.description}": ${statErrors.join('; ')}`);
+        }
     }
     const params = entry.effect === EffectLabel.ApplyStat ? { stat: entry.stat, duration: entry.duration } : undefined;
     const impl = factory.createEffect(entry.effect, entry.magnitude, params);

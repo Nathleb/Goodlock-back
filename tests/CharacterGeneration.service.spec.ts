@@ -97,6 +97,22 @@ describe('CharacterGenerationService', () => {
   });
 
   it.each([
+    ['unknown stat', { stat: 'LUCK', magnitude: 3, duration: 2 }],
+    ['a stat not implemented yet (ARMOR)', { stat: 'ARMOR', magnitude: 3, duration: 2 }],
+    ['missing stat', { magnitude: 3, duration: 2 }],
+    ['zero magnitude', { stat: 'POWER', magnitude: 0, duration: 2 }],
+    ['fractional magnitude', { stat: 'POWER', magnitude: 1.5, duration: 2 }],
+    ['zero duration', { stat: 'POWER', magnitude: 3, duration: 0 }],
+    ['negative duration', { stat: 'POWER', magnitude: 3, duration: -1 }],
+    ['fractional duration', { stat: 'POWER', magnitude: 3, duration: 1.5 }],
+    ['missing duration', { stat: 'POWER', magnitude: 3 }],
+  ])('throws on invalid ApplyStat parameters (%s)', (_label, params) => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', ...params, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
+    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid stat parameters/);
+  });
+
+  it.each([
     ['empty targets', []],
     ['slot out of range', [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [7] }]],
     ['missing targets', undefined],
