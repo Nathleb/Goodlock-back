@@ -112,6 +112,8 @@ The effect is fixed per state; a **signed counter per axis** holds the **duratio
 
 ### 4.5 Template schema [proposed]
 
+The stat enum grows feature by feature: `POWER` first, `ARMOR` with its own feature. The validator rejects a stat whose feature is not implemented yet.
+
 `EffectEntry` becomes a discriminated union:
 
 ```jsonc
