@@ -124,6 +124,16 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 - **Tests grow:** client coverage increases each phase; backend stays green.
 - **Reconnection resilience** is maintained as a standing requirement, not a one-time task.
 
+## Dice authoring and statuses (backend, in progress)
+
+Umbrella design: `docs/features/active/2026-10-26-dice-authoring-and-statuses/design.md`. Features in order,
+each with its own spec and PR: deterministic initiative; `FixedDamage`; POWER; ARMOR; states one by one
+(STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, HASTE/SLOW); the new roster. Later: `DIE_LOCK` (acts on the keep
+decision), a player-set tie preset within a team, and **triggers** ("flee when hit", riposte), which need
+their own system. Client: the resolution preview becomes a simulation of the resolution.
+
+---
+
 ## Open decisions (flagged, not yet made)
 1. **DB-backed results entity** — Phase 3; requires the explicit discussion CLAUDE.md mandates
    before adding any new persistence (collection and decks were agreed in Oct 2026).
