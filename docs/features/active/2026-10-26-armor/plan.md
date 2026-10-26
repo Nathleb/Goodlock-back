@@ -8,7 +8,7 @@ Layers: domain (type, `Damage`, validator), application (DTO mapper). Each step:
 - [x] 1. `STAT_NAMES` and ARMOR in `netStat`.
 - [x] 2. `Damage` subtracts the target's ARMOR.
 - [x] 3. Floor at 0.
-- [ ] 4. ARMOR debuff (Vulnerable).
+- [x] 4. ARMOR debuff (Vulnerable).
 - [ ] 5. POWER and ARMOR share one floor.
 - [ ] 6. ARMOR is read per target cell.
 - [ ] 7. Shield absorbs after ARMOR.

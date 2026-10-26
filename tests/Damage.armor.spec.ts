@@ -43,4 +43,12 @@ describe('Damage with ARMOR', () => {
         expect(at(state, 1, 0).hp).toBe(20);
         expect(at(state, 1, 0).shield).toBe(0);
     });
+
+    it('a negative ARMOR (Vulnerable) increases the damage taken', () => {
+        const exposed = withCharacter(gs, 1, 0, { modifiers: [stat('ARMOR', -3)] });
+
+        const { state } = new Damage(5).solve(exposed, [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(12);
+    });
 });
