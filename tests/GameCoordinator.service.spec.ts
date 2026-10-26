@@ -420,9 +420,23 @@ describe('confirmKeep', () => {
 
             coordinator.confirmKeep(SOCKET_0, []);
 
+            // The clients get the post-upkeep board before the result, so they see what decided the match.
             const events = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
-            expect(events).toEqual(['roundResolved', 'gameOver']);
+            expect(events).toEqual(['roundResolved', 'gameStateUpdated', 'gameOver']);
             expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameOver', { winner: 1, reason: 'elimination' });
+            expect(lastEmittedState().players[0].team[1].hp).toBe(0);
+            expect(lastEmittedState().phase).toBe(GamePhase.RESULT);
+        });
+
+        it('saves the post-upkeep state when the poison ends the match, for a client that reconnects', () => {
+            const doomed = edit(edit(keepGs, 0, 0, { hp: 0 }), 0, 1, { hp: 5, states: poisoned });
+            mockRoom.getRoom.mockReturnValue(makeRoom(resolving(doomed)));
+
+            coordinator.confirmKeep(SOCKET_0, []);
+
+            const saved = mockRoom.updateGameState.mock.calls[mockRoom.updateGameState.mock.calls.length - 1][1];
+            expect(saved.phase).toBe(GamePhase.RESULT);
+            expect(saved.players[0].team[1].hp).toBe(0);
         });
 
         it('is a draw when the poison kills both players second characters', () => {

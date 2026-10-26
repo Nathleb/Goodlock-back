@@ -90,6 +90,8 @@ export class GameCoordinatorService {
         const upkeepWinner = checkWinner(next);
         if (upkeepWinner !== null) {
             this.roomPort.updateGameState(roomId, next);
+            // Send the board the poison left, so the clients see what decided the match before the result.
+            this.wsPort.emitToRoom(roomId, 'gameStateUpdated', this.withTimers(roomId, GameStateMapper.toDTO(next), next));
             const payload: GameOverDTO = { winner: upkeepWinner, reason: 'elimination' };
             this.wsPort.emitToRoom(roomId, 'gameOver', payload);
             return;
