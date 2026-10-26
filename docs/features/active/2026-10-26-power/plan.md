@@ -5,7 +5,7 @@
 Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validation, tick), application (DTO + mapper). Each step: red test seen failing first (mutation check when the code already satisfies it), minimum code, tests green, one commit.
 
 - [x] 0. Docs: this spec and plan.
-- [ ] 1. `Modifier` becomes a stat instance; `netStat` sums, ignores other stats, caps at ±9.
+- [x] 1. `Modifier` becomes a stat instance; `netStat` sums, ignores other stats, caps at ±9.
 - [ ] 2. `Damage` adds the actor's POWER.
 - [ ] 3. A POWER debuff floors the damage at 0.
 - [ ] 4. POWER applies on ALLY cells too.
