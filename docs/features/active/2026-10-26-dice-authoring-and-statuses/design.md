@@ -125,7 +125,7 @@ The stat enum grows feature by feature: `POWER` first, `ARMOR` with its own feat
 
 - `FixedDamage` uses the same shape as `Damage` (`magnitude`, `targets`).
 - A blank face is `"effects": []` (already accepted by `CharacterGeneration`).
-- `validateEffectTargets` gains checks: `duration` integer ≥ 1; `stat`/`state` in their enums; `magnitude` ≠ 0 for ApplyStat.
+- Template validation gains a `validateStatParams` next to `validateEffectTargets` (`TargetResolution.service.ts`): `duration` integer ≥ 1; `stat`/`state` in their enums; `magnitude` ≠ 0 for ApplyStat.
 
 ---
 
