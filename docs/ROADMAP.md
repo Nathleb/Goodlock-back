@@ -19,7 +19,7 @@ serve the phone experience, not the other way around.
 **Backend (`Goodlock-back`) — engine and player data are built; ahead of the client.**
 - Combat: 4 generic effect strategies (Damage, Heal, Shield, Swap) driven by
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
-  bracket, then base speed, random tiebreak). Character templates are placeholder balance.
+  bracket, then base speed, then an alternating initiative token and slot). Character templates are placeholder balance.
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
   boot; `UserCharacter` ownership (grant-all for now); decks of **6**, max 5 per user, starter deck;
   in a room each player picks a deck, then **team preview**: both decks revealed, each secretly keeps

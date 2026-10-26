@@ -12,7 +12,7 @@ Each step: red test first, minimum code, tests green, one commit.
 - [x] 3. Domain, ties across teams go to the initiative holder. Red (`tests/PriorityQueue.service.spec.ts`): equal bracket and speed on both sides, the holder resolves first for both values; initiative never beats speed or bracket; `Math.random` is not called while resolving. Code: `orderedForResolution(queue, state)` as a pure sort, `shuffled` deleted.
 - [x] 4. Domain, ties within one team go by slot ascending. Red: two allies with equal bracket and speed whose array order does not match their slots. Code: slot key in the comparator; an actor missing from the state keeps its queue order.
 - [x] 5. Application, initiative in the public DTO. Red (`tests/GameStateMapper.viewer.spec.ts`): present in `toDTO` and in every `toDTOForViewer` phase. Code: `GameState.dto.ts`, `GameStateMapper.toDTO`.
-- [ ] 6. Client mirror in Goodlock-app (subagent, branch `feat/initiative` from `feat/landscape`): `initiativePlayerIndex` in `lib/net/models.dart`, tolerant when absent so the recorded demo still parses. `flutter analyze` and `flutter test`.
-- [ ] 7. Docs to current behavior: `CLAUDE.md` rule 4 and the Randomness convention, the pokemon-speed and auto-targeting specs, ROADMAP, the stale "randomised" comment in `tests/DomainIntegration.spec.ts`.
+- [x] 6. Client mirror in Goodlock-app (subagent, branch `feat/initiative` from `feat/landscape`): `initiativePlayerIndex` in `lib/net/models.dart`, tolerant when absent so the recorded demo still parses. `flutter analyze` and `flutter test`.
+- [x] 7. Docs to current behavior: `CLAUDE.md` rule 4 and the Randomness convention, the pokemon-speed and auto-targeting specs, ROADMAP, the stale "randomised" comment in `tests/DomainIntegration.spec.ts`.
 
 After the steps: FULL review, then implemented/, memory, push and PR.

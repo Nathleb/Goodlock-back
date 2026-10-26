@@ -427,9 +427,8 @@ describe('Domain integration — Win conditions', () => {
     });
 
     it('checkWinner returns draw when both teams have 3+ dead characters', () => {
-        // Resolution order is randomised within a priority bucket, so a simultaneous
-        // kill test is non-deterministic. Test checkWinner directly with a
-        // known-dead state instead.
+        // Test checkWinner directly with a known-dead state: it isolates the
+        // winner rule from the resolution order.
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const killThree = (team: typeof gameState.players[0]['team']) =>
             team.map((char, idx) => idx < 3 ? { ...char, hp: 0 } : char);
