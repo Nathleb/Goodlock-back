@@ -15,6 +15,7 @@ Goodlock is the backend for a tactical PvP dice game (each character is a 6-face
 # Development
 npm run start:dev       # watch mode
 npm run build           # compile to dist/
+npm run protocol:schema # regenerate protocol/protocol.schema.json from ServerEvents
 
 # Tests
 npm run test            # run all tests
@@ -135,13 +136,13 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
 
 **Add an effect**: add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first, one spec per strategy); add its case to `effectFor` (`domain/strategies/effectFor.ts`: the exhaustive switch does not compile until it is there); check that `validateEffectTargets` accepts its target groups; use it in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
 
-**Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (a failed Result is reported as `error { code, message }`, see Conventions); handler in `session.gateway.ts` with the existing guards; payload class in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. The gateway validates every `@MessageBody()` with a `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`), so every property of a payload class needs a class-validator decorator, or every real client message is refused with "property X should not exist". `tests/SessionGateway.validation.spec.ts` mounts the gateway on a real socket: add a case there for the new payload. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Then mirror the event in Goodlock-app (see Client contract).
+**Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (a failed Result is reported as `error { code, message }`, see Conventions); handler in `session.gateway.ts` with the existing guards; payload class in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. The gateway validates every `@MessageBody()` with a `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`), so every property of a payload class needs a class-validator decorator, or every real client message is refused with "property X should not exist". `tests/SessionGateway.validation.spec.ts` mounts the gateway on a real socket: add a case there for the new payload. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Add the event and its payload type to `ServerEvents` (`application/dtos/Protocol.dto.ts`; `WebSocketPort` emits are typed against it) and run `npm run protocol:schema`. Then mirror the event in Goodlock-app (see Client contract).
 
 **Schema change** (`prisma/schema.prisma`): there is no natural red test for a schema step. Verify it with `npx prisma validate`, `npx prisma generate` and `npx tsc --noEmit`, plus a repository or module spec if behavior changes. Create the migration without applying it: `npx prisma migrate dev --create-only --name <topic>` (needs the local Postgres up). Applying it (`npx prisma migrate dev`) is a human-only step. Run `npx prisma generate` after any schema change, or `tsc` fails on the client types.
 
 ## Client contract
 
-The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no shared package and no generated types: the protocol is mirrored by hand. WebSocket events are in `lib/net/game_socket.dart`, payload models in `lib/net/models.dart`, HTTP calls in `lib/net/api.dart`, game constants in `lib/net/rules.dart`. A protocol change here is not done until those files match; a subagent can do the mirroring.
+The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no shared package and no generated Dart types: the protocol is mirrored by hand, but `protocol/protocol.schema.json` (generated from `ServerEvents` by `npm run protocol:schema`, kept fresh by `tests/ProtocolSchema.spec.ts`) is the machine-readable contract: the client copies it with `tool/sync_protocol.sh` and validates its fixtures against it. WebSocket events are in `lib/net/game_socket.dart`, payload models in `lib/net/models.dart`, HTTP calls in `lib/net/api.dart`, game constants in `lib/net/rules.dart`. A protocol change here is not done until those files match; a subagent can do the mirroring.
 
 ## Guardrails
 
