@@ -229,7 +229,7 @@ Each item is its own feature (branch, spec, plan, review, PR). A feature that ch
 
 1. Deterministic initiative (`implemented/2026-10-26-initiative`), done
 2. `FixedDamage` (`implemented/2026-10-26-fixed-damage`), done
-3. POWER: stat instances, tick, `ApplyStat` schema
+3. POWER: stat instances, tick, `ApplyStat` schema (`implemented/2026-10-26-power`), done
 4. ARMOR
 5. States, one per feature: STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, then HASTE/SLOW (the first one adds the counters, the `ApplyState` schema and the tick)
 6. New roster (`templates/` below, once the effects exist)

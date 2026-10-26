@@ -17,7 +17,7 @@ serve the phone experience, not the other way around.
 ## Where we are today (updated 2026-10-19)
 
 **Backend (`Goodlock-back`) — engine and player data are built; ahead of the client.**
-- Combat: generic effect strategies (Damage, FixedDamage, Heal, Shield, Swap) driven by
+- Combat: generic effect strategies (Damage, FixedDamage, Heal, Shield, Swap, ApplyStat) driven by
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
   bracket, then base speed, then an alternating initiative token and slot). Character templates are placeholder balance.
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
