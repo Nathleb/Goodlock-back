@@ -10,7 +10,7 @@ Layers: domain (type, `Damage`, validator), application (DTO mapper). Each step:
 - [x] 3. Floor at 0.
 - [x] 4. ARMOR debuff (Vulnerable).
 - [x] 5. POWER and ARMOR share one floor.
-- [ ] 6. ARMOR is read per target cell.
+- [x] 6. ARMOR is read per target cell.
 - [ ] 7. Shield absorbs after ARMOR.
 - [ ] 8. `FixedDamage`, Heal and Shield ignore the target's ARMOR.
 - [ ] 9. Templates can use `ApplyStat` with ARMOR (validator reads `STAT_NAMES`).

@@ -61,4 +61,14 @@ describe('Damage with ARMOR', () => {
         const { state: floored } = new Damage(5).solve(crossed, [pos(1, 0)], actorId());
         expect(at(floored, 1, 0).hp).toBe(20);
     });
+
+    it('reads ARMOR on each target cell, so an area pattern is reduced cell by cell', () => {
+        const guarded = withCharacter(gs, 1, 1, { modifiers: [stat('ARMOR', 8)] });
+
+        const { state } = new Damage(7).solve(guarded, [pos(1, 0), pos(1, 1), pos(1, 2)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(13);
+        expect(at(state, 1, 1).hp).toBe(20);
+        expect(at(state, 1, 2).hp).toBe(13);
+    });
 });
