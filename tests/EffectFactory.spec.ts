@@ -1,6 +1,7 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import EffectFactory from "@domain/factories/EffectFactory.class";
 import Damage from "@domain/strategies/Damage.class";
+import FixedDamage from "@domain/strategies/FixedDamage.class";
 import Heal from "@domain/strategies/Heal.class";
 import Shield from "@domain/strategies/Shield.class";
 import Swap from "@domain/strategies/Swap.class";
@@ -11,6 +12,13 @@ describe('EffectFactory', () => {
     factory.registerEffect(EffectLabel.Damage, (amount) => new Damage(amount));
     const effect = factory.createEffect(EffectLabel.Damage, 10);
     expect(effect).toBeInstanceOf(Damage);
+  });
+
+  it('should register and create FixedDamage effect', () => {
+    const factory = new EffectFactory();
+    factory.registerEffect(EffectLabel.FixedDamage, (amount) => new FixedDamage(amount));
+    const effect = factory.createEffect(EffectLabel.FixedDamage, 10);
+    expect(effect).toBeInstanceOf(FixedDamage);
   });
 
   it('should register and create Heal effect', () => {
