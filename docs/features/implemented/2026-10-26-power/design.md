@@ -8,7 +8,7 @@ POWER is a stat with a magnitude. A positive value is a buff, a negative value i
 
 - Each application is an independent **instance** `{ stat, value, roundsLeft, appliedRound }`, stored in `Character.modifiers`. Magnitude and duration are authored separately; the duration is an integer ≥ 1 with no upper cap.
 - The **net value** of a stat is the sum of its instances, capped to ±`MAX_STAT_NET` (9). The cap applies when the value is read; instances are stored uncapped, so opposite instances still cancel.
-- `Damage` deals `max(0, magnitude + POWER(actor))` per cell, then shield absorbs, then HP. POWER applies on every cell of a `Damage`, ally or enemy. It never applies to `Heal`, `Shield` or `FixedDamage`.
+- `Damage` deals `max(0, magnitude + POWER(actor) - ARMOR(target))` per cell (the ARMOR part comes from its own spec), then shield absorbs, then HP. POWER applies on every cell of a `Damage`, ally or enemy. It never applies to `Heal`, `Shield` or `FixedDamage`.
 - Changes are **immediate**: a later action of the same round sees them.
 - **Ticking**: at the end of each round every instance loses one `roundsLeft` and is removed at 0, except an instance applied during that same round (`appliedRound === currentRound`), which does not tick yet. A duration *d* applied in round *N* is therefore active for the rest of *N* and rounds *N+1 … N+d*.
 - `ApplyStat` (template `{ effect, stat, magnitude, duration, targets }`) adds one instance per target-cell occurrence. An empty cell does nothing while the rest of the pattern applies. A dead occupant gets no instance (it is still listed as affected, like `Damage` on a dead target).
