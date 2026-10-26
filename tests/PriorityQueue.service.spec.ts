@@ -628,6 +628,51 @@ describe('PriorityQueueService', () => {
     });
   });
 
+  describe('SPEED states in the sort key', () => {
+    const dieOfFace = (effects: EffectEntry[], priority: number) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, speedState = 0, priority = 0) => ({
+      ...createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace([], priority), position: { playerIndex, slot } }),
+      states: speedState === 0 ? {} : { SPEED: { value: speedState, touchedRound: 0 } },
+    });
+    const orderOf = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) => {
+      const { log } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1))));
+      return log.map(step => step.characterId);
+    };
+
+    it('a hasted character resolves before a faster neutral one of the same bracket', () => {
+      const hasted = hero('hasted', 1, 0, 0, 2);
+      const fast = hero('fast', 9, 1, 0);
+      expect(orderOf([hasted], [fast])).toEqual([hasted.id, fast.id]);
+    });
+
+    it('a slowed character resolves after a slower neutral one of the same bracket', () => {
+      const slowed = hero('slowed', 9, 0, 0, -1);
+      const slow = hero('slow', 1, 1, 0);
+      expect(orderOf([slowed], [slow])).toEqual([slow.id, slowed.id]);
+    });
+
+    it('orders hasted, neutral, slowed', () => {
+      const hasted = hero('hasted', 2, 0, 0, 1);
+      const neutral = hero('neutral', 5, 0, 1);
+      const slowed = hero('slowed', 9, 1, 0, -1);
+      expect(orderOf([slowed, neutral], [hasted])).toEqual([hasted.id, neutral.id, slowed.id]);
+    });
+
+    it('between two hasted characters the faster resolves first', () => {
+      const quick = hero('quick', 8, 0, 0, 1);
+      const quicker = hero('quicker', 9, 1, 0, 3);
+      expect(orderOf([quick], [quicker])).toEqual([quicker.id, quick.id]);
+    });
+
+    it('never lets SPEED cross a bracket', () => {
+      const hastedLow = hero('hasted-low', 1, 0, 0, 3, 0);
+      const neutralHigh = hero('neutral-high', 1, 1, 0, 0, 1);
+      const slowedHigh = hero('slowed-high', 1, 1, 1, -3, 1);
+      expect(orderOf([hastedLow], [neutralHigh, slowedHigh])).toEqual([neutralHigh.id, slowedHigh.id, hastedLow.id]);
+    });
+  });
+
   describe('auto-targeting at resolution time', () => {
     const factory = buildEffectFactory();
     const face = (priority: number, effects: EffectEntry[]) =>

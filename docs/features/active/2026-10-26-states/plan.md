@@ -29,7 +29,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 14. Coordinator wiring and game over. Review 4.
 
 5e HASTE and SLOW
-- [ ] 15. Sort key with the SPEED sign.
+- [x] 15. Sort key with the SPEED sign.
 - [ ] 16. Re-sort of the unresolved entries after each step.
 - [ ] 17. Guards.
 - [ ] 18. Wording of the old "computed once". Review 5.
