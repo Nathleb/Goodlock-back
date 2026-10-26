@@ -1,7 +1,9 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, createCharacterFromJsonTemplate, createCharacterFromTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { CatalogId } from "@shared/branded.types";
-import { buildEffectFactory } from "@domain/services/GameInit.service";
+import { buildEffectFactory, createGameState } from "@domain/services/GameInit.service";
+import { createPlayer } from "@domain/services/Player.service";
+import FixedDamage from "@domain/strategies/FixedDamage.class";
 
 describe('CharacterGenerationService', () => {
   const factory = buildEffectFactory();
@@ -58,6 +60,27 @@ describe('CharacterGenerationService', () => {
     expect(c.baseDie[0].effects[0]).toMatchObject({
       label: 'Damage', magnitude: 4, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }],
     });
+  });
+
+  it('builds a face from a FixedDamage entry using the FixedDamage strategy', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'FixedDamage', magnitude: 3, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
+    const c = createCharacterFromJsonTemplate(json, factory);
+    expect(c.baseDie[0].effects[0]).toMatchObject({ label: 'FixedDamage', magnitude: 3 });
+    expect(c.baseDie[0].effects[0].impl).toBeInstanceOf(FixedDamage);
+  });
+
+  it('the built FixedDamage lowers hp by the template magnitude, shield untouched', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'FixedDamage', magnitude: 3, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
+    const built = createCharacterFromJsonTemplate(json, factory);
+    const victim = { ...createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 0, slot: 0 } }), shield: 4 };
+    const state = createGameState(createPlayer([victim], 0), createPlayer([], 1));
+
+    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 0, slot: 0 }], victim.id);
+
+    expect(after.players[0].team[0].hp).toBe(7);
+    expect(after.players[0].team[0].shield).toBe(4);
   });
 
   it.each([

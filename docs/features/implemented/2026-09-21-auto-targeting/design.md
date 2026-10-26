@@ -16,7 +16,7 @@ Players do not choose targets. Every die face carries predefined target cells in
 - Decision: a relative cell outside the board (slot < 0 or >= `BOARD_SIZE`) is **dropped**; an effect with no remaining cell **fizzles** (no-op).
 - Decision: a cell reached several times by one effect is **hit once per occurrence** rather than deduplicated, because overlapping patterns stacking is part of the game.
 - Decision: conditional targeting ("weakest enemy") is **out of scope**: it targets characters, not cells.
-- Decision: the effect strategies are **four generic effects, `Damage`, `Heal`, `Shield`, `Swap`**, because the "who" lives in `targets`; only the "what" remains in the effect.
+- Decision: the effect strategies are **generic effects, `Damage`, `FixedDamage`, `Heal`, `Shield`, `Swap`**, because the "who" lives in `targets`; only the "what" remains in the effect.
 
 ## 1. Domain model
 
@@ -32,7 +32,7 @@ type TargetGroup = {
 };
 ```
 
-`EffectLabel` is `Damage | Heal | Shield | Swap`. A `DieFace` is `{ priority, description, effects: FaceEffect[] }`, and each `FaceEffect` is `{ label, magnitude, targets: TargetGroup[], impl }` where `impl` is the strategy registered for the label in `EffectFactory` (`magnitude` is ignored by `Swap`). The strategy interface is `solve(gs, targets: readonly Position[], actorId) -> { state, affected }`.
+`EffectLabel` is `Damage | FixedDamage | Heal | Shield | Swap`. A `DieFace` is `{ priority, description, effects: FaceEffect[] }`, and each `FaceEffect` is `{ label, magnitude, targets: TargetGroup[], impl }` where `impl` is the strategy registered for the label in `EffectFactory` (`magnitude` is ignored by `Swap`). The strategy interface is `solve(gs, targets: readonly Position[], actorId) -> { state, affected }`.
 
 Board convention: `ENEMY` relative offset `0` is the enemy in the same slot index as the actor ("the one facing me"). `BOARD_SIZE` is 5 cells per side; the team has fewer characters than cells, so some cells are empty (see below).
 
@@ -40,7 +40,7 @@ Template JSON example, "Sacrifice 3 HP to deal 9 to the first three enemies":
 
 ```json
 "effects": [
-  { "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ALLY",  "mode": "RELATIVE", "n": [0] }] },
+  { "effect": "FixedDamage", "magnitude": 3, "targets": [{ "side": "ALLY",  "mode": "RELATIVE", "n": [0] }] },
   { "effect": "Damage", "magnitude": 9, "targets": [{ "side": "ENEMY", "mode": "ABSOLUTE", "n": [0, 1, 2] }] }
 ]
 ```
@@ -71,17 +71,18 @@ Mixed example, one effect hitting enemies 0-2 and the actor itself:
 | Effect | Behaviour on the resolved positions |
 |---|---|
 | `Damage` | damage (shield first) to the occupant of each position, once per occurrence |
+| `FixedDamage` | sacrificed HP: lowers the occupant's HP by exactly the magnitude, once per occurrence; not absorbed by shield and never modified by buffs or debuffs (used for costs) |
 | `Heal` | heal the occupant of each position, once per occurrence (capped at `maxHp`; a dead occupant is not healed) |
 | `Shield` | add shield to the occupant of each position, once per occurrence |
 | `Swap` | needs exactly 2 positions on the same side; exchanges their occupants. If one cell is empty the occupant **moves** there (the hole travels); two empty cells, a repeated cell, or cells on different sides fizzle |
 
-An empty cell does nothing for `Damage`/`Heal`/`Shield`, and the rest of the pattern still applies. Dead characters stay targetable: damage on a dead occupant is wasted, not redirected.
+An empty cell does nothing for `Damage`/`FixedDamage`/`Heal`/`Shield`, and the rest of the pattern still applies. Dead characters stay targetable: damage on a dead occupant is wasted, not redirected.
 
 ### Template validation (at catalog load)
 
 `validateEffectTargets` is called while building characters from templates:
 
-- `effect` is one of the four labels; `targets` is non-empty; each group's `n` is a non-empty array of integers.
+- `effect` is one of the `EffectLabel` values; `targets` is non-empty; each group's `n` is a non-empty array of integers.
 - ABSOLUTE `n` within 0..4; RELATIVE `n` within -4..4.
 - Repeated cells are allowed (they stack).
 - `Swap`: exactly 2 numbers in total across its groups, all groups on the same `side` (modes may differ, e.g. `[ALLY REL [0], ALLY ABS [0]]` moves the actor to slot 0).
