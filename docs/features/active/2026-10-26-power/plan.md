@@ -6,7 +6,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 
 - [x] 0. Docs: this spec and plan.
 - [x] 1. `Modifier` becomes a stat instance; `netStat` sums, ignores other stats, caps at ±9.
-- [ ] 2. `Damage` adds the actor's POWER.
+- [x] 2. `Damage` adds the actor's POWER.
 - [ ] 3. A POWER debuff floors the damage at 0.
 - [ ] 4. POWER applies on ALLY cells too.
 - [ ] 5. Shield absorbs after POWER.
