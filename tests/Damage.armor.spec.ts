@@ -51,4 +51,14 @@ describe('Damage with ARMOR', () => {
 
         expect(at(state, 1, 0).hp).toBe(12);
     });
+
+    it("combines the actor's POWER and the target's ARMOR under a single floor", () => {
+        const empowered = withCharacter(withCharacter(gs, 0, 2, { modifiers: [stat('POWER', 2)] }), 1, 0, { modifiers: [stat('ARMOR', 4)] });
+        const { state } = new Damage(5).solve(empowered, [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).hp).toBe(17);
+
+        const crossed = withCharacter(withCharacter(gs, 0, 2, { modifiers: [stat('POWER', -9)] }), 1, 0, { modifiers: [stat('ARMOR', -3)] });
+        const { state: floored } = new Damage(5).solve(crossed, [pos(1, 0)], actorId());
+        expect(at(floored, 1, 0).hp).toBe(20);
+    });
 });
