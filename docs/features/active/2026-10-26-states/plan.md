@@ -8,7 +8,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 
 5a infrastructure and STUN
 - [x] 1. Types: `StateName`, `StateAxis`, `STATE_DEFS`, `Character.states`, `stateValue`.
-- [ ] 2. `ApplyState` strategy.
+- [x] 2. `ApplyState` strategy.
 - [ ] 3. Templates: entry union, factory params, registration, validation.
 - [ ] 4. Tick of the axes.
 - [ ] 5. STUN skips the action.

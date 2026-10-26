@@ -5,6 +5,7 @@ enum EffectLabel {
     Shield = "Shield",
     Swap   = "Swap",
     ApplyStat = "ApplyStat",
+    ApplyState = "ApplyState",
 }
 
 export default EffectLabel;
