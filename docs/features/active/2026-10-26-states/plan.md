@@ -32,7 +32,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 15. Sort key with the SPEED sign.
 - [x] 16. Re-sort of the unresolved entries after each step.
 - [x] 17. Guards.
-- [ ] 18. Wording of the old "computed once". Review 5.
+- [x] 18. Wording of the old "computed once". Review 5.
 
 6 roster
 - [ ] 19. Add or replace the placeholders (check-in).

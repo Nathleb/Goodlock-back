@@ -21,7 +21,7 @@ Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT. There is no
 
 ## 3. Resolution rules
 
-**Priority** (Pokemon-style): two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Exact ties go to the player holding the initiative token (`GameState.initiativePlayerIndex`: drawn at init, flipped at the end of each round, public in the DTO), then by slot ascending (0 to 4). The order is a pure sort with no random call, so the client can preview it exactly. Speed never crosses brackets.
+**Priority** (Pokemon-style): Actions sort by `face.priority` (a small bracket modifier) descending, then by the SPEED state (hasted, neutral, slowed), then by `character.baseSpeed` descending within the same bracket. Exact ties go to the player holding the initiative token (`GameState.initiativePlayerIndex`: drawn at init, flipped at the end of each round, public in the DTO), then by slot ascending (0 to 4). The order is a pure sort with no random call, so the client can preview it exactly. The actions that have not played yet are sorted again before every step, so a HASTE or SLOW landing mid-round reorders them; the initiative and slot keys are fixed when the resolution starts. Speed and the SPEED state never cross brackets, and nobody plays twice.
 
 **Auto-targeting**: players never choose targets. Each effect carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies.
 - Off-board cells are dropped; no cell = fizzle.
