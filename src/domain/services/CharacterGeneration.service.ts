@@ -1,4 +1,5 @@
 import CharacterTemplate from "../types/CharacterTemplate.type";
+import EffectLabel from "../types/EffectLabels.type";
 import EffectFactory from "../factories/EffectFactory.class";
 import Die from "../types/Die.type";
 import DieFace from "../types/DieFace.type";
@@ -82,9 +83,10 @@ export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: E
     if (errors.length > 0) {
         throw new Error(`Invalid targets for effect "${entry.effect}" on face "${dieFace.description}": ${errors.join('; ')}`);
     }
-    const impl = factory.createEffect(entry.effect, entry.magnitude);
+    const params = entry.effect === EffectLabel.ApplyStat ? { stat: entry.stat, duration: entry.duration } : undefined;
+    const impl = factory.createEffect(entry.effect, entry.magnitude, params);
     return {
         ...dieFace,
-        effects: [...dieFace.effects, { label: entry.effect, magnitude: entry.magnitude, targets: entry.targets, impl }],
+        effects: [...dieFace.effects, { label: entry.effect, magnitude: entry.magnitude, ...params, targets: entry.targets, impl }],
     };
 }

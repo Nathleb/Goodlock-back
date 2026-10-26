@@ -1,10 +1,14 @@
 import Effect from "./Effect.type";
 import EffectLabel from "./EffectLabels.type";
+import { StatName } from "./Modifier.type";
 import TargetGroup from "./TargetGroup.type";
 
 export type FaceEffect = {
     readonly label: EffectLabel;
     readonly magnitude: number;
+    /** Only for ApplyStat. */
+    readonly stat?: StatName;
+    readonly duration?: number;
     readonly targets: readonly TargetGroup[];
     readonly impl: Effect;
 };

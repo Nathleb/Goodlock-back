@@ -13,7 +13,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 - [x] 6. Heal, Shield and `FixedDamage` ignore POWER (tests, mutation checked).
 - [x] 7. `ApplyStat` strategy adds an instance.
 - [x] 8. `ApplyStat` edge cases: repeated cell, empty cell, dead occupant, stacking.
-- [ ] 9. Templates can use `ApplyStat` (entry union, factory params, registration).
+- [x] 9. Templates can use `ApplyStat` (entry union, factory params, registration).
 - [ ] 10. Validation of stat parameters.
 - [ ] 11. Tick at the end of the round.
 - [ ] 12. An instance applied this round does not tick.
