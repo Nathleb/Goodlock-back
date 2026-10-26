@@ -13,7 +13,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 4. Tick of the axes.
 - [x] 5. STUN skips the action.
 - [x] 6. DTO and catalog mapper.
-- [x] 7. Review 1.
+- [ ] 7. Review 1.
 
 5b ROOT
 - [ ] 8. Swap fizzles on a rooted occupant.
