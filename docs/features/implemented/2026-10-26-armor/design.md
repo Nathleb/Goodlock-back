@@ -1,6 +1,6 @@
 # ARMOR: a buff/debuff on the damage a character takes — design
 
-**Status:** approved 2026-10-26, in progress. Part of `../2026-10-26-dice-authoring-and-statuses/design.md` (sections 4.1, 4.4). Reuses the stat machinery of the POWER spec (`../../implemented/2026-10-26-power/design.md`).
+**Status:** implemented 2026-10-26. Part of `../../active/2026-10-26-dice-authoring-and-statuses/design.md` (sections 4.1, 4.4). Reuses the stat machinery of the POWER spec (`../2026-10-26-power/design.md`).
 
 A positive ARMOR is a buff (less damage taken), a negative ARMOR is a debuff (Vulnerable).
 
