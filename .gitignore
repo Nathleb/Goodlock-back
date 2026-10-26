@@ -45,3 +45,5 @@ lerna-debug.log*
 .claude/
 web-bundles/
 goodlock-handoff
+# MCP servers (local)
+.mcp.json
