@@ -14,7 +14,7 @@ Layers: domain (type, `Damage`, validator), application (DTO mapper). Each step:
 - [x] 7. Shield absorbs after ARMOR.
 - [x] 8. `FixedDamage`, Heal and Shield ignore the target's ARMOR.
 - [x] 9. Templates can use `ApplyStat` with ARMOR (validator reads `STAT_NAMES`).
-- [ ] 10. ARMOR changes apply inside the round, in speed order.
+- [x] 10. ARMOR changes apply inside the round, in speed order.
 - [ ] 11. ARMOR ticks like POWER.
 - [ ] 12. DTO `stats` has ARMOR.
 - [ ] 13. Docs to current behavior.
