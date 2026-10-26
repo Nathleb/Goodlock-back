@@ -1,5 +1,6 @@
-/** Stats with a magnitude. Each stat is added by its own feature. */
-export type StatName = 'POWER';
+/** Stats with a magnitude. Each stat is added by its own feature; the validator and the DTO read this list. */
+export const STAT_NAMES = ['POWER', 'ARMOR'] as const;
+export type StatName = typeof STAT_NAMES[number];
 
 /** One application of a stat: magnitude and duration are authored independently. */
 type Modifier = {
