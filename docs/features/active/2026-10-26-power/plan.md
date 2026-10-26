@@ -11,7 +11,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 - [x] 4. POWER applies on ALLY cells too.
 - [x] 5. Shield absorbs after POWER.
 - [x] 6. Heal, Shield and `FixedDamage` ignore POWER (tests, mutation checked).
-- [ ] 7. `ApplyStat` strategy adds an instance.
+- [x] 7. `ApplyStat` strategy adds an instance.
 - [ ] 8. `ApplyStat` edge cases: repeated cell, empty cell, dead occupant, stacking.
 - [ ] 9. Templates can use `ApplyStat` (entry union, factory params, registration).
 - [ ] 10. Validation of stat parameters.
