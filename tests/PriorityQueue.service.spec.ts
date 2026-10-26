@@ -673,6 +673,35 @@ describe('PriorityQueueService', () => {
     });
   });
 
+  describe('SPEED changing during the round', () => {
+    const dieOfFace = (effects: EffectEntry[], priority: number) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[] = [], priority = 0) =>
+      createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects, priority), position: { playerIndex, slot } });
+    const apply = (state: 'HASTE' | 'SLOW', side: 'ALLY' | 'ENEMY', slot: number, duration = 1): EffectEntry =>
+      ({ effect: EffectLabel.ApplyState, state, duration, targets: [{ side, mode: 'ABSOLUTE', n: [slot] }] });
+    const run = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) => {
+      const { log, state } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1))));
+      return { order: log.map(step => step.characterId), log, state };
+    };
+
+    it('a HASTE landing mid-round moves a slow, unresolved character up', () => {
+      const starter = hero('starter', 9, 0, 0, [apply('HASTE', 'ALLY', 1)]);
+      const lagging = hero('lagging', 1, 0, 1);
+      const middle = hero('middle', 5, 1, 0);
+
+      expect(run([starter, lagging], [middle]).order).toEqual([starter.id, lagging.id, middle.id]);
+    });
+
+    it('a SLOW landing mid-round moves a fast, unresolved character down', () => {
+      const starter = hero('starter', 9, 0, 0, [apply('SLOW', 'ENEMY', 0)]);
+      const victim = hero('victim', 5, 1, 0);
+      const lagging = hero('lagging', 1, 1, 1);
+
+      expect(run([starter], [victim, lagging]).order).toEqual([starter.id, lagging.id, victim.id]);
+    });
+  });
+
   describe('auto-targeting at resolution time', () => {
     const factory = buildEffectFactory();
     const face = (priority: number, effects: EffectEntry[]) =>
