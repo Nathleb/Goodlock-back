@@ -21,7 +21,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 
 5c DIVINE_SHIELD
 - [x] 10. Damage nullified and state consumed.
-- [ ] 11. DIVINE_SHIELD edge cases. Review 3.
+- [x] 11. DIVINE_SHIELD edge cases. Review 3.
 
 5d POISON and REGEN
 - [ ] 12. `upkeep`.

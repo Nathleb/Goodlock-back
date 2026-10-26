@@ -1,5 +1,7 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import Damage from "@domain/strategies/Damage.class";
+import EffectLabel from "@domain/types/EffectLabels.type";
+import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import Heal from "@domain/strategies/Heal.class";
 import Shield from "@domain/strategies/Shield.class";
@@ -47,6 +49,16 @@ describe('DIVINE_SHIELD', () => {
         expect(at(state, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
     });
 
+    it("counts the actor's POWER before deciding whether the hit would hurt", () => {
+        const target = patch(gs, 1, 0, { ...shielded(), modifiers: [{ stat: 'ARMOR', value: 9, roundsLeft: 2, appliedRound: 0 }] });
+        const empowered = patch(target, 0, 2, { modifiers: [{ stat: 'POWER', value: 5, roundsLeft: 2, appliedRound: 0 }] });
+
+        const { state } = new Damage(5).solve(empowered, [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).states).toEqual({});
+    });
+
     it('a repeated cell consumes it once, then the second occurrence lands', () => {
         const { state } = new Damage(5).solve(patch(gs, 1, 0, shielded()), [pos(1, 0), pos(1, 0)], actorId());
 
@@ -61,7 +73,7 @@ describe('DIVINE_SHIELD', () => {
         expect(at(state, 1, 1).states).toEqual({});
     });
 
-    it('leaves a target without it unchanged', () => {
+    it('lets the hit land on a target without it', () => {
         const { state } = new Damage(5).solve(gs, [pos(1, 0)], actorId());
         expect(at(state, 1, 0).hp).toBe(15);
     });
@@ -107,5 +119,21 @@ describe('DIVINE_SHIELD', () => {
         expect(at(walled, 1, 0).shield).toBe(4);
         expect(at(healed, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
         expect(at(walled, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
+    });
+
+    it('shows up in the resolve log: the nullified target is listed with its shield spent and hp intact', () => {
+        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }], impl: new Damage(5) }] };
+        const attacker = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'att', maxHp: 20, baseSpeed: 5, baseDie: Array(6).fill(hitFace) as unknown as Die, position: { playerIndex: 0, slot: 0 } });
+        const victim = { ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'vic', maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: 1, slot: 0 } }), ...shielded() };
+        const start = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([victim], 1)));
+
+        const { state, log } = unstackPriorityQueueWithLog(start);
+
+        const step = log.find(entry => entry.characterId === attacker.id)!;
+        expect(step.skipped).toBe(false);
+        expect(step.changes).toHaveLength(1);
+        expect(step.changes[0].character).toMatchObject({ id: victim.id, hp: 20 });
+        expect(step.changes[0].character.states).toEqual({});
+        expect(state.players[1].team[0].hp).toBe(20);
     });
 });
