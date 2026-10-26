@@ -29,6 +29,11 @@ const withHp = (s: GameState, pi: PlayerIndex, slot: number, hp: number): GameSt
     return { ...s, players };
 };
 const actorId = () => at(gs, 0, 2).id;
+const withArmor = (s: GameState, pi: PlayerIndex, slot: number, value: number): GameState => {
+    const players = [...s.players] as [Player, Player];
+    players[pi] = { ...players[pi], team: players[pi].team.map((c, i) => i === slot ? { ...c, modifiers: [{ stat: 'ARMOR' as const, value, roundsLeft: 2, appliedRound: 0 }] } : c) };
+    return { ...s, players };
+};
 const withActorPower = (s: GameState, value: number): GameState => {
     const players = [...s.players] as [Player, Player];
     players[0] = { ...players[0], team: players[0].team.map((c, i) => i === 2 ? { ...c, modifiers: [{ stat: 'POWER' as const, value, roundsLeft: 2, appliedRound: 0 }] } : c) };
@@ -160,6 +165,12 @@ describe('Heal', () => {
         expect(at(state, 0, 1).hp).toBe(16);
     });
 
+    it("ignores the target's ARMOR", () => {
+        const hurt = withHp(withArmor(gs, 0, 1, 7), 0, 1, 10);
+        const { state } = new Heal(5).solve(hurt, [pos(0, 1)], actorId());
+        expect(at(state, 0, 1).hp).toBe(15);
+    });
+
     it("ignores the actor's POWER", () => {
         const hurt = withHp(withActorPower(gs, 7), 0, 1, 10);
         const { state } = new Heal(5).solve(hurt, [pos(0, 1)], actorId());
@@ -178,6 +189,11 @@ describe('Shield', () => {
     it('shields a repeated cell once per occurrence', () => {
         const { state } = new Shield(4).solve(gs, [pos(0, 0), pos(0, 0)], actorId());
         expect(at(state, 0, 0).shield).toBe(8);
+    });
+
+    it("ignores the target's ARMOR", () => {
+        const { state } = new Shield(4).solve(withArmor(gs, 0, 0, 7), [pos(0, 0)], actorId());
+        expect(at(state, 0, 0).shield).toBe(4);
     });
 
     it("ignores the actor's POWER", () => {
