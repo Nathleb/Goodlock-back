@@ -2,9 +2,10 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import Damage from "@domain/strategies/Damage.class";
 import Swap from "@domain/strategies/Swap.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
+import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
-import { createCharacter } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
+import { buildEffectFactory, createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import Die from "@domain/types/Die.type";
 import GameState from "@domain/types/GameState.type";
@@ -50,9 +51,13 @@ describe('ROOT', () => {
     it('makes a Swap fizzle when an unrooted character would move into the cell of a rooted one', () => {
         const gs = root(createGameState(five(0, 'A'), five(1, 'B')), 0, 2);
 
-        const { affected } = new Swap().solve(gs, [pos(0, 1), pos(0, 2)], occupant(gs, 0, 1)!.id);
+        const [mover, rooted] = [occupant(gs, 0, 1)!.id, occupant(gs, 0, 2)!.id];
+
+        const { state, affected } = new Swap().solve(gs, [pos(0, 1), pos(0, 2)], mover);
 
         expect(affected).toEqual([]);
+        expect(occupant(state, 0, 1)!.id).toBe(mover);
+        expect(occupant(state, 0, 2)!.id).toBe(rooted);
     });
 
     it('does not touch a Swap that does not involve the rooted character', () => {
@@ -113,5 +118,33 @@ describe('ROOT', () => {
         expect(affected.sort()).toEqual([alive, dead].sort());
         expect(occupant(state, 0, 2)!.id).toBe(alive);
         expect(occupant(state, 0, 1)!.id).toBe(dead);
+    });
+
+    describe('applied inside the resolution', () => {
+        const factory = buildEffectFactory();
+        const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
+            createCharacter({
+                catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, position: { playerIndex, slot },
+                baseDie: generateFullDie(Array(6).fill({ description: 'f', priority: 0, effects }) as unknown as BaseDieInstructions, factory),
+            });
+        const rootEnemy: EffectEntry = { effect: EffectLabel.ApplyState, state: 'ROOT', duration: 1, targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }] };
+        const moveRight: EffectEntry = { effect: EffectLabel.Swap, magnitude: 0, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }, { side: 'ALLY', mode: 'ABSOLUTE', n: [1] }] };
+        const resolveWith = (rooterSpeed: number) => {
+            const rooter = hero('rooter', rooterSpeed, 0, 0, [rootEnemy]);
+            const mover = hero('mover', 5, 1, 0, [moveRight]);
+            const buddy = hero('buddy', 1, 1, 1, []);
+            const gs = addAllEffectsToPriorityQueue(createGameState(createPlayer([rooter], 0), createPlayer([mover, buddy], 1)));
+            return { moverId: mover.id, state: unstackPriorityQueueWithLog(gs).state };
+        };
+
+        it('a ROOT applied earlier in the resolution cancels a later Swap of the same round', () => {
+            const { moverId, state } = resolveWith(9);
+            expect(occupant(state, 1, 0)!.id).toBe(moverId);
+        });
+
+        it('a ROOT applied after the Swap does not undo it', () => {
+            const { moverId, state } = resolveWith(1);
+            expect(occupant(state, 1, 1)!.id).toBe(moverId);
+        });
     });
 });

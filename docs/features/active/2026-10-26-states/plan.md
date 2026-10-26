@@ -17,7 +17,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 
 5b ROOT
 - [x] 8. Swap fizzles on a rooted occupant.
-- [ ] 9. ROOT edge cases. Review 2.
+- [x] 9. ROOT edge cases. Review 2.
 
 5c DIVINE_SHIELD
 - [ ] 10. Damage nullified and state consumed.
