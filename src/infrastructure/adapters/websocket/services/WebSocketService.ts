@@ -1,6 +1,7 @@
 import { SocketId, RoomId } from '@shared/branded.types';
 import { Injectable } from '@nestjs/common';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
+import { ServerEvents } from '@application/dtos/Protocol.dto';
 import { SharedWebSocketService } from './SharedWebSocketService';
 
 @Injectable()
@@ -15,11 +16,11 @@ export class WebSocketService implements WebSocketPort {
         this.shared.getServer().in(socketId).socketsLeave(roomId);
     }
 
-    emitToSocket(socketId: SocketId, event: string, data: unknown): void {
+    emitToSocket<E extends keyof ServerEvents>(socketId: SocketId, event: E, data: ServerEvents[E]): void {
         this.shared.getServer().to(socketId).emit(event, data);
     }
 
-    emitToRoom(roomId: RoomId, event: string, data: unknown): void {
+    emitToRoom<E extends keyof ServerEvents>(roomId: RoomId, event: E, data: ServerEvents[E]): void {
         this.shared.getServer().to(roomId).emit(event, data);
     }
 
