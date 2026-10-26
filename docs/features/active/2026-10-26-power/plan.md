@@ -19,7 +19,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 - [x] 12. An instance applied this round does not tick.
 - [x] 13. Immediate effect inside the round (integration).
 - [x] 14. DTO: `modifiers`, `stats`, effect `stat` and `duration`.
-- [ ] 15. Client mirror in Goodlock-app (subagent, from main after fast-forwarding feat/fixed-damage).
+- [x] 15. Client mirror in Goodlock-app (subagent, from main after fast-forwarding feat/fixed-damage).
 - [x] 16. Docs to current behavior: GAME-DESIGN, umbrella, auto-targeting spec, ROADMAP, FixedDamage spec.
 
 After the steps: FULL review, implemented/, memory, push and PR.
