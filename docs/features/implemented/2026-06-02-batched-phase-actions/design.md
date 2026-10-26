@@ -1,102 +1,46 @@
 # Batched Phase Actions Design
 
-**Date:** 2026-06-02  
-**Status:** implemented 2026-06-02 (confirmAssignment later removed with auto-targeting; confirmKeep still current)
+**Status:** implemented 2026-06-02
 
-## Context
+## Principle
 
-The current WebSocket protocol sends one event per player action during KEEP and ASSIGN phases:
-- `toggleDieLock { characterId }` fires on every die tap
-- `selectTarget { characterId, target }` fires on every target change
+A phase input is sent once, as a single batched event at confirm time. The client buffers its choices locally; the server only needs the final committed selection, because intermediate taps are noise. There is no per-tap event (no `toggleDieLock`, no target selection).
 
-Both phases end with a CONFIRM action. The server only needs the final committed selection — intermediate state is noise. The frontend already buffers selections locally (KeepPanel, AssignPanel). This spec collapses each phase to a single batched event sent at confirm time.
+## Protocol
 
-## Protocol changes
+| Phase | Client -> server | Payload |
+|---|---|---|
+| SELECTION | `confirmSelection` | `{ characterIds: string[] }`: the catalog ids kept from the player's own deck |
+| PLACEMENT | `rearrangeTeam` (as often as wanted), then `confirmPlacement` | `{ slots: (string \| null)[] }`, no payload for the confirm |
+| KEEP | `confirmKeep` | `{ lockedCharacterIds: string[] }`: the characters whose face stays locked for the next reroll |
 
-| Removed event | Replacement |
-|---|---|
-| `toggleDieLock { characterId }` | _(removed — frontend buffers locally)_ |
-| `confirmKeep` _(no payload)_ | `confirmKeep { lockedCharacterIds: string[] }` |
-| `selectTarget { characterId, target: { playerIndex, slot } }` | _(removed — frontend buffers locally)_ |
-| `confirmAssignment` _(no payload)_ | `confirmAssignment { targets: { characterId: string, target: { playerIndex: number, slot: number } }[] }` |
+Each confirm has a `cancel*` counterpart without payload (see the cancel-confirm spec).
 
-`cancelKeep` and `cancelAssignment` are unchanged.
+## Validation
 
-## Validation (both events)
+Validation is **atomic**: if anything in the payload is invalid, the whole batch is rejected with an `error`, nothing is applied, and the player stays un-ready. This is the authoritative-server model: the client is never trusted.
 
-Validation is **atomic**: if any entry in the payload is invalid, the whole batch is rejected with an error, nothing is applied, and the player stays un-ready. This follows the authoritative-server model standard in multiplayer games.
+- `confirmKeep`: every id must belong to the sending player's team. An empty array is valid (nothing locked). Characters absent from the list end up with `isFaceLocked = false`: the payload **sets** the lock state, it does not toggle it.
+- `confirmSelection`: exactly `TEAM_SIZE` ids, no duplicates, all from the player's own deck (checked in the domain, `GameLoop.service.ts`).
+- `rearrangeTeam`: validated by `placeTeam` (`BOARD_SIZE` cells, each team character exactly once, the rest `null`).
 
-**`confirmKeep`**
-- Every id in `lockedCharacterIds` must exist in the sending player's team.
-- An empty array is valid (no characters locked).
-- Characters absent from the list have `isFaceLocked = false`.
+The gateway payload classes (`src/infrastructure/adapters/websocket/payloads/`) check the shape with class-validator; the semantic checks above live in the domain and the coordinator.
 
-**`confirmAssignment`**
-- The payload must contain exactly one entry per character (all 5 required).
-- Every `characterId` must exist in the sending player's team.
-- Every `target.playerIndex` must be 0 or 1.
-- Every `target.slot` must be in range 0–4.
+## Application layer
 
-## Application layer — GameCoordinatorService
+`GameCoordinatorService.confirmKeep(socketId, lockedCharacterIds)`:
 
-### Removed methods
-- `toggleDieLock(socketId, characterId)` — deleted
-- `selectTarget(socketId, characterId, rawTarget)` — deleted
+1. Resolve the context (session, room, player index).
+2. Reject any id that is not on the player's team.
+3. Rebuild the player's team with `isFaceLocked = lockedSet.has(char.id)`.
+4. Hand the resulting state to `doConfirm(socketId, ctx, gs, domainFn)`.
 
-### Changed: `confirmKeep(socketId, lockedCharacterIds: string[])`
-1. `getContext(socketId)` — get ctx (`room`, `playerIndex`)
-2. Validate: every id in `lockedCharacterIds` exists in `player.team`; emit error and return on first failure
-3. Apply (SET semantics): rebuild player team with `isFaceLocked = lockedSet.has(char.id)` for each character
-4. Build `gsWithLocks` with updated player state
-5. Call `this.doConfirm(ctx, gsWithLocks, confirmKeep)` (see below)
+`doConfirm` receives the context and the pre-modified `GameState` as explicit parameters and derives nothing from outside: it runs the domain function (mark ready; when both are ready, reroll or advance), persists through `roomPort.updateGameState`, and emits. When the last confirm lands the game in RESOLVE, it resolves the round immediately.
 
-### Changed: `confirmAssignment(socketId, targets: { characterId, target }[])`
-1. `getContext(socketId)` — get ctx (`room`, `playerIndex`)
-2. Validate: payload has 5 entries; every `characterId` in player's team; every `target.playerIndex` in `[0,1]`; every `target.slot` in `[0..4]`; emit error and return on first failure
-3. Apply: loop over `targets`, calling `selectTargetOfCharacter(player, char.position.slot, target)` per entry to build updated player
-4. Build `gsWithTargets` with updated player state
-5. Call `this.doConfirm(ctx, gsWithTargets, domainConfirmAssignment)` (see below)
+## Domain
 
-### Refactored: `doConfirm(ctx, gs, domainFn)`
-Replaces the old `confirmAction(socketId, domainFn)`. Receives the full context (`room`, `playerIndex`) and the pre-modified `GameState` as explicit parameters — no internal `getContext` lookup, no `roomPort` read. All subsequent logic (mark ready, reroll or advance phase, emit) operates on the passed-in state.
+There is no "toggle one lock" in the production path: lock state is set from the batch inline in the coordinator, and domain tests build locked teams by constructing state directly.
 
-This is the functional pattern: the helper derives nothing from external sources; it only writes back via `roomPort.updateGameState` and `wsPort`.
+## Frontend
 
-## Domain layer
-
-### Removed: `toggleDieLockForCharacter`
-Removed from `Player.service.ts`. The concept of "toggle one lock" no longer exists in the production path. The new SET semantics (`isFaceLocked = lockedSet.has(char.id)`) are applied inline in the coordinator.
-
-All domain tests that used `toggleDieLockForCharacter` as a setup helper (`Roll.service.spec.ts`, `GameLoop.service.spec.ts`, `Round.service.spec.ts`) switch to direct state construction:
-
-```typescript
-const lockedIds = new Set([player.team[0].id]);
-player = { ...player, team: player.team.map(c => ({ ...c, isFaceLocked: lockedIds.has(c.id) })) };
-```
-
-`Player.service.spec.ts` drops the `toggleDieLockForCharacter` describe block.
-
-### Unchanged: `selectTargetOfCharacter`
-Remains in `Player.service.ts`. Still called per-character in the `confirmAssignment` batch loop and used directly in domain/integration tests.
-
-## Infrastructure layer — session.gateway.ts
-
-- Remove `@SubscribeMessage('toggleDieLock')` handler
-- Remove `@SubscribeMessage('selectTarget')` handler
-- `@SubscribeMessage('confirmKeep')`: pass `data.lockedCharacterIds` to coordinator
-- `@SubscribeMessage('confirmAssignment')`: pass `data.targets` to coordinator
-
-## Test changes — GameCoordinator.service.spec.ts
-
-**Deleted describe blocks:**
-- `toggleDieLock` (~10 tests)
-- `selectTarget` (~6 tests)
-- Post-confirm mutation guards for `toggleDieLock` and `selectTarget`
-
-**Updated describe blocks:**
-- `confirmKeep`: update call signatures to pass `lockedCharacterIds`. Add: reject unknown characterId, accept empty array, accept all 5 locked
-- `confirmAssignment`: update call signatures to pass `targets`. Add: reject unknown characterId, reject invalid `playerIndex`, reject out-of-bounds slot, reject payload with wrong count, accept full valid payload
-
-## Scope
-
-This change is backend-only. The frontend (Goodlock-frontend) will need matching changes to KeepPanel and AssignPanel to send batched payloads instead of per-tap events, but that is out of scope here.
+The client holds the buffered choices (locks, layout, picks) and sends them at confirm time.

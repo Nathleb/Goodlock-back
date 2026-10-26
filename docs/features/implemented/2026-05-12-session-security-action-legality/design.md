@@ -1,89 +1,62 @@
 # Session Security & Action Legality
 
-**Date:** 2026-05-12
 **Status:** implemented 2026-05-12
 
-## Problem
+## Goal
 
-Three enforcement gaps exist in the current WebSocket backend:
+Three guarantees on the WebSocket path:
 
-1. `getContext()` silently drops requests when session/room/game context is missing — the client receives no feedback.
-2. A player who has already confirmed a phase (`playersReady[i] = true`) can call confirm handlers again, mutating game state twice.
-3. A player who has confirmed a phase can still call mutation handlers for that phase (e.g. `rearrangeTeam` after `confirmPlacement`).
+1. A request that arrives without a usable session, room or game never disappears silently: the client gets an `error`.
+2. A player who already confirmed a phase (`playersReady[i] = true`) cannot confirm it again.
+3. A player who already confirmed cannot change that phase's input afterwards (e.g. `rearrangeTeam` after `confirmPlacement`).
 
-Authentication is already handled: `handleConnection` disconnects sockets without `deviceIdentifier`, and `getContext()` maps socketId → sessionId → playerIndex. Phase guards (`assertPhase`) and character ownership checks also exist. This spec addresses only the remaining gaps.
+Authentication itself is separate: `handleConnection` disconnects sockets without a valid JWT, and the coordinator maps `socketId` -> session -> player index. Phase guards (`assertPhase`) and character ownership checks are unchanged by this feature.
 
 ## Design
 
-### Layer 1 — Infrastructure: `SessionGuard`
+### Infrastructure: `SessionGuard`
 
-**File:** `src/infrastructure/adapters/websocket/guards/Session.guard.ts`
+`src/infrastructure/adapters/websocket/guards/Session.guard.ts`. A `CanActivate` guard applied to the gateway class with `@UseGuards(SessionGuard)`, so it covers every `@SubscribeMessage()` handler.
 
-A NestJS `CanActivate` guard applied to the gateway class via `@UseGuards(SessionGuard)`. It covers all `@SubscribeMessage()` handlers.
+- Looks up the session by the client's socket id through `SessionPort`.
+- No session: emits `error { message: 'Not connected' }` to that socket and returns `false`.
+- Session present: returns `true`.
 
-**Behaviour:**
-- Extracts `socketId` from `context.switchToWs().getClient<Socket>().id`
-- Calls `sessionPort.getSession(socketId)`
-- If session is `null`: emits `error` event `{ message: 'Not connected' }` to the socket and returns `false`
-- If session exists: returns `true`
+Since `handleConnection` always creates a session for an authenticated socket, this fires only in edge cases (a race, a bug). It is defense in depth, not the primary auth mechanism.
 
-**Note:** Since `handleConnection` always creates a session for authenticated sockets, this guard fires only in edge cases (implementation bugs, race conditions). It is defense-in-depth, not the primary auth mechanism.
+### Application: one generic error for missing game context
 
-**Injection:** The guard needs `SessionPort`. It uses `Inject(SESSION_PORT)` via the NestJS DI system (declared as an injectable service or constructed via `ModuleRef`).
+`GameCoordinatorService.getContext(socketId)` returns `null` when there is no session, no room id, no room, no game state, or the session is not a player of the room. Every game action treats `null` the same way:
 
-### Layer 2 — Application: Generic error on missing game context
-
-**File:** `src/application/services/GameCoordinator.service.ts`
-
-All six callers of `getContext()` currently do:
-```ts
-const ctx = this.getContext(socketId);
-if (!ctx) return;
-```
-
-Change to:
 ```ts
 const ctx = this.getContext(socketId);
 if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
 ```
 
-The same generic message covers all failure cases (no session, no roomId, no room, no gameState, not in room). No internal state is exposed.
+The message is deliberately the same for every cause, so no internal state is exposed.
 
-### Layer 3 — Domain: `assertNotReady`
+### Domain: `assertNotReady`
 
-**File:** `src/domain/services/Phase.service.ts`
+`src/domain/services/Phase.service.ts` exports `assertNotReady(gs, playerIndex)`, which throws `'Player has already confirmed'` when `gs.playersReady[playerIndex]` is true.
 
-New pure function added alongside the existing `assertPhase`:
-
-```ts
-export function assertNotReady(gs: GameState, playerIndex: PlayerIndex): void {
-    if (gs.playersReady[playerIndex]) throw new Error('Player has already confirmed');
-}
-```
-
-**Call sites:**
-
-| Location | Handler | Purpose |
+| Where | Action | Purpose |
 |---|---|---|
-| `GameLoop.service.ts` | `confirmPlacement` | Prevent double-confirm |
-| `GameLoop.service.ts` | `confirmKeep` | Prevent double-confirm |
-| `GameLoop.service.ts` | `confirmAssignment` | Prevent double-confirm |
-| `GameCoordinator.service.ts` | `rearrangeTeam` | Prevent post-confirm mutation |
-| `GameCoordinator.service.ts` | `toggleDieLock` | Prevent post-confirm mutation |
-| `GameCoordinator.service.ts` | `selectTarget` | Prevent post-confirm mutation |
+| `GameLoop.service.ts` `confirmSelection` | confirm the kept 4 | no double confirm |
+| `GameLoop.service.ts` `confirmPlacement` | confirm the layout | no double confirm |
+| `GameLoop.service.ts` `confirmKeep` | confirm the locks | no double confirm |
+| `GameCoordinator.service.ts` `rearrangeTeam` | change the layout | no change after confirm |
 
-The coordinator calls `assertNotReady` inside the existing `try/catch` block, so thrown errors are automatically forwarded to the client as `error` events via `emitError`.
+The coordinator calls these inside its existing `try/catch`, so a thrown error reaches the client as an `error` event through `emitError`. To change something after confirming, the player first cancels the confirmation (see the cancel-confirm spec).
 
-## What this does NOT change
+## What this does not change
 
-- Dead characters can still be targeted (resolution layer ignores dead targets).
-- No new phases, no new events, no new DTOs.
-- Character ownership checks and `assertPhase` guards are unchanged.
+- Dead characters can still be targeted.
+- No new phases, events or DTOs.
+- Character ownership checks and `assertPhase` guards.
 
-## Test coverage
+## Tests
 
-- `SessionGuard`: unit test — guard returns false and emits error when session is null.
-- `getContext` error path: one test per coordinator method verifying `error` is emitted instead of silently dropping.
-- `assertNotReady`: unit test in `Phase.service.spec.ts` — throws when ready, passes when not ready.
-- Double-confirm: test that a second `confirmPlacement`/`confirmKeep`/`confirmAssignment` call emits `error`.
-- Post-confirm mutation: test that `rearrangeTeam` after `confirmPlacement` emits `error`.
+- `SessionGuard`: returns `true` with a session; returns `false` and emits `error` without one.
+- Coordinator: each game action emits `error` instead of dropping the request when the game context is missing.
+- `Phase.service.spec.ts`: `assertNotReady` throws when ready, passes when not.
+- Double confirm: a second `confirmSelection` / `confirmPlacement` / `confirmKeep` is rejected; `rearrangeTeam` after `confirmPlacement` is rejected.
