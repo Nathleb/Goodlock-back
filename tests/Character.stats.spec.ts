@@ -36,4 +36,19 @@ describe('netStat', () => {
         expect(netStat(withModifiers([instance(15), instance(-3)]), 'POWER')).toBe(9);
         expect(netStat(withModifiers([instance(15), instance(-15)]), 'POWER')).toBe(0);
     });
+
+    describe('ARMOR', () => {
+        const armor = (value: number) => instance(value, 'ARMOR');
+
+        it('sums only its own instances, whatever POWER holds', () => {
+            const c = withModifiers([armor(3), armor(-1), instance(5)]);
+            expect(netStat(c, 'ARMOR')).toBe(2);
+            expect(netStat(c, 'POWER')).toBe(5);
+        });
+
+        it('is capped at +9 and -9 like any stat', () => {
+            expect(netStat(withModifiers([armor(6), armor(6)]), 'ARMOR')).toBe(9);
+            expect(netStat(withModifiers([armor(-6), armor(-6)]), 'ARMOR')).toBe(-9);
+        });
+    });
 });

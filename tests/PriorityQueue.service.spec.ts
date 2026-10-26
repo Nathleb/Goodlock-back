@@ -523,6 +523,30 @@ describe('PriorityQueueService', () => {
       expect(after.players[1].team[0].hp).toBe(100 - 8);
     });
 
+    const exposeEnemy = (value: number): EffectEntry => ({ effect: EffectLabel.ApplyStat, stat: 'ARMOR', magnitude: value, duration: 2, targets: [enemyAbs(0)] });
+
+    it('a faster ARMOR debuff applies to a hit resolved later in the same resolution', () => {
+      const debuffer = hero('debuffer', 9, 0, 0, [exposeEnemy(-3)]);
+      const attacker = hero('attacker', 3, 0, 1, [hit(5)]);
+      const dummy = hero('dummy', 1, 1, 0, []);
+      const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([debuffer, attacker], 0), createPlayer([dummy], 1)));
+
+      const { state: after } = unstackPriorityQueueWithLog(state);
+
+      expect(after.players[1].team[0].hp).toBe(100 - 8);
+    });
+
+    it('a slower ARMOR buff on the target does not reduce a faster hit that already resolved', () => {
+      const attacker = hero('attacker', 9, 0, 0, [hit(5)]);
+      const guard: EffectEntry = { effect: EffectLabel.ApplyStat, stat: 'ARMOR', magnitude: 3, duration: 2, targets: [allyRel(0)] };
+      const defender = hero('defender', 3, 1, 0, [guard]);
+      const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([defender], 1)));
+
+      const { state: after } = unstackPriorityQueueWithLog(state);
+
+      expect(after.players[1].team[0].hp).toBe(100 - 5);
+    });
+
     it('a slower buff does not apply to a faster ally that already acted', () => {
       const buffer = hero('buffer', 3, 0, 0, [buffAlly(3)]);
       const attacker = hero('attacker', 9, 0, 1, [hit(5)]);

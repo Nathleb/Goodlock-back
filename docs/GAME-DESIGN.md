@@ -27,10 +27,10 @@ Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT. There is no
 - Off-board cells are dropped; no cell = fizzle.
 - The empty cell is kept, and each effect decides what it does there: Damage, FixedDamage, Heal and Shield do nothing on that cell and the rest of the pattern still applies; Swap moves the character into it, so the hole travels.
 
-**Damage types**: `Damage` is inflicted damage: the actor's POWER is added, then shield absorbs, then HP (future ARMOR and DIVINE_SHIELD apply to it too). `FixedDamage` is sacrificed HP: it lowers HP by exactly its magnitude, ignores shield, and nothing modifies it. The author picks per face, including for costs on the actor or an ally.
+**Damage types**: `Damage` is inflicted damage: the actor's POWER is added and the target's ARMOR subtracted, then shield absorbs, then HP (the future DIVINE_SHIELD applies to it too). `FixedDamage` is sacrificed HP: it lowers HP by exactly its magnitude, ignores shield, and nothing modifies it. The author picks per face, including for costs on the actor or an ally.
 
-**Stats (buffs and debuffs)**: `POWER` changes the damage a character deals; a negative value is a debuff. `ApplyStat` adds an independent instance `{ stat, value, roundsLeft }` with its own magnitude and duration (integer ≥ 1, no cap). The net value of a stat is the sum of its instances, capped at ±9.
-- `Damage` deals `max(0, magnitude + POWER)` per cell, on any side. Heal, Shield and `FixedDamage` ignore POWER.
+**Stats (buffs and debuffs)**: `POWER` changes the damage a character deals and `ARMOR` the damage it takes; a negative value is a debuff (Weak, Vulnerable). `ApplyStat` adds an independent instance `{ stat, value, roundsLeft }` with its own magnitude and duration (integer ≥ 1, no cap). The net value of a stat is the sum of its instances, capped at ±9.
+- `Damage` deals `max(0, magnitude + POWER(actor) - ARMOR(target))` per cell, on any side, with a single floor at 0. ARMOR is read on each target cell, so an area pattern is reduced cell by cell. Heal, Shield and `FixedDamage` ignore both stats.
 - Changes are immediate: a later action of the same round sees them.
 - At the end of each round every instance loses one round and is removed at 0, except an instance applied during that round, which starts ticking next round. A duration *d* applied in round *N* is therefore active through round *N + d*.
 - `ApplyStat` gives nothing to a dead character.

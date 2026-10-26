@@ -81,4 +81,18 @@ describe('FixedDamage', () => {
         expect(at(buffed, 1, 0).hp).toBe(15);
         expect(at(weakened, 1, 0).hp).toBe(15);
     });
+
+    it("ignores the target's ARMOR, buff or debuff", () => {
+        const withTargetArmor = (value: number): GameState => {
+            const players = [...gs.players] as [Player, Player];
+            players[1] = { ...players[1], team: players[1].team.map((c, i) => i === 0 ? { ...c, modifiers: [{ stat: 'ARMOR' as const, value, roundsLeft: 2, appliedRound: 0 }] } : c) };
+            return { ...gs, players };
+        };
+
+        const armored = new FixedDamage(5).solve(withTargetArmor(7), [pos(1, 0)], actorId()).state;
+        const exposed = new FixedDamage(5).solve(withTargetArmor(-9), [pos(1, 0)], actorId()).state;
+
+        expect(at(armored, 1, 0).hp).toBe(15);
+        expect(at(exposed, 1, 0).hp).toBe(15);
+    });
 });

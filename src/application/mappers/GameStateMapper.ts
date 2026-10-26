@@ -7,6 +7,7 @@ import { ResolveStep } from '@domain/types/PriorityQueue.type';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { GameStateDTO, PlayerGameStateDTO, CharacterDTO, DieFaceDTO, ResolveStepDTO } from '@application/dtos/GameState.dto';
 import { netStat } from '@domain/services/Character.service';
+import { STAT_NAMES } from '@domain/types/Modifier.type';
 import { CatalogMapper } from './CatalogMapper';
 
 export class GameStateMapper {
@@ -103,7 +104,7 @@ export class GameStateMapper {
             isFaceLocked: char.isFaceLocked,
             position: char.position,
             modifiers: char.modifiers.map(m => ({ stat: m.stat, value: m.value, roundsLeft: m.roundsLeft })),
-            stats: { POWER: netStat(char, 'POWER') },
+            stats: Object.fromEntries(STAT_NAMES.map(stat => [stat, netStat(char, stat)])),
         };
     }
 

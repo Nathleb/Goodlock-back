@@ -158,3 +158,23 @@ describe('Round.service stat ticking', () => {
         expect(active).toEqual([true, true, true, false]);
     });
 });
+
+describe('Round.service ARMOR ticking', () => {
+    const armor = (value: number, roundsLeft: number, appliedRound: number) =>
+        ({ stat: 'ARMOR' as const, value, roundsLeft, appliedRound });
+    const stateWith = (round: number, modifiers: ReturnType<typeof armor>[]) => {
+        const c = createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+        const other = createCharacter({ catalogId: TEST_CATALOG_ID, name: "O", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 1, slot: 0 } });
+        return { ...createGameState(createPlayer([{ ...c, modifiers }], 0), createPlayer([other], 1)), currentRound: round };
+    };
+
+    it('loses one round per instance applied earlier and is removed at 0', () => {
+        const after = endOfRound(stateWith(5, [armor(3, 2, 3), armor(-2, 1, 4)]));
+        expect(after.players[0].team[0].modifiers).toEqual([armor(3, 1, 3)]);
+    });
+
+    it('does not tick an instance applied during the round that is ending', () => {
+        const after = endOfRound(stateWith(5, [armor(3, 2, 5)]));
+        expect(after.players[0].team[0].modifiers).toEqual([armor(3, 2, 5)]);
+    });
+});

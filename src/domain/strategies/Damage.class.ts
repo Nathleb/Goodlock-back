@@ -9,7 +9,8 @@ export default class Damage implements Effect {
 
     solve(gameState: GameState, targets: readonly Position[], actorId: string): { state: GameState; affected: string[] } {
         const actor = gameState.players.flatMap(p => p.team).find(c => c.id === actorId);
-        const amount = Math.max(0, this.amount + (actor ? netStat(actor, 'POWER') : 0));
-        return applyAtPositions(gameState, targets, c => dealDamage(c, amount));
+        const power = actor ? netStat(actor, 'POWER') : 0;
+        // Read on each target cell, so an area pattern is reduced cell by cell.
+        return applyAtPositions(gameState, targets, c => dealDamage(c, Math.max(0, this.amount + power - netStat(c, 'ARMOR'))));
     }
 }

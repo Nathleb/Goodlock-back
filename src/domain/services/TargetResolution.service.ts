@@ -1,6 +1,7 @@
 import Position, { BOARD_SIZE, PlayerIndex, SlotIndex } from "../types/Position.type";
 import TargetGroup from "../types/TargetGroup.type";
 import EffectLabel from "../types/EffectLabels.type";
+import { STAT_NAMES } from "../types/Modifier.type";
 
 const MIN_SLOT = 0;
 const MAX_SLOT = BOARD_SIZE - 1;
@@ -21,9 +22,9 @@ export function resolveTargets(groups: readonly TargetGroup[], actor: Position):
     return out;
 }
 
-const IMPLEMENTED_STATS: readonly string[] = ['POWER'];
+const IMPLEMENTED_STATS: readonly string[] = STAT_NAMES;
 
-/** Parameters of an ApplyStat entry; the stat list grows with each stat's feature. */
+/** Parameters of an ApplyStat entry; the accepted stats are `STAT_NAMES`, which grows with each stat's feature. */
 export function validateStatParams(entry: { readonly stat?: unknown; readonly magnitude?: unknown; readonly duration?: unknown }): string[] {
     const errors: string[] = [];
     if (typeof entry.stat !== 'string' || !IMPLEMENTED_STATS.includes(entry.stat)) {
