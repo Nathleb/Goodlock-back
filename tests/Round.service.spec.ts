@@ -178,3 +178,42 @@ describe('Round.service ARMOR ticking', () => {
         expect(after.players[0].team[0].modifiers).toEqual([armor(3, 2, 5)]);
     });
 });
+
+describe('Round.service state ticking', () => {
+    const stateWith = (round: number, states: Parameters<typeof withStates>[0]) => withStates(states, round);
+    function withStates(states: Record<string, { value: number; touchedRound: number }>, round: number) {
+        const c = createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+        const other = createCharacter({ catalogId: TEST_CATALOG_ID, name: "O", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 1, slot: 0 } });
+        return { ...createGameState(createPlayer([{ ...c, states }], 0), createPlayer([other], 1)), currentRound: round };
+    }
+
+    it('moves a positive counter one step toward 0', () => {
+        const after = endOfRound(stateWith(5, { STUN: { value: 3, touchedRound: 2 } }));
+        expect(after.players[0].team[0].states).toEqual({ STUN: { value: 2, touchedRound: 2 } });
+    });
+
+    it('moves a negative counter one step toward 0', () => {
+        const after = endOfRound(stateWith(5, { SPEED: { value: -3, touchedRound: 2 } }));
+        expect(after.players[0].team[0].states).toEqual({ SPEED: { value: -2, touchedRound: 2 } });
+    });
+
+    it('removes an axis that reaches 0', () => {
+        const after = endOfRound(stateWith(5, { ROOT: { value: 1, touchedRound: 2 }, SPEED: { value: -1, touchedRound: 2 } }));
+        expect(after.players[0].team[0].states).toEqual({});
+    });
+
+    it('does not tick an axis touched during the round that is ending', () => {
+        const after = endOfRound(stateWith(5, { STUN: { value: 2, touchedRound: 5 }, ROOT: { value: 2, touchedRound: 4 } }));
+        expect(after.players[0].team[0].states).toEqual({ STUN: { value: 2, touchedRound: 5 }, ROOT: { value: 1, touchedRound: 4 } });
+    });
+
+    it('so a duration d applied in round N is active through round N + d', () => {
+        let state = stateWith(5, { STUN: { value: 2, touchedRound: 5 } });
+        const active: boolean[] = [];
+        for (let round = 5; round <= 8; round++) {
+            active.push(state.players[0].team[0].states.STUN !== undefined);
+            state = endOfRound(state);
+        }
+        expect(active).toEqual([true, true, true, false]);
+    });
+});

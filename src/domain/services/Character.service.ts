@@ -82,3 +82,17 @@ export function tickModifiers(character: Character, endingRound: number): Charac
 export function stateValue(character: Character, axis: StateAxis): number {
     return character.states[axis]?.value ?? 0;
 }
+
+/**
+ * End of round: every state axis moves one step toward 0 and is dropped at 0,
+ * except an axis touched during the ending round, which starts ticking next round.
+ */
+export function tickStates(character: Character, endingRound: number): Character {
+    const ticked: Record<string, { value: number; touchedRound: number }> = {};
+    for (const [axis, counter] of Object.entries(character.states)) {
+        if (!counter) continue;
+        const value = counter.touchedRound === endingRound ? counter.value : counter.value - Math.sign(counter.value);
+        if (value !== 0) ticked[axis] = { ...counter, value };
+    }
+    return updateCharacter(character, { states: ticked });
+}
