@@ -163,9 +163,19 @@ describe('stats in the DTO', () => {
     });
 
     it('gives the capped net value per stat, 0 when there is no instance', () => {
-        expect(GameStateMapper.characterToDTO(char('a', 0, 0, false)).stats).toEqual({ POWER: 0 });
+        expect(GameStateMapper.characterToDTO(char('a', 0, 0, false)).stats).toEqual({ POWER: 0, ARMOR: 0 });
         const heavy = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), modifiers: [power(6), power(6)] });
-        expect(heavy.stats).toEqual({ POWER: 9 });
+        expect(heavy.stats).toEqual({ POWER: 9, ARMOR: 0 });
+    });
+
+    it('gives a net value per stat, ARMOR included, each capped on its own', () => {
+        const armor = (value: number) => ({ stat: 'ARMOR' as const, value, roundsLeft: 2, appliedRound: 1 });
+        const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), modifiers: [power(2), armor(6), armor(6)] });
+
+        expect(dto.stats).toEqual({ POWER: 2, ARMOR: 9 });
+        expect(dto.modifiers.filter(m => m.stat === 'ARMOR')).toEqual([
+            { stat: 'ARMOR', value: 6, roundsLeft: 2 }, { stat: 'ARMOR', value: 6, roundsLeft: 2 },
+        ]);
     });
 
     it('carries stat and duration on an ApplyStat face effect, and nothing extra on others', () => {
@@ -185,6 +195,6 @@ describe('stats in the DTO', () => {
             characterId: 'a', skipped: false, effects: [],
             changes: [{ characterId: 'a', character: { ...char('a', 0, 0, false), modifiers: [power(3)] } }],
         }]);
-        expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3 });
+        expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3, ARMOR: 0 });
     });
 });

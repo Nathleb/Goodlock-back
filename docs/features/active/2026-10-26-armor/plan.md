@@ -16,7 +16,7 @@ Layers: domain (type, `Damage`, validator), application (DTO mapper). Each step:
 - [x] 9. Templates can use `ApplyStat` with ARMOR (validator reads `STAT_NAMES`).
 - [x] 10. ARMOR changes apply inside the round, in speed order.
 - [x] 11. ARMOR ticks like POWER.
-- [ ] 12. DTO `stats` has ARMOR.
+- [x] 12. DTO `stats` has ARMOR.
 - [ ] 13. Docs to current behavior.
 
 After the steps: FULL review, implemented/, memory, push and PR.
