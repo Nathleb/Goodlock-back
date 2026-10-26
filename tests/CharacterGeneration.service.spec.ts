@@ -96,9 +96,21 @@ describe('CharacterGenerationService', () => {
     expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyStat', magnitude: -3, stat: 'POWER', duration: 2 });
   });
 
+  it('builds an ApplyStat face for ARMOR whose effect adds that instance', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', stat: 'ARMOR', magnitude: -3, duration: 2, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
+    const built = createCharacterFromJsonTemplate(json, factory);
+    const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 1, slot: 0 } });
+    const state = { ...createGameState(createPlayer([], 0), createPlayer([target], 1)), currentRound: 2 };
+
+    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 1, slot: 0 }], target.id);
+
+    expect(after.players[1].team[0].modifiers).toEqual([{ stat: 'ARMOR', value: -3, roundsLeft: 2, appliedRound: 2 }]);
+    expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyStat', stat: 'ARMOR', duration: 2 });
+  });
+
   it.each([
     ['unknown stat', { stat: 'LUCK', magnitude: 3, duration: 2 }],
-    ['a stat not implemented yet (ARMOR)', { stat: 'ARMOR', magnitude: 3, duration: 2 }],
     ['missing stat', { magnitude: 3, duration: 2 }],
     ['zero magnitude', { stat: 'POWER', magnitude: 0, duration: 2 }],
     ['fractional magnitude', { stat: 'POWER', magnitude: 1.5, duration: 2 }],
