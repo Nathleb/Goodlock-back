@@ -9,7 +9,7 @@ export default class Damage implements Effect {
 
     solve(gameState: GameState, targets: readonly Position[], actorId: string): { state: GameState; affected: string[] } {
         const actor = gameState.players.flatMap(p => p.team).find(c => c.id === actorId);
-        const amount = this.amount + (actor ? netStat(actor, 'POWER') : 0);
+        const amount = Math.max(0, this.amount + (actor ? netStat(actor, 'POWER') : 0));
         return applyAtPositions(gameState, targets, c => dealDamage(c, amount));
     }
 }

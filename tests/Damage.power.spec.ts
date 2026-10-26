@@ -33,4 +33,13 @@ describe('Damage with POWER', () => {
 
         expect(at(state, 1, 0).hp).toBe(12);
     });
+
+    it('floors the damage at 0 under a strong debuff, never healing or adding shield', () => {
+        const weak = withCharacter(gs, 0, 2, { modifiers: [power(-9)] });
+
+        const { state } = new Damage(5).solve(weak, [pos(1, 0)], at(weak, 0, 2).id);
+
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).shield).toBe(0);
+    });
 });
