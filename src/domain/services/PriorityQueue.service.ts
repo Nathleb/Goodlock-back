@@ -3,6 +3,7 @@ import DieFace from "../types/DieFace.type";
 import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
+import { stateValue } from "./Character.service";
 
 export function createPriorityQueue(): PriorityQueue {
     return [];
@@ -67,7 +68,9 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
     // Order is computed once up front. State mutations inside the loop (hp, shield,
     // positions) never re-order resolution — the bracket/speed/initiative sort is fixed here.
     for (const [face, characterId] of orderedForResolution(state.priorityQueue, state)) {
-        if (!isAlive(state, characterId) || findCharacter(state, characterId) === undefined) {
+        const self = findCharacter(state, characterId);
+        // A stun is read when the turn comes: one landing before the action cancels it, like death.
+        if (!isAlive(state, characterId) || self === undefined || stateValue(self, 'STUN') > 0) {
             log.push({ characterId, skipped: true, effects: [], changes: [] });
             continue;
         }

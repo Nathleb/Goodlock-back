@@ -11,7 +11,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 2. `ApplyState` strategy.
 - [x] 3. Templates: entry union, factory params, registration, validation.
 - [x] 4. Tick of the axes.
-- [ ] 5. STUN skips the action.
+- [x] 5. STUN skips the action.
 - [ ] 6. DTO and catalog mapper.
 - [ ] 7. Review 1.
 

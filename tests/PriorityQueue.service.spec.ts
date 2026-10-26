@@ -6,6 +6,7 @@ import { loseHp } from "@domain/services/Character.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPriorityQueue, addEffectsToPriorityQueue, addAllEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createPlayer } from "@domain/services/Player.service";
+import { endOfRound } from "@domain/services/Round.service";
 import { beginResolvePhase } from "@domain/services/Phase.service";
 import DieFace from "@domain/types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
@@ -556,6 +557,74 @@ describe('PriorityQueueService', () => {
       const { state: after } = unstackPriorityQueueWithLog(state);
 
       expect(after.players[1].team[0].hp).toBe(100 - 5);
+    });
+  });
+
+  describe('STUN', () => {
+    const dieOfFace = (effects: EffectEntry[], priority = 0) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
+      createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
+    const hit = (amount: number): EffectEntry => ({ effect: EffectLabel.Damage, magnitude: amount, targets: [enemyAbs(0)] });
+    const stunEnemy = (duration: number): EffectEntry => ({ effect: EffectLabel.ApplyState, state: 'STUN', duration, targets: [enemyAbs(0)] });
+    const stunned = (c: ReturnType<typeof hero>, value = 1) => ({ ...c, states: { STUN: { value, touchedRound: 0 } } });
+    const build = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) =>
+      addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1)));
+
+    it('a stunned character does not act and is logged as skipped', () => {
+      const attacker = stunned(hero('attacker', 5, 0, 0, [hit(5)]));
+      const dummy = hero('dummy', 1, 1, 0, []);
+
+      const { state, log } = unstackPriorityQueueWithLog(build([attacker], [dummy]));
+
+      expect(state.players[1].team[0].hp).toBe(100);
+      expect(log[0]).toMatchObject({ characterId: attacker.id, skipped: true, effects: [], changes: [] });
+    });
+
+    it('a stun landing before the victim acts cancels its action', () => {
+      const stunner = hero('stunner', 9, 0, 0, [stunEnemy(1)]);
+      const victim = hero('victim', 3, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+
+      const { state, log } = unstackPriorityQueueWithLog(build([stunner], [victim]));
+
+      expect(state.players[0].team[0].hp).toBe(100);
+      expect(log[1]).toMatchObject({ characterId: victim.id, skipped: true });
+    });
+
+    it('a stun landing after the victim acted does not cancel that action', () => {
+      const stunner = hero('stunner', 3, 0, 0, [stunEnemy(1)]);
+      const victim = hero('victim', 9, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+
+      const { state, log } = unstackPriorityQueueWithLog(build([stunner], [victim]));
+
+      expect(state.players[0].team[0].hp).toBe(95);
+      expect(log[0]).toMatchObject({ characterId: victim.id, skipped: false });
+    });
+
+    it('a stunned character is still a valid target', () => {
+      const attacker = hero('attacker', 5, 0, 0, [hit(5)]);
+      const victim = stunned(hero('victim', 1, 1, 0, []));
+
+      const { state } = unstackPriorityQueueWithLog(build([attacker], [victim]));
+
+      expect(state.players[1].team[0].hp).toBe(95);
+    });
+
+    it('STUN 1 applied in a round also cancels the action of the next round', () => {
+      const stunner = hero('stunner', 9, 0, 0, [stunEnemy(1)]);
+      const victim = hero('victim', 3, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+      const round1 = unstackPriorityQueueWithLog(build([stunner], [victim])).state;
+
+      const nextRound = endOfRound(round1);
+      // The stunner rests in round 2, so only the carried-over stun is in play.
+      const resting = { description: 'rest', priority: 0, effects: [] };
+      const quiet = { ...nextRound, players: [{ ...nextRound.players[0], team: [{ ...nextRound.players[0].team[0], face: resting }] }, nextRound.players[1]] as GameState['players'] };
+      const refilled = addAllEffectsToPriorityQueue(quiet);
+      const { state: round2, log } = unstackPriorityQueueWithLog(refilled);
+
+      expect(log.find(step => step.characterId === victim.id)).toMatchObject({ skipped: true });
+      expect(round2.players[0].team[0].hp).toBe(100);
+      expect(endOfRound(round2).players[1].team[0].states.STUN).toBeUndefined();
     });
   });
 
