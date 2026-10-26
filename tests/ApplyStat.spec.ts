@@ -58,4 +58,15 @@ describe('ApplyStat', () => {
         expect(state.players[1].team.find(c => c.position.slot === 3)!.modifiers).toHaveLength(1);
         expect(affected).toEqual([holed.players[1].team[3].id]);
     });
+
+    it('still lists a dead occupant as affected, like Damage on a dead target', () => {
+        const withDead: GameState = {
+            ...gs,
+            players: [gs.players[0], { ...gs.players[1], team: gs.players[1].team.map((c, i) => i === 0 ? { ...c, hp: 0 } : c) }],
+        };
+
+        const { affected } = new ApplyStat('POWER', 3, 2).solve(withDead, [pos(1, 0)], actorId());
+
+        expect(affected).toEqual([at(gs, 1, 0).id]);
+    });
 });
