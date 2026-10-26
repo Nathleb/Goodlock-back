@@ -11,7 +11,7 @@ Layers: domain (type, `Damage`, validator), application (DTO mapper). Each step:
 - [x] 4. ARMOR debuff (Vulnerable).
 - [x] 5. POWER and ARMOR share one floor.
 - [x] 6. ARMOR is read per target cell.
-- [ ] 7. Shield absorbs after ARMOR.
+- [x] 7. Shield absorbs after ARMOR.
 - [ ] 8. `FixedDamage`, Heal and Shield ignore the target's ARMOR.
 - [ ] 9. Templates can use `ApplyStat` with ARMOR (validator reads `STAT_NAMES`).
 - [ ] 10. ARMOR changes apply inside the round, in speed order.

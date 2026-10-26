@@ -71,4 +71,13 @@ describe('Damage with ARMOR', () => {
         expect(at(state, 1, 1).hp).toBe(20);
         expect(at(state, 1, 2).hp).toBe(13);
     });
+
+    it('is applied before the shield absorbs the remaining damage', () => {
+        const shielded = withCharacter(gs, 1, 0, { modifiers: [stat('ARMOR', 3)], shield: 6 });
+
+        const { state } = new Damage(5).solve(shielded, [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).shield).toBe(4);
+        expect(at(state, 1, 0).hp).toBe(20);
+    });
 });
