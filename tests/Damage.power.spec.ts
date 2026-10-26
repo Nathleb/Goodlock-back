@@ -42,4 +42,12 @@ describe('Damage with POWER', () => {
         expect(at(state, 1, 0).hp).toBe(20);
         expect(at(state, 1, 0).shield).toBe(0);
     });
+
+    it('also applies on an ally cell', () => {
+        const buffed = withCharacter(gs, 0, 2, { modifiers: [power(3)] });
+
+        const { state } = new Damage(5).solve(buffed, [pos(0, 0)], at(buffed, 0, 2).id);
+
+        expect(at(state, 0, 0).hp).toBe(12);
+    });
 });
