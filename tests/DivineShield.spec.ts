@@ -37,4 +37,75 @@ describe('DIVINE_SHIELD', () => {
         expect(at(state, 1, 0).hp).toBe(20);
         expect(at(state, 1, 0).states).toEqual({});
     });
+
+    it('is not consumed by a hit already floored to 0 by ARMOR', () => {
+        const target = patch(gs, 1, 0, { ...shielded(), modifiers: [{ stat: 'ARMOR', value: 9, roundsLeft: 2, appliedRound: 0 }] });
+
+        const { state } = new Damage(5).solve(target, [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
+    });
+
+    it('a repeated cell consumes it once, then the second occurrence lands', () => {
+        const { state } = new Damage(5).solve(patch(gs, 1, 0, shielded()), [pos(1, 0), pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(15);
+        expect(at(state, 1, 0).states).toEqual({});
+    });
+
+    it('protects only the shielded cell of an area pattern', () => {
+        const { state } = new Damage(5).solve(patch(gs, 1, 1, shielded()), [pos(1, 0), pos(1, 1), pos(1, 2)], actorId());
+
+        expect([0, 1, 2].map(i => at(state, 1, i).hp)).toEqual([15, 20, 15]);
+        expect(at(state, 1, 1).states).toEqual({});
+    });
+
+    it('leaves a target without it unchanged', () => {
+        const { state } = new Damage(5).solve(gs, [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).hp).toBe(15);
+    });
+
+    it('spends the whole counter, whatever its duration', () => {
+        const { state } = new Damage(5).solve(patch(gs, 1, 0, shielded(3)), [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).states).toEqual({});
+    });
+
+    it('works on an ally cell too', () => {
+        const { state } = new Damage(5).solve(patch(gs, 0, 0, shielded()), [pos(0, 0)], actorId());
+
+        expect(at(state, 0, 0).hp).toBe(20);
+        expect(at(state, 0, 0).states).toEqual({});
+    });
+
+    it('nullifies the hit before the armour shield absorbs anything', () => {
+        const { state } = new Damage(5).solve(patch(gs, 1, 0, { ...shielded(), shield: 6 }), [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).shield).toBe(6);
+        expect(at(state, 1, 0).hp).toBe(20);
+    });
+
+    it('is not consumed by a hit on a dead character', () => {
+        const { state } = new Damage(5).solve(patch(gs, 1, 0, { ...shielded(), hp: 0 }), [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
+    });
+
+    it('is ignored by FixedDamage, which does not consume it', () => {
+        const { state } = new FixedDamage(5).solve(patch(gs, 1, 0, shielded()), [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(15);
+        expect(at(state, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
+    });
+
+    it('does not affect Heal or Shield, and is kept', () => {
+        const hurt = patch(gs, 1, 0, { ...shielded(), hp: 10 });
+
+        const healed = new Heal(5).solve(hurt, [pos(1, 0)], actorId()).state;
+        const walled = new Shield(4).solve(hurt, [pos(1, 0)], actorId()).state;
+
+        expect(at(healed, 1, 0).hp).toBe(15);
+        expect(at(walled, 1, 0).shield).toBe(4);
+        expect(at(healed, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
+        expect(at(walled, 1, 0).states.DIVINE_SHIELD?.value).toBe(1);
+    });
 });
