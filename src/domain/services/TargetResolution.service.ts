@@ -37,8 +37,11 @@ export function validateStatParams(entry: { readonly stat?: unknown; readonly ma
 }
 
 /** Parameters of an ApplyState entry: a known state and a duration of at least one round. */
-export function validateStateParams(entry: { readonly state?: unknown; readonly duration?: unknown }): string[] {
+export function validateStateParams(entry: { readonly state?: unknown; readonly duration?: unknown; readonly magnitude?: unknown; readonly stat?: unknown }): string[] {
     const errors: string[] = [];
+    // A state has no magnitude and no stat: refuse them rather than silently ignoring an author's intent.
+    if (entry.magnitude !== undefined) errors.push('a state has no magnitude');
+    if (entry.stat !== undefined) errors.push('a state has no stat');
     if (typeof entry.state !== 'string' || !(STATE_NAMES as readonly string[]).includes(entry.state)) {
         errors.push(`state must be one of ${STATE_NAMES.join(', ')}`);
     }

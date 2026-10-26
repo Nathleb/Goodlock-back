@@ -145,6 +145,8 @@ describe('CharacterGenerationService', () => {
     ['negative duration', { state: 'STUN', duration: -1 }],
     ['fractional duration', { state: 'STUN', duration: 1.5 }],
     ['missing duration', { state: 'STUN' }],
+    ['a stray magnitude', { state: 'STUN', duration: 1, magnitude: 2 }],
+    ['a stray stat', { state: 'STUN', duration: 1, stat: 'POWER' }],
   ])('throws on invalid ApplyState parameters (%s)', (_label, params) => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', ...params, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
