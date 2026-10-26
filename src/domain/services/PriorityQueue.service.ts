@@ -45,15 +45,19 @@ function findCharacter(gameState: GameState, characterId: string): Character | u
 }
 
 // Pokemon-style ordering: bracket (face.priority) desc, then speed desc, then the
-// initiative holder's actors first. A pure sort: no randomness, so the order is
-// fully determined by the queue and the state.
+// initiative holder's actors first, then slot asc (0 -> 4). A pure sort: no
+// randomness, so the order is fully determined by the queue and the state. An actor
+// missing from the state has no slot and keeps its queue order (the sort is stable).
 function orderedForResolution(queue: PriorityQueue, state: GameState): QueueEntry[] {
     const holdsInitiative = (characterId: string): number =>
         state.players.some(p => p.playerIndex === state.initiativePlayerIndex && p.team.some(c => c.id === characterId)) ? 0 : 1;
+    const slotOf = (characterId: string): number =>
+        findCharacter(state, characterId)?.position.slot ?? 0;
     return [...queue].sort(
         (a, b) => (b[0].priority - a[0].priority)
             || (b[2] - a[2])
             || (holdsInitiative(a[1]) - holdsInitiative(b[1]))
+            || (slotOf(a[1]) - slotOf(b[1]))
     );
 }
 

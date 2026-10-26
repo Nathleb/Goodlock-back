@@ -414,6 +414,23 @@ describe('PriorityQueueService', () => {
         expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['other-high', 'holder-low']);
       });
 
+      it('inside one team, equal bracket and speed go by slot ascending whatever the array order', () => {
+        const at = (slot: SlotIndex, id: string) => ({
+          ...createCharacter({ catalogId: TEST_CATALOG_ID, name: id, maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 0, slot } }),
+          id,
+        });
+        const high = at(3, 'slot-3');
+        const low = at(1, 'slot-1');
+        const state: GameState = {
+          ...createGameState({ playerIndex: 0, team: [high, low] }, { playerIndex: 1, team: [] }),
+          priorityQueue: [
+            [noop(0), high.id, 5] as const,
+            [noop(0), low.id, 5] as const,
+          ],
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['slot-1', 'slot-3']);
+      });
+
       it('resolves without any random call', () => {
         const random = jest.spyOn(Math, 'random');
         unstackPriorityQueueWithLog(tied(0));
