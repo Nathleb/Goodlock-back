@@ -21,4 +21,18 @@ describe('CatalogMapper', () => {
         const dto = CatalogMapper.toDTO(template);
         expect(dto.baseDie[0].effects[0].targets[0].n).not.toBe(face.effects[0].targets[0].n);
     });
+
+    it('carries stat and duration on an ApplyStat effect, and nothing extra on others', () => {
+        const buffFace = { description: 'buff', priority: 0, effects: [
+            { effect: 'ApplyStat', stat: 'POWER', magnitude: -3, duration: 2, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] },
+            { effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] },
+        ] };
+        const buffer = { ...template, baseDieInstructions: [buffFace, buffFace, buffFace, buffFace, buffFace, buffFace] } as unknown as CharacterTemplate;
+
+        const effects = CatalogMapper.toDTO(buffer).baseDie[0].effects;
+
+        expect(effects[0]).toMatchObject({ effect: 'ApplyStat', magnitude: -3, stat: 'POWER', duration: 2 });
+        expect('stat' in effects[1]).toBe(false);
+        expect('duration' in effects[1]).toBe(false);
+    });
 });
