@@ -50,4 +50,13 @@ describe('Damage with POWER', () => {
 
         expect(at(state, 0, 0).hp).toBe(12);
     });
+
+    it('is absorbed by shield after POWER is added', () => {
+        const buffed = withCharacter(withCharacter(gs, 0, 2, { modifiers: [power(3)] }), 1, 0, { shield: 6 });
+
+        const { state } = new Damage(5).solve(buffed, [pos(1, 0)], at(buffed, 0, 2).id);
+
+        expect(at(state, 1, 0).shield).toBe(0);
+        expect(at(state, 1, 0).hp).toBe(18);
+    });
 });

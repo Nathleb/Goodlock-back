@@ -9,7 +9,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 - [x] 2. `Damage` adds the actor's POWER.
 - [x] 3. A POWER debuff floors the damage at 0.
 - [x] 4. POWER applies on ALLY cells too.
-- [ ] 5. Shield absorbs after POWER.
+- [x] 5. Shield absorbs after POWER.
 - [ ] 6. Heal, Shield and `FixedDamage` ignore POWER (tests, mutation checked).
 - [ ] 7. `ApplyStat` strategy adds an instance.
 - [ ] 8. `ApplyStat` edge cases: repeated cell, empty cell, dead occupant, stacking.
