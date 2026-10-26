@@ -153,3 +153,38 @@ describe('face DTO', () => {
         ]);
     });
 });
+
+describe('stats in the DTO', () => {
+    const power = (value: number, roundsLeft = 2) => ({ stat: 'POWER' as const, value, roundsLeft, appliedRound: 1 });
+
+    it('lists the instances without the internal appliedRound', () => {
+        const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), modifiers: [power(3, 2), power(-1, 1)] });
+        expect(dto.modifiers).toEqual([{ stat: 'POWER', value: 3, roundsLeft: 2 }, { stat: 'POWER', value: -1, roundsLeft: 1 }]);
+    });
+
+    it('gives the capped net value per stat, 0 when there is no instance', () => {
+        expect(GameStateMapper.characterToDTO(char('a', 0, 0, false)).stats).toEqual({ POWER: 0 });
+        const heavy = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), modifiers: [power(6), power(6)] });
+        expect(heavy.stats).toEqual({ POWER: 9 });
+    });
+
+    it('carries stat and duration on an ApplyStat face effect, and nothing extra on others', () => {
+        const apply = { label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2, targets: [], impl: { solve: jest.fn() } };
+        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [], impl: { solve: jest.fn() } };
+        const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
+
+        const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
+
+        expect(dto.face.effects[0]).toMatchObject({ effect: 'ApplyStat', magnitude: 3, stat: 'POWER', duration: 2 });
+        expect('stat' in dto.face.effects[1]).toBe(false);
+        expect('duration' in dto.face.effects[1]).toBe(false);
+    });
+
+    it('shows up in the resolve-step changes too', () => {
+        const dto = GameStateMapper.resolveStepsToDTO([{
+            characterId: 'a', skipped: false, effects: [],
+            changes: [{ characterId: 'a', character: { ...char('a', 0, 0, false), modifiers: [power(3)] } }],
+        }]);
+        expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3 });
+    });
+});

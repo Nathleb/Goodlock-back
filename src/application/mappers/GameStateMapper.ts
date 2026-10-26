@@ -6,6 +6,7 @@ import { Player } from '@domain/types/Player.type';
 import { ResolveStep } from '@domain/types/PriorityQueue.type';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { GameStateDTO, PlayerGameStateDTO, CharacterDTO, DieFaceDTO, ResolveStepDTO } from '@application/dtos/GameState.dto';
+import { netStat } from '@domain/services/Character.service';
 import { CatalogMapper } from './CatalogMapper';
 
 export class GameStateMapper {
@@ -101,6 +102,8 @@ export class GameStateMapper {
             face: GameStateMapper.faceToDTO(char.face),
             isFaceLocked: char.isFaceLocked,
             position: char.position,
+            modifiers: char.modifiers.map(m => ({ stat: m.stat, value: m.value, roundsLeft: m.roundsLeft })),
+            stats: { POWER: netStat(char, 'POWER') },
         };
     }
 
@@ -111,6 +114,8 @@ export class GameStateMapper {
             effects: face.effects.map(e => ({
                 effect: e.label,
                 magnitude: e.magnitude,
+                ...(e.stat !== undefined && { stat: e.stat }),
+                ...(e.duration !== undefined && { duration: e.duration }),
                 targets: e.targets.map(g => ({ side: g.side, mode: g.mode, n: [...g.n] })),
             })),
         };
