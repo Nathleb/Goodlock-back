@@ -2,6 +2,7 @@ import GameState from "../types/GameState.type";
 import { resetShield } from "./Character.service";
 import { hasLost, unlockAllDice } from "./Player.service";
 import { Player } from "../types/Player.type";
+import { PlayerIndex } from "../types/Position.type";
 
 export function endOfRound(gameState: GameState): GameState {
     const updatedPlayers = gameState.players.map(player => {
@@ -12,6 +13,7 @@ export function endOfRound(gameState: GameState): GameState {
         ...gameState,
         players: updatedPlayers,
         currentRound: gameState.currentRound + 1,
+        initiativePlayerIndex: (1 - gameState.initiativePlayerIndex) as PlayerIndex,
         rollsLeft: 2,
         playersReady: [false, false],
     };
