@@ -1,9 +1,10 @@
 import EffectLabel from "./EffectLabels.type";
 import { StatName } from "./Modifier.type";
+import { StateName } from "./State.type";
 import TargetGroup from "./TargetGroup.type";
 
 export type BasicEffectEntry = {
-    readonly effect: Exclude<EffectLabel, EffectLabel.ApplyStat>;
+    readonly effect: Exclude<EffectLabel, EffectLabel.ApplyStat | EffectLabel.ApplyState>;
     readonly magnitude: number;
     readonly targets: readonly TargetGroup[];
 };
@@ -17,7 +18,15 @@ export type ApplyStatEntry = {
     readonly targets: readonly TargetGroup[];
 };
 
-export type EffectEntry = BasicEffectEntry | ApplyStatEntry;
+/** Puts a state on its axis: no magnitude, `duration` is in rounds. */
+export type ApplyStateEntry = {
+    readonly effect: EffectLabel.ApplyState;
+    readonly state: StateName;
+    readonly duration: number;
+    readonly targets: readonly TargetGroup[];
+};
+
+export type EffectEntry = BasicEffectEntry | ApplyStatEntry | ApplyStateEntry;
 
 export type FaceTemplate = {
     readonly description: string;

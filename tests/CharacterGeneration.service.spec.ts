@@ -109,6 +109,19 @@ describe('CharacterGenerationService', () => {
     expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyStat', stat: 'ARMOR', duration: 2 });
   });
 
+  it('builds an ApplyState face whose effect puts the template state and duration on the axis', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', state: 'SLOW', duration: 2, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
+    const built = createCharacterFromJsonTemplate(json, factory);
+    const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 1, slot: 0 } });
+    const state = { ...createGameState(createPlayer([], 0), createPlayer([target], 1)), currentRound: 4 };
+
+    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 1, slot: 0 }], target.id);
+
+    expect(after.players[1].team[0].states).toEqual({ SPEED: { value: -2, touchedRound: 4 } });
+    expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyState', magnitude: 0, state: 'SLOW', duration: 2 });
+  });
+
   it.each([
     ['unknown stat', { stat: 'LUCK', magnitude: 3, duration: 2 }],
     ['missing stat', { magnitude: 3, duration: 2 }],
@@ -122,6 +135,26 @@ describe('CharacterGenerationService', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', ...params, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
     expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid stat parameters/);
+  });
+
+  it.each([
+    ['unknown state', { state: 'FROZEN', duration: 1 }],
+    ['a stat name given as a state', { state: 'POWER', duration: 1 }],
+    ['missing state', { duration: 1 }],
+    ['zero duration', { state: 'STUN', duration: 0 }],
+    ['negative duration', { state: 'STUN', duration: -1 }],
+    ['fractional duration', { state: 'STUN', duration: 1.5 }],
+    ['missing duration', { state: 'STUN' }],
+  ])('throws on invalid ApplyState parameters (%s)', (_label, params) => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', ...params, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
+    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid state parameters/);
+  });
+
+  it.each(['HASTE', 'SLOW', 'REGEN', 'POISON', 'STUN', 'ROOT', 'DIVINE_SHIELD'])('accepts the state %s', (state) => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', state, duration: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
+    expect(() => createCharacterFromJsonTemplate(json, factory)).not.toThrow();
   });
 
   it.each([
