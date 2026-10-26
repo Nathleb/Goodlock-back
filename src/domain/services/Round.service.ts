@@ -1,5 +1,5 @@
 import GameState from "../types/GameState.type";
-import { resetShield } from "./Character.service";
+import { resetShield, tickModifiers } from "./Character.service";
 import { hasLost, unlockAllDice } from "./Player.service";
 import { Player } from "../types/Player.type";
 import { PlayerIndex } from "../types/Position.type";
@@ -7,7 +7,7 @@ import { PlayerIndex } from "../types/Position.type";
 export function endOfRound(gameState: GameState): GameState {
     const updatedPlayers = gameState.players.map(player => {
         const unlocked = unlockAllDice(player);
-        return { ...unlocked, team: unlocked.team.map(c => resetShield(c)) };
+        return { ...unlocked, team: unlocked.team.map(c => tickModifiers(resetShield(c))) };
     }) as unknown as [Player, Player];
     return {
         ...gameState,

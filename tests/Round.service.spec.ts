@@ -123,3 +123,23 @@ describe('checkWinner', () => {
         expect(checkWinner(createGameState(p1, p2))).toBe('draw');
     });
 });
+
+describe('Round.service stat ticking', () => {
+    const instance = (value: number, roundsLeft: number, appliedRound: number) =>
+        ({ stat: 'POWER' as const, value, roundsLeft, appliedRound });
+    const stateWith = (round: number, modifiers: ReturnType<typeof instance>[]) => {
+        const c = createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+        const other = createCharacter({ catalogId: TEST_CATALOG_ID, name: "O", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 1, slot: 0 } });
+        return { ...createGameState(createPlayer([{ ...c, modifiers }], 0), createPlayer([other], 1)), currentRound: round };
+    };
+
+    it('loses one round per instance applied in an earlier round', () => {
+        const after = endOfRound(stateWith(5, [instance(3, 2, 3)]));
+        expect(after.players[0].team[0].modifiers).toEqual([instance(3, 1, 3)]);
+    });
+
+    it('removes an instance that reaches 0 rounds left', () => {
+        const after = endOfRound(stateWith(5, [instance(3, 1, 3), instance(-2, 2, 4)]));
+        expect(after.players[0].team[0].modifiers).toEqual([instance(-2, 1, 4)]);
+    });
+});

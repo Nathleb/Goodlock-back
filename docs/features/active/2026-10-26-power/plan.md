@@ -15,7 +15,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 - [x] 8. `ApplyStat` edge cases: repeated cell, empty cell, dead occupant, stacking.
 - [x] 9. Templates can use `ApplyStat` (entry union, factory params, registration).
 - [x] 10. Validation of stat parameters.
-- [ ] 11. Tick at the end of the round.
+- [x] 11. Tick at the end of the round.
 - [ ] 12. An instance applied this round does not tick.
 - [ ] 13. Immediate effect inside the round (integration).
 - [ ] 14. DTO: `modifiers`, `stats`, effect `stat` and `duration`.

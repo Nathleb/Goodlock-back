@@ -65,3 +65,11 @@ export function netStat(character: Character, stat: StatName): number {
         .reduce((total, m) => total + m.value, 0);
     return Math.max(-MAX_STAT_NET, Math.min(MAX_STAT_NET, sum));
 }
+
+/** End of round: every stat instance loses one round and is removed at 0. */
+export function tickModifiers(character: Character): Character {
+    const ticked = character.modifiers
+        .map(m => ({ ...m, roundsLeft: m.roundsLeft - 1 }))
+        .filter(m => m.roundsLeft > 0);
+    return updateCharacter(character, { modifiers: ticked });
+}
