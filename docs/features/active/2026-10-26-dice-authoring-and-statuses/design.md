@@ -225,8 +225,8 @@ A rough value per face to compare dice at a glance (the budget *constraint* syst
 
 Each item is its own feature (branch, spec, plan, review, PR). A feature that changes a behavior documented here updates this document in the same change.
 
-1. Deterministic initiative (`2026-10-26-initiative`)
-2. `FixedDamage`
+1. Deterministic initiative (`implemented/2026-10-26-initiative`), done
+2. `FixedDamage` (`2026-10-26-fixed-damage`)
 3. POWER: stat instances, tick, `ApplyStat` schema
 4. ARMOR
 5. States, one per feature: STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, then HASTE/SLOW (the first one adds the counters, the `ApplyState` schema and the tick)
