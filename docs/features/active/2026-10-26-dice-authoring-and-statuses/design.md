@@ -112,7 +112,7 @@ The effect is fixed per state; a **signed counter per axis** holds the **duratio
 
 ### 4.5 Template schema [proposed]
 
-The stat enum grows feature by feature: `POWER` first, `ARMOR` with its own feature. The validator rejects a stat whose feature is not implemented yet.
+The stat list (`STAT_NAMES`) grew feature by feature: `POWER` first, then `ARMOR`. The validator accepts exactly that list.
 
 `EffectEntry` becomes a discriminated union:
 
@@ -230,7 +230,7 @@ Each item is its own feature (branch, spec, plan, review, PR). A feature that ch
 1. Deterministic initiative (`implemented/2026-10-26-initiative`), done
 2. `FixedDamage` (`implemented/2026-10-26-fixed-damage`), done
 3. POWER: stat instances, tick, `ApplyStat` schema (`implemented/2026-10-26-power`), done
-4. ARMOR (`2026-10-26-armor`)
+4. ARMOR (`implemented/2026-10-26-armor`), done
 5. States, one per feature: STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, then HASTE/SLOW (the first one adds the counters, the `ApplyState` schema and the tick)
 6. New roster (`templates/` below, once the effects exist)
 7. Later: `DIE_LOCK`, player-set tie preset, triggers
