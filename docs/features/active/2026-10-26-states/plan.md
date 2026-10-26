@@ -7,7 +7,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 0. Setup and this spec.
 
 5a infrastructure and STUN
-- [ ] 1. Types: `StateName`, `StateAxis`, `STATE_DEFS`, `Character.states`, `stateValue`.
+- [x] 1. Types: `StateName`, `StateAxis`, `STATE_DEFS`, `Character.states`, `stateValue`.
 - [ ] 2. `ApplyState` strategy.
 - [ ] 3. Templates: entry union, factory params, registration, validation.
 - [ ] 4. Tick of the axes.

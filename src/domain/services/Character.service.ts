@@ -1,5 +1,6 @@
 import Character from "../types/Character.type";
 import { StatName } from "../types/Modifier.type";
+import { StateAxis } from "../types/State.type";
 import { roll1D6 } from "../utils/Random.utils";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
@@ -75,4 +76,9 @@ export function tickModifiers(character: Character, endingRound: number): Charac
         .map(m => m.appliedRound === endingRound ? m : { ...m, roundsLeft: m.roundsLeft - 1 })
         .filter(m => m.roundsLeft > 0);
     return updateCharacter(character, { modifiers: ticked });
+}
+
+/** Signed counter of a state axis (0 when the axis is absent). */
+export function stateValue(character: Character, axis: StateAxis): number {
+    return character.states[axis]?.value ?? 0;
 }
