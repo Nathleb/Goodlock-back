@@ -1,6 +1,6 @@
 import Character from "../types/Character.type";
 import { StatName } from "../types/Modifier.type";
-import { StateAxis } from "../types/State.type";
+import { STATE_AXES, StateAxis, StateCounter } from "../types/State.type";
 import { roll1D6 } from "../utils/Random.utils";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
@@ -88,8 +88,9 @@ export function stateValue(character: Character, axis: StateAxis): number {
  * except an axis touched during the ending round, which starts ticking next round.
  */
 export function tickStates(character: Character, endingRound: number): Character {
-    const ticked: Record<string, { value: number; touchedRound: number }> = {};
-    for (const [axis, counter] of Object.entries(character.states)) {
+    const ticked: { -readonly [A in StateAxis]?: StateCounter } = {};
+    for (const axis of STATE_AXES) {
+        const counter = character.states[axis];
         if (!counter) continue;
         const value = counter.touchedRound === endingRound ? counter.value : counter.value - Math.sign(counter.value);
         if (value !== 0) ticked[axis] = { ...counter, value };
