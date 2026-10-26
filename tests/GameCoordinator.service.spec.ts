@@ -382,6 +382,67 @@ describe('confirmKeep', () => {
         expect(events[events.length - 1]).toBe('gameOver');
     });
 
+    describe('upkeep at the start of the next round', () => {
+        const resolving = (gs: typeof baseGs) => p1Ready({ ...gs, rollsLeft: 0 });
+        // VITALITY -1 touched during round 0: it survives this round's tick and hurts at the start of round 1.
+        const poisoned = { VITALITY: { value: -1, touchedRound: 0 } };
+        const edit = (gs: typeof baseGs, pi: 0 | 1, slot: number, change: Partial<Player['team'][number]>) => ({
+            ...gs,
+            players: gs.players.map((p, i) => i === pi ? { ...p, team: p.team.map((c, j) => j === slot ? { ...c, ...change } : c) } : p) as [Player, Player],
+        });
+        const lastEmittedState = () => {
+            const calls = mockWs.emitToRoom.mock.calls.filter(([, event]) => event === 'gameStateUpdated');
+            return calls[calls.length - 1][2];
+        };
+
+        it('POISON hurts in the state sent for the next round', () => {
+            mockRoom.getRoom.mockReturnValue(makeRoom(resolving(edit(keepGs, 0, 1, { states: poisoned }))));
+
+            coordinator.confirmKeep(SOCKET_0, []);
+
+            expect(lastEmittedState().players[0].team[1].hp).toBe(95);
+            expect(mockRoom.updateGameState).toHaveBeenLastCalledWith('room-1', expect.objectContaining({ phase: GamePhase.KEEP }));
+        });
+
+        it('a poison that expires at the end of this round does not hurt at the start of the next', () => {
+            // VITALITY -1 touched in an earlier round: this round's tick removes it before the upkeep runs.
+            const lastHit = { VITALITY: { value: -1, touchedRound: -1 } };
+            mockRoom.getRoom.mockReturnValue(makeRoom(resolving(edit(keepGs, 0, 1, { states: lastHit }))));
+
+            coordinator.confirmKeep(SOCKET_0, []);
+
+            expect(lastEmittedState().players[0].team[1].hp).toBe(100);
+        });
+
+        it('ends the match when the poison kills the second character: gameOver, no next-round state', () => {
+            const doomed = edit(edit(keepGs, 0, 0, { hp: 0 }), 0, 1, { hp: 5, states: poisoned });
+            mockRoom.getRoom.mockReturnValue(makeRoom(resolving(doomed)));
+
+            coordinator.confirmKeep(SOCKET_0, []);
+
+            const events = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
+            expect(events).toEqual(['roundResolved', 'gameOver']);
+            expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameOver', { winner: 1, reason: 'elimination' });
+        });
+
+        it('is a draw when the poison kills both players second characters', () => {
+            const both = edit(edit(edit(edit(keepGs, 0, 0, { hp: 0 }), 0, 1, { hp: 5, states: poisoned }), 1, 0, { hp: 0 }), 1, 1, { hp: 5, states: poisoned });
+            mockRoom.getRoom.mockReturnValue(makeRoom(resolving(both)));
+
+            coordinator.confirmKeep(SOCKET_0, []);
+
+            expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameOver', { winner: 'draw', reason: 'elimination' });
+        });
+
+        it('does not touch the state when nobody is poisoned or regenerating', () => {
+            mockRoom.getRoom.mockReturnValue(makeRoom(resolving(keepGs)));
+
+            coordinator.confirmKeep(SOCKET_0, []);
+
+            expect(lastEmittedState().players[0].team.map((c: { hp: number }) => c.hp)).toEqual([100, 100, 100, 100]);
+        });
+    });
+
     it('emits error when lockedCharacterIds contains unknown id', () => {
         coordinator.confirmKeep(SOCKET_0, ['unknown-id']);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());

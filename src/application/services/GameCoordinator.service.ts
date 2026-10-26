@@ -18,6 +18,7 @@ import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
+import { upkeep } from '@domain/services/Upkeep.service';
 import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
 import {
     confirmPlacement, performRoll,
@@ -84,7 +85,16 @@ export class GameCoordinatorService {
             this.wsPort.emitToRoom(roomId, 'gameOver', payload);
             return;
         }
-        next = performRoll(beginRollPhase(endOfRound(next)));
+        // POISON and REGEN act at the start of the next round, before the roll; the poison can end the match.
+        next = upkeep(endOfRound(next));
+        const upkeepWinner = checkWinner(next);
+        if (upkeepWinner !== null) {
+            this.roomPort.updateGameState(roomId, next);
+            const payload: GameOverDTO = { winner: upkeepWinner, reason: 'elimination' };
+            this.wsPort.emitToRoom(roomId, 'gameOver', payload);
+            return;
+        }
+        next = performRoll(beginRollPhase(next));
         this.roomPort.updateGameState(roomId, next);
         this.wsPort.emitToRoom(roomId, 'gameStateUpdated', this.withTimers(roomId, GameStateMapper.toDTO(next), next));
     }
