@@ -20,7 +20,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 9. ROOT edge cases. Review 2.
 
 5c DIVINE_SHIELD
-- [ ] 10. Damage nullified and state consumed.
+- [x] 10. Damage nullified and state consumed.
 - [ ] 11. DIVINE_SHIELD edge cases. Review 3.
 
 5d POISON and REGEN
