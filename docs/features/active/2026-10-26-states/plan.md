@@ -24,7 +24,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 11. DIVINE_SHIELD edge cases. Review 3.
 
 5d POISON and REGEN
-- [ ] 12. `upkeep`.
+- [x] 12. `upkeep`.
 - [ ] 13. Timeline test.
 - [ ] 14. Coordinator wiring and game over. Review 4.
 
