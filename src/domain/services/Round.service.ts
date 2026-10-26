@@ -7,7 +7,7 @@ import { PlayerIndex } from "../types/Position.type";
 export function endOfRound(gameState: GameState): GameState {
     const updatedPlayers = gameState.players.map(player => {
         const unlocked = unlockAllDice(player);
-        return { ...unlocked, team: unlocked.team.map(c => tickModifiers(resetShield(c))) };
+        return { ...unlocked, team: unlocked.team.map(c => tickModifiers(resetShield(c), gameState.currentRound)) };
     }) as unknown as [Player, Player];
     return {
         ...gameState,

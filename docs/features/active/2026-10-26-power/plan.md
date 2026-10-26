@@ -16,7 +16,7 @@ Layers: domain (types, `netStat`, `Damage`, `ApplyStat`, generation and validati
 - [x] 9. Templates can use `ApplyStat` (entry union, factory params, registration).
 - [x] 10. Validation of stat parameters.
 - [x] 11. Tick at the end of the round.
-- [ ] 12. An instance applied this round does not tick.
+- [x] 12. An instance applied this round does not tick.
 - [ ] 13. Immediate effect inside the round (integration).
 - [ ] 14. DTO: `modifiers`, `stats`, effect `stat` and `duration`.
 - [ ] 15. Client mirror in Goodlock-app (subagent, from main after fast-forwarding feat/fixed-damage).

@@ -142,4 +142,19 @@ describe('Round.service stat ticking', () => {
         const after = endOfRound(stateWith(5, [instance(3, 1, 3), instance(-2, 2, 4)]));
         expect(after.players[0].team[0].modifiers).toEqual([instance(-2, 1, 4)]);
     });
+
+    it('does not tick an instance applied during the round that is ending', () => {
+        const after = endOfRound(stateWith(5, [instance(3, 2, 5), instance(-2, 2, 4)]));
+        expect(after.players[0].team[0].modifiers).toEqual([instance(3, 2, 5), instance(-2, 1, 4)]);
+    });
+
+    it('so a duration d applied in round N is active through round N + d', () => {
+        let state = stateWith(5, [instance(3, 2, 5)]);
+        const active: boolean[] = [];
+        for (let round = 5; round <= 8; round++) {
+            active.push(state.players[0].team[0].modifiers.length > 0);
+            state = endOfRound(state);
+        }
+        expect(active).toEqual([true, true, true, false]);
+    });
 });

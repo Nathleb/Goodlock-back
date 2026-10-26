@@ -66,10 +66,13 @@ export function netStat(character: Character, stat: StatName): number {
     return Math.max(-MAX_STAT_NET, Math.min(MAX_STAT_NET, sum));
 }
 
-/** End of round: every stat instance loses one round and is removed at 0. */
-export function tickModifiers(character: Character): Character {
+/**
+ * End of round: every stat instance loses one round and is removed at 0, except
+ * one applied during the ending round, which only starts ticking next round.
+ */
+export function tickModifiers(character: Character, endingRound: number): Character {
     const ticked = character.modifiers
-        .map(m => ({ ...m, roundsLeft: m.roundsLeft - 1 }))
+        .map(m => m.appliedRound === endingRound ? m : { ...m, roundsLeft: m.roundsLeft - 1 })
         .filter(m => m.roundsLeft > 0);
     return updateCharacter(character, { modifiers: ticked });
 }
