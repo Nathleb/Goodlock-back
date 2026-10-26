@@ -448,6 +448,23 @@ describe('PriorityQueueService', () => {
         expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['holder-slot-4', 'rival-slot-0']);
       });
 
+      it('an actor missing from the state sorts as a non-holder in slot 0, and is skipped', () => {
+        const present = {
+          ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'present', maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 2 } }),
+          id: 'present-slot-2',
+        };
+        const state: GameState = {
+          ...createGameState({ playerIndex: 0, team: [] }, { playerIndex: 1, team: [present] }, 0),
+          priorityQueue: [
+            [noop(0), present.id, 5] as const,
+            [noop(0), 'missing', 5] as const,
+          ],
+        };
+        const { log } = unstackPriorityQueueWithLog(state);
+        expect(log.map(s => s.characterId)).toEqual(['missing', 'present-slot-2']);
+        expect(log[0].skipped).toBe(true);
+      });
+
       it('resolves without any random call', () => {
         const random = jest.spyOn(Math, 'random');
         unstackPriorityQueueWithLog(tied(0));
