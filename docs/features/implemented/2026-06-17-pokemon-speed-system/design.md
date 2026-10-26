@@ -23,7 +23,7 @@ Negative and arbitrary integer brackets are naturally supported (the queue is no
 
 - `PriorityQueue` is a flat `readonly QueueEntry[]`; `QueueEntry = [DieFace, actorId, actorSpeed]`, so each entry is self-contained for sorting. `createPriorityQueue()` takes no argument.
 - `addAllEffectsToPriorityQueue` queues every character's current face with its `baseSpeed`.
-- `unstackPriorityQueueWithLog` computes the order once up front with a pure sort: `priority` desc, `speed` desc, the actors of `GameState.initiativePlayerIndex` first, then `position.slot` asc. No random call. An actor missing from the state keeps its queue order (the sort is stable). State changes during the round (hp, shield, positions) never re-order resolution.
+- `unstackPriorityQueueWithLog` computes the order once up front with a pure sort: `priority` desc, `speed` desc, the actors of `GameState.initiativePlayerIndex` first, then `position.slot` asc. No random call. An actor missing from the state sorts as a non-holder in slot 0 and is skipped at resolution anyway. State changes during the round (hp, shield, positions) never re-order resolution.
 - Each entry is then resolved in order: a dead actor is skipped (and logged as skipped), otherwise each effect's cells are resolved from the actor's current position and applied (see the auto-targeting spec).
 
 The `ResolveStep` log shape does not depend on the ordering model, so DTOs, the gateway and the client are unaffected by it.
