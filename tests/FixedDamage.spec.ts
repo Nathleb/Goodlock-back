@@ -66,4 +66,19 @@ describe('FixedDamage', () => {
         expect(state.players[1].team.find(c => c.position.slot === 3)!.hp).toBe(15);
         expect(affected).toEqual([holed.players[1].team[3].id]);
     });
+
+    it('ignores the actor\'s POWER, buff or debuff', () => {
+        const power = (value: number) => ({ stat: 'POWER' as const, value, roundsLeft: 2, appliedRound: 0 });
+        const withActorPower = (value: number): GameState => {
+            const players = [...gs.players] as [Player, Player];
+            players[0] = { ...players[0], team: players[0].team.map((c, i) => i === 2 ? { ...c, modifiers: [power(value)] } : c) };
+            return { ...gs, players };
+        };
+
+        const buffed = new FixedDamage(5).solve(withActorPower(7), [pos(1, 0)], actorId()).state;
+        const weakened = new FixedDamage(5).solve(withActorPower(-9), [pos(1, 0)], actorId()).state;
+
+        expect(at(buffed, 1, 0).hp).toBe(15);
+        expect(at(weakened, 1, 0).hp).toBe(15);
+    });
 });
