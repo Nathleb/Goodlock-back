@@ -34,4 +34,13 @@ describe('Damage with ARMOR', () => {
 
         expect(at(state, 1, 0).hp).toBe(18);
     });
+
+    it('floors the damage at 0 under a strong ARMOR, never healing or adding shield', () => {
+        const wall = withCharacter(gs, 1, 0, { modifiers: [stat('ARMOR', 9)] });
+
+        const { state } = new Damage(5).solve(wall, [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).shield).toBe(0);
+    });
 });
