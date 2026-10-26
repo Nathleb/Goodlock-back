@@ -21,6 +21,19 @@ export function resolveTargets(groups: readonly TargetGroup[], actor: Position):
     return out;
 }
 
+const IMPLEMENTED_STATS: readonly string[] = ['POWER'];
+
+/** Parameters of an ApplyStat entry; the stat list grows with each stat's feature. */
+export function validateStatParams(entry: { readonly stat?: unknown; readonly magnitude?: unknown; readonly duration?: unknown }): string[] {
+    const errors: string[] = [];
+    if (typeof entry.stat !== 'string' || !IMPLEMENTED_STATS.includes(entry.stat)) {
+        errors.push(`stat must be one of ${IMPLEMENTED_STATS.join(', ')}`);
+    }
+    if (!Number.isInteger(entry.magnitude) || entry.magnitude === 0) errors.push('magnitude must be a non-zero integer');
+    if (!Number.isInteger(entry.duration) || (entry.duration as number) < 1) errors.push('duration must be an integer >= 1');
+    return errors;
+}
+
 export function validateEffectTargets(effect: string, groups: readonly TargetGroup[]): string[] {
     const errors: string[] = [];
     if (!Array.isArray(groups) || groups.length === 0) return ['targets must be a non-empty array'];

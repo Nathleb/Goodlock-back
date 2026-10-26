@@ -5,6 +5,7 @@ import { createPriorityQueue } from "./PriorityQueue.service";
 import { Player } from "../types/Player.type";
 import { PlayerIndex } from "../types/Position.type";
 import EffectFactory from "../factories/EffectFactory.class";
+import ApplyStat from "../strategies/ApplyStat.class";
 import Damage from "../strategies/Damage.class";
 import FixedDamage from "../strategies/FixedDamage.class";
 import Heal from "../strategies/Heal.class";
@@ -30,5 +31,9 @@ export function buildEffectFactory(): EffectFactory {
     factory.registerEffect(EffectLabel.Heal,   (amount) => new Heal(amount));
     factory.registerEffect(EffectLabel.Shield, (amount) => new Shield(amount));
     factory.registerEffect(EffectLabel.Swap,   () => new Swap());
+    factory.registerEffect(EffectLabel.ApplyStat, (amount, params) => {
+        if (!params?.stat || params.duration === undefined) throw new Error("ApplyStat needs a stat and a duration");
+        return new ApplyStat(params.stat, amount, params.duration);
+    });
     return factory;
 }

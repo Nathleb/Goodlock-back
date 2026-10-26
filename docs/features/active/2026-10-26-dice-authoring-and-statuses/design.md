@@ -112,6 +112,8 @@ The effect is fixed per state; a **signed counter per axis** holds the **duratio
 
 ### 4.5 Template schema [proposed]
 
+The stat enum grows feature by feature: `POWER` first, `ARMOR` with its own feature. The validator rejects a stat whose feature is not implemented yet.
+
 `EffectEntry` becomes a discriminated union:
 
 ```jsonc
@@ -123,7 +125,7 @@ The effect is fixed per state; a **signed counter per axis** holds the **duratio
 
 - `FixedDamage` uses the same shape as `Damage` (`magnitude`, `targets`).
 - A blank face is `"effects": []` (already accepted by `CharacterGeneration`).
-- `validateEffectTargets` gains checks: `duration` integer ≥ 1; `stat`/`state` in their enums; `magnitude` ≠ 0 for ApplyStat.
+- Template validation gains a `validateStatParams` next to `validateEffectTargets` (`TargetResolution.service.ts`): `duration` integer ≥ 1; `stat`/`state` in their enums; `magnitude` ≠ 0 for ApplyStat.
 
 ---
 
@@ -227,7 +229,7 @@ Each item is its own feature (branch, spec, plan, review, PR). A feature that ch
 
 1. Deterministic initiative (`implemented/2026-10-26-initiative`), done
 2. `FixedDamage` (`implemented/2026-10-26-fixed-damage`), done
-3. POWER: stat instances, tick, `ApplyStat` schema
+3. POWER: stat instances, tick, `ApplyStat` schema (`implemented/2026-10-26-power`), done
 4. ARMOR
 5. States, one per feature: STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, then HASTE/SLOW (the first one adds the counters, the `ApplyState` schema and the tick)
 6. New roster (`templates/` below, once the effects exist)

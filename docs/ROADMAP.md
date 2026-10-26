@@ -17,7 +17,7 @@ serve the phone experience, not the other way around.
 ## Where we are today (updated 2026-10-19)
 
 **Backend (`Goodlock-back`) — engine and player data are built; ahead of the client.**
-- Combat: generic effect strategies (Damage, FixedDamage, Heal, Shield, Swap) driven by
+- Combat: generic effect strategies (Damage, FixedDamage, Heal, Shield, Swap, ApplyStat) driven by
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
   bracket, then base speed, then an alternating initiative token and slot). Character templates are placeholder balance.
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
@@ -112,7 +112,6 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 ### Phase 5 — v1.0 (installable launch)
 - First-run onboarding/tutorial (mobile-shaped), app icon + splash, content pass (placeholder
   characters today; with decks of 6 and a pick of 4 the roster needs depth and real balance).
-  `Character.modifiers` exists in the type but no modifier effect is implemented yet.
 - Produce the **signed installable build** (sideload / TestFlight) — the agreed v1.0 target.
 - Beta with real users on real phones; fix what they hit.
 - **Exit:** v1.0 installable build, validated by external testers on their own devices.
@@ -129,7 +128,7 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 Umbrella design: `docs/features/active/2026-10-26-dice-authoring-and-statuses/design.md`. Features in order,
 each with its own spec and PR: deterministic initiative; `FixedDamage`; POWER; ARMOR; states one by one
 (STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, HASTE/SLOW); the new roster. Later: `DIE_LOCK` (acts on the keep
-decision), a player-set tie preset within a team, and **triggers** ("flee when hit", riposte), which need
+decision), a player-set tie preset within a team, client badges for the active stats (the models already parse `modifiers` and `stats`), and **triggers** ("flee when hit", riposte), which need
 their own system. Client: the resolution preview becomes a simulation of the resolution.
 
 ---

@@ -83,6 +83,35 @@ describe('CharacterGenerationService', () => {
     expect(after.players[0].team[0].shield).toBe(4);
   });
 
+  it('builds an ApplyStat face whose effect adds the template stat, value and duration', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', stat: 'POWER', magnitude: -3, duration: 2, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
+    const built = createCharacterFromJsonTemplate(json, factory);
+    const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 0, slot: 0 } });
+    const state = { ...createGameState(createPlayer([target], 0), createPlayer([], 1)), currentRound: 4 };
+
+    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 0, slot: 0 }], target.id);
+
+    expect(after.players[0].team[0].modifiers).toEqual([{ stat: 'POWER', value: -3, roundsLeft: 2, appliedRound: 4 }]);
+    expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyStat', magnitude: -3, stat: 'POWER', duration: 2 });
+  });
+
+  it.each([
+    ['unknown stat', { stat: 'LUCK', magnitude: 3, duration: 2 }],
+    ['a stat not implemented yet (ARMOR)', { stat: 'ARMOR', magnitude: 3, duration: 2 }],
+    ['missing stat', { magnitude: 3, duration: 2 }],
+    ['zero magnitude', { stat: 'POWER', magnitude: 0, duration: 2 }],
+    ['fractional magnitude', { stat: 'POWER', magnitude: 1.5, duration: 2 }],
+    ['zero duration', { stat: 'POWER', magnitude: 3, duration: 0 }],
+    ['negative duration', { stat: 'POWER', magnitude: 3, duration: -1 }],
+    ['fractional duration', { stat: 'POWER', magnitude: 3, duration: 1.5 }],
+    ['missing duration', { stat: 'POWER', magnitude: 3 }],
+  ])('throws on invalid ApplyStat parameters (%s)', (_label, params) => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', ...params, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
+    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid stat parameters/);
+  });
+
   it.each([
     ['empty targets', []],
     ['slot out of range', [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [7] }]],

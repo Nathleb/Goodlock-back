@@ -10,10 +10,10 @@ A face can cost HP ("take 3 damage, deal 9"). Decision: a separate `FixedDamage`
 
 - `FixedDamage` lowers the occupant's HP by exactly `magnitude`, on any side.
 - It is not absorbed by shield.
-- It ignores POWER and ARMOR, and neither triggers nor consumes DIVINE_SHIELD. Those statuses do not exist yet: their features must keep this rule.
+- It ignores POWER (pinned by a test) and ARMOR, and neither triggers nor consumes DIVINE_SHIELD. ARMOR and DIVINE_SHIELD do not exist yet: their features must keep this rule and add the matching tests.
 - Cell by cell, like every effect: a repeated cell is hit once per occurrence, an empty cell does nothing while the rest of the pattern applies, a dead occupant stays at 0 HP.
 - Template shape is the same as `Damage`: `{ "effect": "FixedDamage", "magnitude": 3, "targets": [...] }`.
 
 ## Out of scope
 
-Statuses (POWER, ARMOR, DIVINE_SHIELD): later features.
+Statuses ARMOR and DIVINE_SHIELD: later features.

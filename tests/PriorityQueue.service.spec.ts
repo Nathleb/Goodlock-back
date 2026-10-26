@@ -493,6 +493,48 @@ describe('PriorityQueueService', () => {
     });
   });
 
+  describe('stat changes inside the round', () => {
+    const dieOfFace = (effects: EffectEntry[], priority = 0) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
+      createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
+    const buffAlly = (value: number): EffectEntry => ({ effect: EffectLabel.ApplyStat, stat: 'POWER', magnitude: value, duration: 2, targets: [allyAbs(1)] });
+    const hit = (amount: number): EffectEntry => ({ effect: EffectLabel.Damage, magnitude: amount, targets: [enemyAbs(0)] });
+
+    it('a faster buff applies to a slower ally acting later in the same resolution', () => {
+      const buffer = hero('buffer', 9, 0, 0, [buffAlly(3)]);
+      const attacker = hero('attacker', 3, 0, 1, [hit(5)]);
+      const dummy = hero('dummy', 1, 1, 0, []);
+      const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([buffer, attacker], 0), createPlayer([dummy], 1)));
+
+      const { state: after } = unstackPriorityQueueWithLog(state);
+
+      expect(after.players[1].team[0].hp).toBe(100 - 8);
+    });
+
+    it('a buff placed before the damage in one face already counts for that damage', () => {
+      const self: EffectEntry = { effect: EffectLabel.ApplyStat, stat: 'POWER', magnitude: 3, duration: 2, targets: [allyRel(0)] };
+      const actor = hero('actor', 5, 0, 0, [self, hit(5)]);
+      const dummy = hero('dummy', 1, 1, 0, []);
+      const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([actor], 0), createPlayer([dummy], 1)));
+
+      const { state: after } = unstackPriorityQueueWithLog(state);
+
+      expect(after.players[1].team[0].hp).toBe(100 - 8);
+    });
+
+    it('a slower buff does not apply to a faster ally that already acted', () => {
+      const buffer = hero('buffer', 3, 0, 0, [buffAlly(3)]);
+      const attacker = hero('attacker', 9, 0, 1, [hit(5)]);
+      const dummy = hero('dummy', 1, 1, 0, []);
+      const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([buffer, attacker], 0), createPlayer([dummy], 1)));
+
+      const { state: after } = unstackPriorityQueueWithLog(state);
+
+      expect(after.players[1].team[0].hp).toBe(100 - 5);
+    });
+  });
+
   describe('auto-targeting at resolution time', () => {
     const factory = buildEffectFactory();
     const face = (priority: number, effects: EffectEntry[]) =>
