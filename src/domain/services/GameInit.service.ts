@@ -31,6 +31,9 @@ export function buildEffectFactory(): EffectFactory {
     factory.registerEffect(EffectLabel.Heal,   (amount) => new Heal(amount));
     factory.registerEffect(EffectLabel.Shield, (amount) => new Shield(amount));
     factory.registerEffect(EffectLabel.Swap,   () => new Swap());
-    factory.registerEffect(EffectLabel.ApplyStat, (amount, params) => new ApplyStat(params!.stat!, amount, params!.duration!));
+    factory.registerEffect(EffectLabel.ApplyStat, (amount, params) => {
+        if (!params?.stat || params.duration === undefined) throw new Error("ApplyStat needs a stat and a duration");
+        return new ApplyStat(params.stat, amount, params.duration);
+    });
     return factory;
 }
