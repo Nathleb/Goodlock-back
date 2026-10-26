@@ -25,7 +25,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 
 5d POISON and REGEN
 - [x] 12. `upkeep`.
-- [ ] 13. Timeline test.
+- [x] 13. Timeline test.
 - [ ] 14. Coordinator wiring and game over. Review 4.
 
 5e HASTE and SLOW

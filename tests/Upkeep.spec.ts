@@ -3,6 +3,8 @@ import { createCharacter } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { upkeep, POISON_DAMAGE, REGEN_HEAL } from "@domain/services/Upkeep.service";
+import { endOfRound } from "@domain/services/Round.service";
+import ApplyState from "@domain/strategies/ApplyState.class";
 import Die from "@domain/types/Die.type";
 import GameState from "@domain/types/GameState.type";
 import { PlayerIndex, SlotIndex } from "@domain/types/Position.type";
@@ -85,5 +87,38 @@ describe('upkeep', () => {
         const after = upkeep(both);
         expect(at(after, 0, 0).hp).toBe(15);
         expect(at(after, 1, 3).hp).toBe(15);
+    });
+});
+
+describe('upkeep timeline', () => {
+    const nextRoundStart = (s: GameState) => upkeep(endOfRound(s));
+    const applyAt = (s: GameState, state: 'POISON' | 'REGEN', duration: number) =>
+        new ApplyState(state, duration).solve(s, [{ playerIndex: 0, slot: 1 }], s.players[0].team[0].id).state;
+
+    it('a POISON of duration d applied in round N hurts at the start of rounds N+1 to N+d, and only those', () => {
+        let state: GameState = { ...createGameState(team(0, 'A'), team(1, 'B')), currentRound: 4 };
+        state = applyAt(state, 'POISON', 2);
+        const hp: number[] = [state.players[0].team[1].hp];
+
+        for (let i = 0; i < 3; i++) {
+            state = nextRoundStart(state);
+            hp.push(state.players[0].team[1].hp);
+        }
+
+        expect(hp).toEqual([20, 15, 10, 10]);
+    });
+
+    it('a REGEN of duration 1 applied in round N heals once, at the start of round N+1', () => {
+        let state: GameState = { ...createGameState(team(0, 'A'), team(1, 'B')), currentRound: 4 };
+        state = { ...state, players: [{ ...state.players[0], team: state.players[0].team.map((c, i) => i === 1 ? { ...c, hp: 5 } : c) }, state.players[1]] };
+        state = applyAt(state, 'REGEN', 1);
+        const hp: number[] = [state.players[0].team[1].hp];
+
+        for (let i = 0; i < 2; i++) {
+            state = nextRoundStart(state);
+            hp.push(state.players[0].team[1].hp);
+        }
+
+        expect(hp).toEqual([5, 10, 10]);
     });
 });
