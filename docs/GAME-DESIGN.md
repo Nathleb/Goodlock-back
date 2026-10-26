@@ -25,7 +25,9 @@ Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT. There is no
 
 **Auto-targeting**: players never choose targets. Each effect carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies.
 - Off-board cells are dropped; no cell = fizzle.
-- The empty cell is kept, and each effect decides what it does there: Damage, Heal and Shield do nothing on that cell and the rest of the pattern still applies; Swap moves the character into it, so the hole travels.
+- The empty cell is kept, and each effect decides what it does there: Damage, FixedDamage, Heal and Shield do nothing on that cell and the rest of the pattern still applies; Swap moves the character into it, so the hole travels.
+
+**Damage types**: `Damage` is inflicted damage (shield absorbs it; future POWER, ARMOR and DIVINE_SHIELD apply to it). `FixedDamage` is sacrificed HP: it lowers HP by exactly its magnitude, ignores shield, and nothing modifies it. The author picks per face, including for costs on the actor or an ally.
 
 **Dead characters**: a character at 0 HP stays on the board and is displayed, cannot act, but can still be targeted.
 
