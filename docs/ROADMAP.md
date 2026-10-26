@@ -19,7 +19,7 @@ serve the phone experience, not the other way around.
 **Backend (`Goodlock-back`) — engine and player data are built; ahead of the client.**
 - Combat: 4 generic effect strategies (Damage, Heal, Shield, Swap) driven by
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
-  bracket, then base speed, random tiebreak). Character templates are placeholder balance.
+  bracket, then base speed, then an alternating initiative token and slot). Character templates are placeholder balance.
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
   boot; `UserCharacter` ownership (grant-all for now); decks of **6**, max 5 per user, starter deck;
   in a room each player picks a deck, then **team preview**: both decks revealed, each secretly keeps
@@ -123,6 +123,16 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 - **Mobile-first:** no feature ships until it's verified on a device build.
 - **Tests grow:** client coverage increases each phase; backend stays green.
 - **Reconnection resilience** is maintained as a standing requirement, not a one-time task.
+
+## Dice authoring and statuses (backend, in progress)
+
+Umbrella design: `docs/features/active/2026-10-26-dice-authoring-and-statuses/design.md`. Features in order,
+each with its own spec and PR: deterministic initiative; `FixedDamage`; POWER; ARMOR; states one by one
+(STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, HASTE/SLOW); the new roster. Later: `DIE_LOCK` (acts on the keep
+decision), a player-set tie preset within a team, and **triggers** ("flee when hit", riposte), which need
+their own system. Client: the resolution preview becomes a simulation of the resolution.
+
+---
 
 ## Open decisions (flagged, not yet made)
 1. **DB-backed results entity** — Phase 3; requires the explicit discussion CLAUDE.md mandates

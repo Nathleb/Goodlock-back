@@ -10,6 +10,7 @@ import { TEAM_SIZE } from "./Deck.service";
 import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
+import { roll1D } from "../utils/Random.utils";
 
 function markPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     const ready: [boolean, boolean] = [gs.playersReady[0], gs.playersReady[1]];
@@ -43,6 +44,7 @@ export function createSelectionState(decks: readonly [readonly CharacterTemplate
     return {
         phase: GamePhase.SELECTION,
         currentRound: 0,
+        initiativePlayerIndex: roll1D(2) as PlayerIndex,
         rollsLeft: 2,
         playersReady: [false, false],
         priorityQueue: createPriorityQueue(),

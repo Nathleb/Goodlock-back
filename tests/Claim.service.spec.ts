@@ -11,7 +11,7 @@ const ONLINE: PlayerPresence = { connected: true, disconnectedAt: null };
 
 function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
     const empty = (i: 0 | 1): Player => ({ playerIndex: i, team: [] });
-    return { phase, currentRound: 1, rollsLeft: 2, playersReady, priorityQueue: [], players: [empty(0), empty(1)] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady, priorityQueue: [], players: [empty(0), empty(1)] };
 }
 
 describe('evaluateClaim — forfeit ground', () => {

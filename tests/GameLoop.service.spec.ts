@@ -10,7 +10,7 @@ import { createPlayer } from "@domain/services/Player.service";
 import { beginKeepPhase, beginRollPhase } from "@domain/services/Phase.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
-    cancelPlacement, cancelKeep,
+    cancelPlacement, cancelKeep, createSelectionState,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
 import GameState from "@domain/types/GameState.type";
@@ -219,3 +219,17 @@ describe('cancelKeep', () => {
     });
 });
 
+
+describe('initiative at game init', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('gives the initiative to player 0 when the draw falls on the lower half', () => {
+        jest.spyOn(Math, 'random').mockReturnValue(0.2);
+        expect(createSelectionState([[], []]).initiativePlayerIndex).toBe(0);
+    });
+
+    it('gives the initiative to player 1 when the draw falls on the upper half', () => {
+        jest.spyOn(Math, 'random').mockReturnValue(0.7);
+        expect(createSelectionState([[], []]).initiativePlayerIndex).toBe(1);
+    });
+});

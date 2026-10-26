@@ -1,4 +1,5 @@
 import { CatalogCharacterDTO } from './Catalog.dto';
+import { PlayerIndex } from '@domain/types/Position.type';
 
 export type TargetGroupDTO = { side: string; mode: string; n: number[] };
 
@@ -49,6 +50,8 @@ export type ResolveStepDTO = {
 export type GameStateDTO = {
     phase: string;
     currentRound: number;
+    /** Player index that wins exact ties in the resolution order this round. Public in every phase. */
+    initiativePlayerIndex: PlayerIndex;
     rollsLeft: number;
     playersReady: [boolean, boolean];
     players: [PlayerGameStateDTO, PlayerGameStateDTO];

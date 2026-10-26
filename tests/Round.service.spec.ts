@@ -21,6 +21,13 @@ const factory = buildEffectFactory();
 const die = generateFullDie(baseDieInstructions, factory);
 
 describe('Round.service', () => {
+    it.each([[0, 1], [1, 0]] as const)('flips the initiative from %i to %i at end of round', (before, after) => {
+        const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+        const gameState = createGameState(createPlayer([makeChar()], 0), createPlayer([makeChar()], 1), before);
+
+        expect(endOfRound(gameState).initiativePlayerIndex).toBe(after);
+    });
+
     it('should reset all shields to 0 at end of round', () => {
         const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const charWithShield = gainShield(makeChar(), 20);

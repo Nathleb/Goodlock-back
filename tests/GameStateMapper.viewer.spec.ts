@@ -29,7 +29,7 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
         playerIndex: pi,
         team: [char(`c${pi}0`, pi, 0, true), char(`c${pi}1`, pi, 1, false)],
     });
-    return { phase, currentRound: 1, rollsLeft: 1, playersReady, priorityQueue: [], players: [team(0), team(1)] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 1, playersReady, priorityQueue: [], players: [team(0), team(1)] };
 }
 
 describe('toDTOForViewer', () => {
@@ -69,6 +69,21 @@ describe('toDTOForViewer', () => {
     it('masks player 0 when the viewer is player 1', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [true, false]), 1);
         expect(dto.players[0].team.every(c => c.isFaceLocked === false)).toBe(true);
+    });
+});
+
+describe('initiative in the public DTO', () => {
+    const phases = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.ROLL, GamePhase.KEEP, GamePhase.RESOLVE, GamePhase.RESULT];
+
+    it.each(phases)('is exposed to both viewers in %s', (phase) => {
+        const state: GameState = { ...gs(phase, [false, false]), initiativePlayerIndex: 1 };
+        expect(GameStateMapper.toDTOForViewer(state, 0).initiativePlayerIndex).toBe(1);
+        expect(GameStateMapper.toDTOForViewer(state, 1).initiativePlayerIndex).toBe(1);
+    });
+
+    it('is carried by the room-wide DTO', () => {
+        const state: GameState = { ...gs(GamePhase.ROLL, [false, false]), initiativePlayerIndex: 0 };
+        expect(GameStateMapper.toDTO(state).initiativePlayerIndex).toBe(0);
     });
 });
 

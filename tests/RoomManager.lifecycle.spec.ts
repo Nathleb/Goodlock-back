@@ -4,7 +4,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 import { CatalogId } from '@shared/branded.types';
 
 function gs(phase: GamePhase, rollsLeft: number): GameState {
-    return { phase, currentRound: 1, rollsLeft, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
 }
 
 function startedRoom(manager: RoomManager): string {

@@ -376,6 +376,102 @@ describe('PriorityQueueService', () => {
       expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining(['x', 'y']));
     });
 
+    describe('initiative breaks exact ties', () => {
+      afterEach(() => jest.restoreAllMocks());
+
+      const tied = (initiative: PlayerIndex): GameState => ({
+        ...buildState([
+          { face: noop(0), id: 'p0-actor', speed: 5, playerIndex: 0 },
+          { face: noop(0), id: 'p1-actor', speed: 5, playerIndex: 1 },
+        ]),
+        initiativePlayerIndex: initiative,
+      });
+
+      it('with equal bracket and speed, the initiative holder resolves first', () => {
+        expect(unstackPriorityQueueWithLog(tied(0)).log.map(s => s.characterId)).toEqual(['p0-actor', 'p1-actor']);
+        expect(unstackPriorityQueueWithLog(tied(1)).log.map(s => s.characterId)).toEqual(['p1-actor', 'p0-actor']);
+      });
+
+      it('never beats a higher speed in the same bracket', () => {
+        const state: GameState = {
+          ...buildState([
+            { face: noop(0), id: 'holder-slow', speed: 1, playerIndex: 0 },
+            { face: noop(0), id: 'other-fast', speed: 9, playerIndex: 1 },
+          ]),
+          initiativePlayerIndex: 0,
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['other-fast', 'holder-slow']);
+      });
+
+      it('never beats a higher bracket', () => {
+        const state: GameState = {
+          ...buildState([
+            { face: noop(0), id: 'holder-low', speed: 5, playerIndex: 0 },
+            { face: noop(1), id: 'other-high', speed: 5, playerIndex: 1 },
+          ]),
+          initiativePlayerIndex: 0,
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['other-high', 'holder-low']);
+      });
+
+      it('inside one team, equal bracket and speed go by slot ascending whatever the array order', () => {
+        const at = (slot: SlotIndex, id: string) => ({
+          ...createCharacter({ catalogId: TEST_CATALOG_ID, name: id, maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 0, slot } }),
+          id,
+        });
+        const high = at(3, 'slot-3');
+        const low = at(1, 'slot-1');
+        const state: GameState = {
+          ...createGameState({ playerIndex: 0, team: [high, low] }, { playerIndex: 1, team: [] }),
+          priorityQueue: [
+            [noop(0), high.id, 5] as const,
+            [noop(0), low.id, 5] as const,
+          ],
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['slot-1', 'slot-3']);
+      });
+
+      it('beats the slot: a holder in slot 4 still resolves before a rival in slot 0', () => {
+        const at = (playerIndex: PlayerIndex, slot: SlotIndex, id: string) => ({
+          ...createCharacter({ catalogId: TEST_CATALOG_ID, name: id, maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex, slot } }),
+          id,
+        });
+        const rival = at(0, 0, 'rival-slot-0');
+        const holder = at(1, 4, 'holder-slot-4');
+        const state: GameState = {
+          ...createGameState({ playerIndex: 0, team: [rival] }, { playerIndex: 1, team: [holder] }, 1),
+          priorityQueue: [
+            [noop(0), rival.id, 5] as const,
+            [noop(0), holder.id, 5] as const,
+          ],
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['holder-slot-4', 'rival-slot-0']);
+      });
+
+      it('an actor missing from the state sorts as a non-holder in slot 0, and is skipped', () => {
+        const present = {
+          ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'present', maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 2 } }),
+          id: 'present-slot-2',
+        };
+        const state: GameState = {
+          ...createGameState({ playerIndex: 0, team: [] }, { playerIndex: 1, team: [present] }, 0),
+          priorityQueue: [
+            [noop(0), present.id, 5] as const,
+            [noop(0), 'missing', 5] as const,
+          ],
+        };
+        const { log } = unstackPriorityQueueWithLog(state);
+        expect(log.map(s => s.characterId)).toEqual(['missing', 'present-slot-2']);
+        expect(log[0].skipped).toBe(true);
+      });
+
+      it('resolves without any random call', () => {
+        const random = jest.spyOn(Math, 'random');
+        unstackPriorityQueueWithLog(tied(0));
+        expect(random).not.toHaveBeenCalled();
+      });
+    });
+
     it('a dead high-bracket actor is skipped but keeps its place in the ordering', () => {
       const deadHigh = loseHp(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'DeadHigh', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(1)), position: { playerIndex: 0, slot: 0 } }), 100);
       const liveLow = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'LiveLow', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 0 } });

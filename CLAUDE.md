@@ -103,7 +103,7 @@ The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no 
 
 **Result over exceptions** (target convention; `Result<T, E>` is not implemented yet, and introducing it is a dedicated change, not something to slip into a feature): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors.
 
-**Randomness**: domain code calls `Math.random` directly (`domain/utils/Random.utils.ts`, `shuffled()` in `PriorityQueue.service.ts`). Tests make it deterministic with `jest.spyOn(Math, 'random')` and restore it with `jest.restoreAllMocks()` in `afterEach` (Jest's `restoreMocks` is off). A `mockReturnValueOnce` sequence depends on the number and order of calls, so changing the shuffle algorithm can break such tests without any behavior change.
+**Randomness**: domain code calls `Math.random` directly through `domain/utils/Random.utils.ts` (`roll1D`: dice rolls and the initiative draw). Resolution itself is never random. Tests make it deterministic with `jest.spyOn(Math, 'random')` and restore it with `jest.restoreAllMocks()` in `afterEach` (Jest's `restoreMocks` is off). A `mockReturnValueOnce` sequence depends on the number and order of calls, so changing how a roll is drawn can break such tests without any behavior change.
 
 **Branded IDs**: never accept a raw `string` as an identifier in service signatures. Always use `SessionId`, `RoomId`, `PlayerId`, etc. If a new identifier type is needed, add it to `shared/branded.types.ts`.
 

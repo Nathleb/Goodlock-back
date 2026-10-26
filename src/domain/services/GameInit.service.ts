@@ -3,16 +3,18 @@ import GamePhase from "../types/GamePhase.type";
 import EffectLabel from "../types/EffectLabels.type";
 import { createPriorityQueue } from "./PriorityQueue.service";
 import { Player } from "../types/Player.type";
+import { PlayerIndex } from "../types/Position.type";
 import EffectFactory from "../factories/EffectFactory.class";
 import Damage from "../strategies/Damage.class";
 import Heal from "../strategies/Heal.class";
 import Shield from "../strategies/Shield.class";
 import Swap from "../strategies/Swap.class";
 
-export function createGameState(player1: Player, player2: Player): GameState {
+export function createGameState(player1: Player, player2: Player, initiativePlayerIndex: PlayerIndex = 0): GameState {
     return {
         phase: GamePhase.PLACEMENT,
         currentRound: 0,
+        initiativePlayerIndex,
         rollsLeft: 2,
         playersReady: [false, false],
         priorityQueue: createPriorityQueue(),

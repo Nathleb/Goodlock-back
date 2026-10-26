@@ -9,11 +9,11 @@ Resolution order comes from two independent keys, never summed:
 - A face's **priority** (`DieFace.priority`) is a small integer **bracket**, authored by hand on each face (a `+2` attack and a `-1` heavy attack are both legal).
 - A character's **speed** (`baseSpeed`) orders actions **within** a bracket. Speed never crosses brackets.
 
-Resolution order: bracket descending, then speed descending. Entries with equal `(bracket, speed)` are ordered randomly. So a `+1` face always resolves before any `0` face regardless of speed; two `0` faces resolve fastest first.
+Resolution order: bracket descending, then speed descending. Entries with equal `(bracket, speed)` go to the player holding the initiative token, then by slot ascending (see the initiative spec). So a `+1` face always resolves before any `0` face regardless of speed; two `0` faces resolve fastest first.
 
 Decision: two independent axes rather than `priority + baseSpeed` on one number, because a slow character on a high-priority face must not outrun a fast character on a low-priority face merely because the numbers add up; the bracket expresses "this move goes first", the speed expresses "this character is quick".
 
-Decision: random tiebreak among equal `(bracket, speed)`, because neither player should be systematically favoured.
+Decision: the initiative token (drawn at init, flipped each round) rather than a random tiebreak among equal `(bracket, speed)`, because it stays fair over a match while keeping the resolution exactly predictable for the client preview. Inside one team, ties go by slot ascending.
 
 Negative and arbitrary integer brackets are naturally supported (the queue is not index-based, so there is no bound to guard).
 
@@ -23,7 +23,7 @@ Negative and arbitrary integer brackets are naturally supported (the queue is no
 
 - `PriorityQueue` is a flat `readonly QueueEntry[]`; `QueueEntry = [DieFace, actorId, actorSpeed]`, so each entry is self-contained for sorting. `createPriorityQueue()` takes no argument.
 - `addAllEffectsToPriorityQueue` queues every character's current face with its `baseSpeed`.
-- `unstackPriorityQueueWithLog` computes the order once up front: Fisher-Yates shuffle of the flat list, then a **stable** sort by `priority` desc and `speed` desc. Because the sort is stable, entries that tie on both keep their shuffled order, which gives the random tiebreak for free. State changes during the round (hp, shield, positions) never re-order resolution.
+- `unstackPriorityQueueWithLog` computes the order once up front with a pure sort: `priority` desc, `speed` desc, the actors of `GameState.initiativePlayerIndex` first, then `position.slot` asc. No random call. State changes during the round (hp, shield, positions) never re-order resolution.
 - Each entry is then resolved in order: a dead actor is skipped (and logged as skipped), otherwise each effect's cells are resolved from the actor's current position and applied (see the auto-targeting spec).
 
 The `ResolveStep` log shape does not depend on the ordering model, so DTOs, the gateway and the client are unaffected by it.
