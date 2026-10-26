@@ -29,7 +29,7 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
         playerIndex: pi,
         team: [char(`c${pi}0`, pi, 0, true), char(`c${pi}1`, pi, 1, false)],
     });
-    return { phase, currentRound: 1, rollsLeft: 1, playersReady, priorityQueue: [], players: [team(0), team(1)] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 1, playersReady, priorityQueue: [], players: [team(0), team(1)] };
 }
 
 describe('toDTOForViewer', () => {

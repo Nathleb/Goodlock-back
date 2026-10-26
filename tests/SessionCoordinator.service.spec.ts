@@ -21,6 +21,7 @@ const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], i
 const GS: GameState = {
     phase: GamePhase.KEEP,
     currentRound: 1,
+    initiativePlayerIndex: 0,
     rollsLeft: 2,
     playersReady: [false, false],
     priorityQueue: [],

@@ -13,7 +13,7 @@ const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(
 const mockWs = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
 function gs(phase: GamePhase): GameState {
-    return { phase, currentRound: 1, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
 }
 
 const STARTED: Room = {
