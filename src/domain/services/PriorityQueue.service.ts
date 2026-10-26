@@ -44,21 +44,16 @@ function findCharacter(gameState: GameState, characterId: string): Character | u
     return undefined;
 }
 
-function shuffled<T>(arr: readonly T[]): T[] {
-    const out = [...arr];
-    for (let i = out.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [out[i], out[j]] = [out[j], out[i]];
-    }
-    return out;
-}
-
-// Pokemon-style ordering: bracket (face.priority) desc, then speed desc.
-// Array.prototype.sort is stable in Node, so shuffling first gives a random
-// tiebreak among entries that share both bracket and speed.
-function orderedForResolution(queue: PriorityQueue): QueueEntry[] {
-    return shuffled(queue).sort(
-        (a, b) => (b[0].priority - a[0].priority) || (b[2] - a[2])
+// Pokemon-style ordering: bracket (face.priority) desc, then speed desc, then the
+// initiative holder's actors first. A pure sort: no randomness, so the order is
+// fully determined by the queue and the state.
+function orderedForResolution(queue: PriorityQueue, state: GameState): QueueEntry[] {
+    const holdsInitiative = (characterId: string): number =>
+        state.players.some(p => p.playerIndex === state.initiativePlayerIndex && p.team.some(c => c.id === characterId)) ? 0 : 1;
+    return [...queue].sort(
+        (a, b) => (b[0].priority - a[0].priority)
+            || (b[2] - a[2])
+            || (holdsInitiative(a[1]) - holdsInitiative(b[1]))
     );
 }
 
@@ -67,8 +62,8 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
     const log: ResolveStep[] = [];
 
     // Order is computed once up front. State mutations inside the loop (hp, shield,
-    // positions) never re-order resolution — the bracket/speed sort is fixed here.
-    for (const [face, characterId] of orderedForResolution(state.priorityQueue)) {
+    // positions) never re-order resolution — the bracket/speed/initiative sort is fixed here.
+    for (const [face, characterId] of orderedForResolution(state.priorityQueue, state)) {
         if (!isAlive(state, characterId) || findCharacter(state, characterId) === undefined) {
             log.push({ characterId, skipped: true, effects: [], changes: [] });
             continue;

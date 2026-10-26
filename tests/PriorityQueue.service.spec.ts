@@ -376,6 +376,51 @@ describe('PriorityQueueService', () => {
       expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining(['x', 'y']));
     });
 
+    describe('initiative breaks exact ties', () => {
+      afterEach(() => jest.restoreAllMocks());
+
+      const tied = (initiative: PlayerIndex): GameState => ({
+        ...buildState([
+          { face: noop(0), id: 'p0-actor', speed: 5, playerIndex: 0 },
+          { face: noop(0), id: 'p1-actor', speed: 5, playerIndex: 1 },
+        ]),
+        initiativePlayerIndex: initiative,
+      });
+
+      it('with equal bracket and speed, the initiative holder resolves first', () => {
+        expect(unstackPriorityQueueWithLog(tied(0)).log.map(s => s.characterId)).toEqual(['p0-actor', 'p1-actor']);
+        expect(unstackPriorityQueueWithLog(tied(1)).log.map(s => s.characterId)).toEqual(['p1-actor', 'p0-actor']);
+      });
+
+      it('never beats a higher speed in the same bracket', () => {
+        const state: GameState = {
+          ...buildState([
+            { face: noop(0), id: 'holder-slow', speed: 1, playerIndex: 0 },
+            { face: noop(0), id: 'other-fast', speed: 9, playerIndex: 1 },
+          ]),
+          initiativePlayerIndex: 0,
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['other-fast', 'holder-slow']);
+      });
+
+      it('never beats a higher bracket', () => {
+        const state: GameState = {
+          ...buildState([
+            { face: noop(0), id: 'holder-low', speed: 5, playerIndex: 0 },
+            { face: noop(1), id: 'other-high', speed: 5, playerIndex: 1 },
+          ]),
+          initiativePlayerIndex: 0,
+        };
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['other-high', 'holder-low']);
+      });
+
+      it('resolves without any random call', () => {
+        const random = jest.spyOn(Math, 'random');
+        unstackPriorityQueueWithLog(tied(0));
+        expect(random).not.toHaveBeenCalled();
+      });
+    });
+
     it('a dead high-bracket actor is skipped but keeps its place in the ordering', () => {
       const deadHigh = loseHp(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'DeadHigh', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(1)), position: { playerIndex: 0, slot: 0 } }), 100);
       const liveLow = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'LiveLow', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 0 } });
