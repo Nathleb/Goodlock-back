@@ -99,4 +99,19 @@ describe('ROOT', () => {
 
         expect(occupant(state, 0, 1)!.id).toBe(rooted.id);
     });
+
+    it('a dead character is no longer rooted: Swaps into or out of its cell work', () => {
+        const base = root(createGameState(five(0, 'A'), five(1, 'B')), 0, 2);
+        const gs: GameState = {
+            ...base,
+            players: [{ ...base.players[0], team: base.players[0].team.map(c => c.position.slot === 2 ? { ...c, hp: 0 } : c) }, base.players[1]],
+        };
+        const [alive, dead] = [occupant(gs, 0, 1)!.id, occupant(gs, 0, 2)!.id];
+
+        const { state, affected } = new Swap().solve(gs, [pos(0, 1), pos(0, 2)], alive);
+
+        expect(affected.sort()).toEqual([alive, dead].sort());
+        expect(occupant(state, 0, 2)!.id).toBe(alive);
+        expect(occupant(state, 0, 1)!.id).toBe(dead);
+    });
 });
