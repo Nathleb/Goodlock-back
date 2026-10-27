@@ -226,6 +226,27 @@
             "slot"
           ],
           "additionalProperties": false
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StatInstanceDTO"
+          },
+          "description": "Active stat instances (buffs and debuffs)."
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Net value per stat, capped; computed by the server so clients do not duplicate the cap."
+        },
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Signed duration counter per state axis (SPEED: + hasted / - slowed, ...), 0 when none."
         }
       },
       "required": [
@@ -239,7 +260,10 @@
         "baseDie",
         "face",
         "isFaceLocked",
-        "position"
+        "position",
+        "modifiers",
+        "stats",
+        "states"
       ],
       "additionalProperties": false
     },
@@ -280,6 +304,15 @@
           "items": {
             "$ref": "#/definitions/TargetGroupDTO"
           }
+        },
+        "stat": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "number"
         }
       },
       "required": [
@@ -309,6 +342,26 @@
         "side",
         "mode",
         "n"
+      ],
+      "additionalProperties": false
+    },
+    "StatInstanceDTO": {
+      "type": "object",
+      "properties": {
+        "stat": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "roundsLeft": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "stat",
+        "value",
+        "roundsLeft"
       ],
       "additionalProperties": false
     },
