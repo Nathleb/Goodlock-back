@@ -10,7 +10,7 @@ Summary of the 2026-10-26 design session. Sections are tagged **[decided]** or *
 
 Auto-targeting removed the ASSIGN phase. The only per-round decision left is **keep/reroll** (team preview and placement happen once). Strategy must therefore come from making the keep a real choice: faces of one die must be ranked by context, not by value.
 
-The current `tmplt/*.json` roster is placeholder test data and does not follow this document.
+The shipped roster in `tmplt/*.json` follows this document (the six characters of the appendix). The former placeholder characters live on as test templates in `tests/fixtures/characters/`.
 
 ---
 
@@ -204,9 +204,9 @@ A rough value per face to compare dice at a glance (the budget *constraint* syst
 
 ---
 
-## Appendix: example templates
+## Appendix: the roster
 
-`templates/*.json` (next to this file): six characters at the new scale illustrating the roles (placeholders, untuned). `garran` and `kesh` use only current effects and load today; the other four need `ApplyStat` / `ApplyState`.
+`tmplt/*.json` is the single source of truth: six characters at the new scale illustrating the roles (untuned). All the effects they use exist.
 
 | Character | Role | HP | Speed | Split (floor / payoff / response / other) |
 |---|---|---|---|---|
@@ -232,5 +232,5 @@ Each item is its own feature (branch, spec, plan, review, PR). A feature that ch
 3. POWER: stat instances, tick, `ApplyStat` schema (`implemented/2026-10-26-power`), done
 4. ARMOR (`implemented/2026-10-26-armor`), done
 5. States, one per feature: STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, then HASTE/SLOW (the first one adds the counters, the `ApplyState` schema and the tick)
-6. New roster (`templates/` below, once the effects exist)
+6. New roster (`tmplt/`, done)
 7. Later: `DIE_LOCK`, player-set tie preset, triggers

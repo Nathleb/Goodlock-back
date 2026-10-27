@@ -54,4 +54,11 @@ describe("character templates", () => {
     const face = tmpl.baseDieInstructions.find((f: { description: string }) => f.description.startsWith("Take 3 damage"));
     expect(face.effects[0]).toMatchObject({ effect: "FixedDamage", magnitude: 3, targets: [{ side: "ALLY" }] });
   });
+
+  it("Garran's self-cost face sacrifices HP with FixedDamage, not Damage", () => {
+    const tmpl = JSON.parse(fs.readFileSync(path.join(tmpltDir, "Garran.json"), "utf-8"));
+    const face = tmpl.baseDieInstructions.find((f: { description: string }) => f.description.startsWith("Take 8 damage"));
+    expect(face.effects[0]).toMatchObject({ effect: "FixedDamage", magnitude: 8, targets: [{ side: "ALLY" }] });
+    expect(face.effects[1]).toMatchObject({ effect: "Damage", magnitude: 26, targets: [{ side: "ENEMY" }] });
+  });
 });

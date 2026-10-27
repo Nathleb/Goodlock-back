@@ -36,7 +36,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 
 6 roster
 - [x] 19. Add or replace the placeholders (check-in): replace; the old ten move to tests/fixtures/characters as test templates.
-- [ ] 20. Templates and catalog tests. Review 6.
+- [x] 20. Templates and catalog tests. Review 6.
 
 Client and docs
 - [ ] 21. Client mirror.

@@ -8,7 +8,7 @@ import { CATALOG_DIR } from '@application/ports/tokens';
 import { UserId } from '@shared/branded.types';
 
 describe('CollectionModule', () => {
-    it('wires the coordinator to the real catalog and the Prisma repository', async () => {
+    it('wires the coordinator to a file catalog (the test templates) and the Prisma repository', async () => {
         const prisma = { userCharacter: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn() } };
         const module = await Test.createTestingModule({ imports: [PrismaModule, CollectionModule] })
             .overrideProvider(PrismaService).useValue(prisma)

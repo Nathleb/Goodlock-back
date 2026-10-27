@@ -27,7 +27,7 @@ describe('the roster', () => {
         expect(blanks).toEqual({ garran: 1, kesh: 1, morrow: 0, tobin: 0, vespera: 1, ysolde: 0 });
     });
 
-    it('puts every state and every stat to use', () => {
+    it('uses these states and these stats', () => {
         const states = new Set(faces.flatMap(f => f.effects).filter(e => e.effect === 'ApplyState').map(e => e.state));
         const stats = new Set(faces.flatMap(f => f.effects).filter(e => e.effect === 'ApplyStat').map(e => e.stat));
         expect([...states].sort()).toEqual(['DIVINE_SHIELD', 'HASTE', 'POISON', 'ROOT', 'STUN']);
