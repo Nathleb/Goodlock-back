@@ -1,6 +1,6 @@
 # Dice authoring, statuses and initiative: design
 
-**Status:** approved 2026-10-26, implemented feature by feature (see section 9). Each feature has its own folder under `docs/features/active/`; this document is the umbrella they refer to.
+**Status:** implemented 2026-10-26, feature by feature (see section 9). Each feature has its own spec next to this one; this document is the umbrella they refer to.
 
 Summary of the 2026-10-26 design session. Sections are tagged **[decided]** or **[proposed]** (suggested, to confirm when its feature is planned). Every question that was open is answered (section 7).
 
@@ -84,7 +84,7 @@ The effect is fixed per state; a **signed counter per axis** holds the **duratio
 | VITALITY | REGEN | POISON | At upkeep: ±`POISON_DAMAGE` (5) HP |
 | STUN | STUN | – | The character's action is skipped (a stun landing before its action cancels it, like death) |
 | ROOT | ROOT | – | Any Swap involving the character's cell fizzles |
-| DIVINE_SHIELD | DIVINE_SHIELD | – | The next Damage instance on the character is nullified, then the state is consumed |
+| DIVINE_SHIELD | DIVINE_SHIELD | – | The next Damage hit that would deal more than 0 is nullified, then the state is consumed (a floored hit and a hit on a dead character consume nothing) |
 
 - Duration cap **[decided]**: none. The validator only checks that `duration` is an integer ≥ 1. Still no indefinite duration.
 - `DIE_LOCK` **[decided: separate later feature]**: the target's die is rolled once and auto-locked at the next ROLL. Only effect family that acts on the keep decision directly; not part of the v1 vocabulary below.

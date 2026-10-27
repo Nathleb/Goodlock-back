@@ -1,6 +1,6 @@
 # Initiative: a deterministic tiebreak for the resolution order — design
 
-**Status:** implemented 2026-10-26. Part of `../../active/2026-10-26-dice-authoring-and-statuses/design.md` (section 3.1).
+**Status:** implemented 2026-10-26. Part of `../2026-10-26-dice-authoring-and-statuses/design.md` (section 3.1).
 
 ## Why
 

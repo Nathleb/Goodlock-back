@@ -1,6 +1,6 @@
 # States: STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, HASTE/SLOW — design
 
-**Status:** approved 2026-10-26, in progress. Part of `../2026-10-26-dice-authoring-and-statuses/design.md` (sections 4.2, 4.3, 4.4, 4.5). Stats (POWER, ARMOR) are in `../../implemented/2026-10-26-power/design.md`.
+**Status:** implemented 2026-10-26. Part of `../2026-10-26-dice-authoring-and-statuses/design.md` (sections 4.2, 4.3, 4.4, 4.5). Stats (POWER, ARMOR) are in `../2026-10-26-power/design.md`.
 
 A state has a fixed effect; a signed **counter per axis** holds its duration.
 
