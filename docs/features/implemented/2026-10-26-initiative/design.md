@@ -10,9 +10,9 @@ Equal `(bracket, speed)` pairs used to resolve in a random order (shuffle, then 
 
 - `GameState.initiativePlayerIndex: PlayerIndex` is drawn **once at game init** (`createSelectionState`), **flipped at the end of each round** (`endOfRound`) and exposed in the **public DTO** in every phase.
 - Decision: a stored field rather than `currentRound % 2`, because the client reads it instead of re-deriving it, and logs and replays show it directly.
-- Resolution order is a pure sort: bracket (`face.priority`) desc, `baseSpeed` desc, actor of the initiative holder first, slot asc (0 → 4).
+- Resolution order is a pure sort: bracket (`face.priority`) desc, the SPEED state (hasted, neutral, slowed), `baseSpeed` desc, actor of the initiative holder first, slot asc (0 → 4). The initiative only breaks ties left by the previous keys.
 - Speed never crosses brackets and initiative never beats speed (unchanged: initiative only breaks exact ties).
-- The slot is read from the state when the order is computed, at the start of RESOLVE. `QueueEntry` stays `[face, actorId, speed]`.
+- The initiative and the slot are read from the state when RESOLVE starts and stay fixed for the round; the unresolved entries are sorted again before every step because the SPEED state can change (see the states spec). `QueueEntry` stays `[face, actorId, speed]`.
 - The DTO field is typed `PlayerIndex`; the client (`GameStateView.initiativePlayerIndex`) defaults to 0 when the field is absent so recorded fixtures still parse.
 - No random call remains in the resolution path.
 
