@@ -711,6 +711,16 @@ describe('PriorityQueueService', () => {
       expect(new Set(order).size).toBe(2);
     });
 
+    it('nobody plays twice, and nobody is skipped, when a SLOW lands on a character that already played', () => {
+      const first = hero('first', 9, 0, 0);
+      const slower = hero('slower', 5, 1, 0, [apply('SLOW', 'ENEMY', 0)]);
+      const last = hero('last', 1, 1, 1);
+
+      const { order } = run([first], [slower, last]);
+
+      expect(order).toEqual([first.id, slower.id, last.id]);
+    });
+
     it('a character hasting itself acts once', () => {
       const selfish = hero('selfish', 5, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'HASTE', duration: 2, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }]);
       const other = hero('other', 1, 1, 0);
@@ -720,7 +730,7 @@ describe('PriorityQueueService', () => {
       expect(order).toEqual([selfish.id, other.id]);
     });
 
-    it('SPEED stays inside a bracket: a hasted low-bracket character does not overtake a same-bracket neutral one', () => {
+    it('SPEED stays inside a bracket: a hasted low-bracket character does not overtake a neutral one of a higher bracket', () => {
       const starter = hero('starter', 9, 0, 0, [apply('HASTE', 'ALLY', 2)]);
       const neutralSameBracket = hero('neutral', 5, 0, 1);
       const lowBracket = hero('low', 1, 0, 2, [], -1);
