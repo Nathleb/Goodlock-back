@@ -1,8 +1,10 @@
+import * as path from 'path';
 import { Test } from '@nestjs/testing';
 import { DeckModule } from '@infrastructure/deck.module';
 import { PrismaModule } from '@infrastructure/prisma/prisma.module';
 import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
+import { CATALOG_DIR } from '@application/ports/tokens';
 import { UserId } from '@shared/branded.types';
 
 describe('DeckModule', () => {
@@ -20,6 +22,7 @@ describe('DeckModule', () => {
         };
         const module = await Test.createTestingModule({ imports: [PrismaModule, DeckModule] })
             .overrideProvider(PrismaService).useValue(prisma)
+            .overrideProvider(CATALOG_DIR).useValue(path.join(__dirname, 'fixtures', 'characters'))
             .compile();
         await module.init();
 

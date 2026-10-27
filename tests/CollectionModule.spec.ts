@@ -1,8 +1,10 @@
+import * as path from 'path';
 import { Test } from '@nestjs/testing';
 import { CollectionModule } from '@infrastructure/collection.module';
 import { PrismaModule } from '@infrastructure/prisma/prisma.module';
 import { PrismaService } from '@infrastructure/prisma/prisma.service';
 import { CollectionCoordinatorService } from '@application/services/CollectionCoordinator.service';
+import { CATALOG_DIR } from '@application/ports/tokens';
 import { UserId } from '@shared/branded.types';
 
 describe('CollectionModule', () => {
@@ -10,6 +12,7 @@ describe('CollectionModule', () => {
         const prisma = { userCharacter: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn() } };
         const module = await Test.createTestingModule({ imports: [PrismaModule, CollectionModule] })
             .overrideProvider(PrismaService).useValue(prisma)
+            .overrideProvider(CATALOG_DIR).useValue(path.join(__dirname, 'fixtures', 'characters'))
             .compile();
         await module.init();
 

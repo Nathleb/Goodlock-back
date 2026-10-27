@@ -1,0 +1,14 @@
+{
+    "id": "tobin",
+    "name": "Tobin",
+    "maxHp": 90,
+    "baseSpeed": 8,
+    "baseDieInstructions": [
+        { "description": "Deal 12 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 12, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 12 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 12, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Grant Power +3 for 2 rounds to adjacent allies.", "priority": 2, "effects": [{ "effect": "ApplyStat", "stat": "POWER", "magnitude": 3, "duration": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [-1, 1] }] }] },
+        { "description": "Grant Power +3 for 2 rounds to adjacent allies.", "priority": 2, "effects": [{ "effect": "ApplyStat", "stat": "POWER", "magnitude": 3, "duration": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [-1, 1] }] }] },
+        { "description": "Grant Haste (1) to all allies.", "priority": 1, "effects": [{ "effect": "ApplyState", "state": "HASTE", "duration": 1, "targets": [{ "side": "ALLY", "mode": "ABSOLUTE", "n": [0, 1, 2, 3, 4] }] }] },
+        { "description": "Heal the ally on the right for 15 HP.", "priority": 1, "effects": [{ "effect": "Heal", "magnitude": 15, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [1] }] }] }
+    ]
+}

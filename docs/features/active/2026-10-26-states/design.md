@@ -30,6 +30,10 @@ A state has a fixed effect; a signed **counter per axis** holds its duration.
 
 `CharacterDTO.states` has every axis (signed value, 0 when none); `FaceEffectDTO.state` when the effect has one; same in the catalog mapper. An animated upkeep log is not part of this feature.
 
+## Roster
+
+The six characters of the authoring design (Garran, Kesh, Ysolde, Morrow, Vespera, Tobin) replace the ten placeholders in `tmplt/`. Decision: the old placeholders move to `tests/fixtures/characters/` as test templates, and the catalog, collection and deck module specs load them through the `CATALOG_DIR` token, rather than those specs depending on the shipped roster, because the roster must be free to change without touching tests. `tests/templates.spec.ts` and `tests/Roster.spec.ts` stay the integrity gate of the shipped templates, including a boot of the shipped catalog.
+
 ## Out of scope
 
 `DIE_LOCK`, the client resolution preview, badges, a player-set tie preset.

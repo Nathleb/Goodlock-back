@@ -1,0 +1,14 @@
+{
+    "id": "kesh",
+    "name": "Kesh",
+    "maxHp": 80,
+    "baseSpeed": 9,
+    "baseDieInstructions": [
+        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 15 damage to the enemy in front-right.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [1] }] }] },
+        { "description": "Deal 22 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 22, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 22 damage to the enemy in front-left.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 22, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1] }] }] },
+        { "description": "Swap places with the ally on the right.", "priority": 2, "effects": [{ "effect": "Swap", "magnitude": 0, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0, 1] }] }] },
+        { "description": "Nothing.", "priority": 0, "effects": [] }
+    ]
+}

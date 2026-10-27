@@ -35,7 +35,7 @@ Each step: red test seen failing first (mutation check when the code already sat
 - [x] 18. Wording of the old "computed once". Review 5.
 
 6 roster
-- [ ] 19. Add or replace the placeholders (check-in).
+- [x] 19. Add or replace the placeholders (check-in): replace; the old ten move to tests/fixtures/characters as test templates.
 - [ ] 20. Templates and catalog tests. Review 6.
 
 Client and docs
