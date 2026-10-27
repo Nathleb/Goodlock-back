@@ -3,7 +3,7 @@ import { PlayerIndex } from '@domain/types/Position.type';
 
 export type TargetGroupDTO = { side: string; mode: string; n: number[] };
 
-export type FaceEffectDTO = { effect: string; magnitude: number; targets: TargetGroupDTO[]; stat?: string; duration?: number };
+export type FaceEffectDTO = { effect: string; magnitude: number; targets: TargetGroupDTO[]; stat?: string; state?: string; duration?: number };
 
 export type StatInstanceDTO = { stat: string; value: number; roundsLeft: number };
 
@@ -29,6 +29,8 @@ export type CharacterDTO = {
     modifiers: StatInstanceDTO[];
     /** Net value per stat, capped; computed by the server so clients do not duplicate the cap. */
     stats: Record<string, number>;
+    /** Signed duration counter per state axis (SPEED: + hasted / - slowed, ...), 0 when none. */
+    states: Record<string, number>;
 };
 
 export type PlayerGameStateDTO = {

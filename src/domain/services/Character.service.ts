@@ -1,5 +1,6 @@
 import Character from "../types/Character.type";
 import { StatName } from "../types/Modifier.type";
+import { STATE_AXES, StateAxis, StateCounter } from "../types/State.type";
 import { roll1D6 } from "../utils/Random.utils";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
@@ -75,4 +76,24 @@ export function tickModifiers(character: Character, endingRound: number): Charac
         .map(m => m.appliedRound === endingRound ? m : { ...m, roundsLeft: m.roundsLeft - 1 })
         .filter(m => m.roundsLeft > 0);
     return updateCharacter(character, { modifiers: ticked });
+}
+
+/** Signed counter of a state axis (0 when the axis is absent). */
+export function stateValue(character: Character, axis: StateAxis): number {
+    return character.states[axis]?.value ?? 0;
+}
+
+/**
+ * End of round: every state axis moves one step toward 0 and is dropped at 0,
+ * except an axis touched during the ending round, which starts ticking next round.
+ */
+export function tickStates(character: Character, endingRound: number): Character {
+    const ticked: { -readonly [A in StateAxis]?: StateCounter } = {};
+    for (const axis of STATE_AXES) {
+        const counter = character.states[axis];
+        if (!counter) continue;
+        const value = counter.touchedRound === endingRound ? counter.value : counter.value - Math.sign(counter.value);
+        if (value !== 0) ticked[axis] = { ...counter, value };
+    }
+    return updateCharacter(character, { states: ticked });
 }

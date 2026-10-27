@@ -6,6 +6,7 @@ import { loseHp } from "@domain/services/Character.service";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createPriorityQueue, addEffectsToPriorityQueue, addAllEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createPlayer } from "@domain/services/Player.service";
+import { endOfRound } from "@domain/services/Round.service";
 import { beginResolvePhase } from "@domain/services/Phase.service";
 import DieFace from "@domain/types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
@@ -556,6 +557,217 @@ describe('PriorityQueueService', () => {
       const { state: after } = unstackPriorityQueueWithLog(state);
 
       expect(after.players[1].team[0].hp).toBe(100 - 5);
+    });
+  });
+
+  describe('STUN', () => {
+    const dieOfFace = (effects: EffectEntry[], priority = 0) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
+      createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
+    const hit = (amount: number): EffectEntry => ({ effect: EffectLabel.Damage, magnitude: amount, targets: [enemyAbs(0)] });
+    const stunEnemy = (duration: number): EffectEntry => ({ effect: EffectLabel.ApplyState, state: 'STUN', duration, targets: [enemyAbs(0)] });
+    const stunned = (c: ReturnType<typeof hero>, value = 1) => ({ ...c, states: { STUN: { value, touchedRound: 0 } } });
+    const build = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) =>
+      addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1)));
+
+    it('a stunned character does not act and is logged as skipped', () => {
+      const attacker = stunned(hero('attacker', 5, 0, 0, [hit(5)]));
+      const dummy = hero('dummy', 1, 1, 0, []);
+
+      const { state, log } = unstackPriorityQueueWithLog(build([attacker], [dummy]));
+
+      expect(state.players[1].team[0].hp).toBe(100);
+      expect(log[0]).toMatchObject({ characterId: attacker.id, skipped: true, effects: [], changes: [] });
+    });
+
+    it('a stun landing before the victim acts cancels its action', () => {
+      const stunner = hero('stunner', 9, 0, 0, [stunEnemy(1)]);
+      const victim = hero('victim', 3, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+
+      const { state, log } = unstackPriorityQueueWithLog(build([stunner], [victim]));
+
+      expect(state.players[0].team[0].hp).toBe(100);
+      expect(log[1]).toMatchObject({ characterId: victim.id, skipped: true });
+    });
+
+    it('a stun landing after the victim acted does not cancel that action', () => {
+      const stunner = hero('stunner', 3, 0, 0, [stunEnemy(1)]);
+      const victim = hero('victim', 9, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+
+      const { state, log } = unstackPriorityQueueWithLog(build([stunner], [victim]));
+
+      expect(state.players[0].team[0].hp).toBe(95);
+      expect(log[0]).toMatchObject({ characterId: victim.id, skipped: false });
+    });
+
+    it('a stunned character is still a valid target', () => {
+      const attacker = hero('attacker', 5, 0, 0, [hit(5)]);
+      const victim = stunned(hero('victim', 1, 1, 0, []));
+
+      const { state } = unstackPriorityQueueWithLog(build([attacker], [victim]));
+
+      expect(state.players[1].team[0].hp).toBe(95);
+    });
+
+    it('STUN 1 applied in a round also cancels the action of the next round', () => {
+      const stunner = hero('stunner', 9, 0, 0, [stunEnemy(1)]);
+      const victim = hero('victim', 3, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+      const round1 = unstackPriorityQueueWithLog(build([stunner], [victim])).state;
+
+      const nextRound = endOfRound(round1);
+      // The stunner rests in round 2, so only the carried-over stun is in play.
+      const resting = { description: 'rest', priority: 0, effects: [] };
+      const quiet = { ...nextRound, players: [{ ...nextRound.players[0], team: [{ ...nextRound.players[0].team[0], face: resting }] }, nextRound.players[1]] as GameState['players'] };
+      const refilled = addAllEffectsToPriorityQueue(quiet);
+      const { state: round2, log } = unstackPriorityQueueWithLog(refilled);
+
+      expect(log.find(step => step.characterId === victim.id)).toMatchObject({ skipped: true });
+      expect(round2.players[0].team[0].hp).toBe(100);
+      expect(endOfRound(round2).players[1].team[0].states.STUN).toBeUndefined();
+    });
+  });
+
+  describe('SPEED states in the sort key', () => {
+    const dieOfFace = (effects: EffectEntry[], priority: number) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, speedState = 0, priority = 0) => ({
+      ...createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace([], priority), position: { playerIndex, slot } }),
+      states: speedState === 0 ? {} : { SPEED: { value: speedState, touchedRound: 0 } },
+    });
+    const orderOf = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) => {
+      const { log } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1))));
+      return log.map(step => step.characterId);
+    };
+
+    it('a hasted character resolves before a faster neutral one of the same bracket', () => {
+      const hasted = hero('hasted', 1, 0, 0, 2);
+      const fast = hero('fast', 9, 1, 0);
+      expect(orderOf([hasted], [fast])).toEqual([hasted.id, fast.id]);
+    });
+
+    it('a slowed character resolves after a slower neutral one of the same bracket', () => {
+      const slowed = hero('slowed', 9, 0, 0, -1);
+      const slow = hero('slow', 1, 1, 0);
+      expect(orderOf([slowed], [slow])).toEqual([slow.id, slowed.id]);
+    });
+
+    it('orders hasted, neutral, slowed', () => {
+      const hasted = hero('hasted', 2, 0, 0, 1);
+      const neutral = hero('neutral', 5, 0, 1);
+      const slowed = hero('slowed', 9, 1, 0, -1);
+      expect(orderOf([slowed, neutral], [hasted])).toEqual([hasted.id, neutral.id, slowed.id]);
+    });
+
+    it('between two hasted characters the faster resolves first', () => {
+      const quick = hero('quick', 8, 0, 0, 1);
+      const quicker = hero('quicker', 9, 1, 0, 3);
+      expect(orderOf([quick], [quicker])).toEqual([quicker.id, quick.id]);
+    });
+
+    it('never lets SPEED cross a bracket', () => {
+      const hastedLow = hero('hasted-low', 1, 0, 0, 3, 0);
+      const neutralHigh = hero('neutral-high', 1, 1, 0, 0, 1);
+      const slowedHigh = hero('slowed-high', 1, 1, 1, -3, 1);
+      expect(orderOf([hastedLow], [neutralHigh, slowedHigh])).toEqual([neutralHigh.id, slowedHigh.id, hastedLow.id]);
+    });
+  });
+
+  describe('SPEED changing during the round', () => {
+    const dieOfFace = (effects: EffectEntry[], priority: number) =>
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+    const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[] = [], priority = 0) =>
+      createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects, priority), position: { playerIndex, slot } });
+    const apply = (state: 'HASTE' | 'SLOW', side: 'ALLY' | 'ENEMY', slot: number, duration = 1): EffectEntry =>
+      ({ effect: EffectLabel.ApplyState, state, duration, targets: [{ side, mode: 'ABSOLUTE', n: [slot] }] });
+    const run = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) => {
+      const { log, state } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1))));
+      return { order: log.map(step => step.characterId), log, state };
+    };
+
+    it('a HASTE landing mid-round moves a slow, unresolved character up', () => {
+      const starter = hero('starter', 9, 0, 0, [apply('HASTE', 'ALLY', 1)]);
+      const lagging = hero('lagging', 1, 0, 1);
+      const middle = hero('middle', 5, 1, 0);
+
+      expect(run([starter, lagging], [middle]).order).toEqual([starter.id, lagging.id, middle.id]);
+    });
+
+    it('a SLOW landing mid-round moves a fast, unresolved character down', () => {
+      const starter = hero('starter', 9, 0, 0, [apply('SLOW', 'ENEMY', 0)]);
+      const victim = hero('victim', 5, 1, 0);
+      const lagging = hero('lagging', 1, 1, 1);
+
+      expect(run([starter], [victim, lagging]).order).toEqual([starter.id, lagging.id, victim.id]);
+    });
+
+    it('nobody plays twice: a HASTE on a character that already played adds no second action', () => {
+      const first = hero('first', 9, 0, 0);
+      const later = hero('later', 5, 1, 0, [apply('HASTE', 'ENEMY', 0, 3)]);
+
+      const { order } = run([first], [later]);
+
+      expect(order).toEqual([first.id, later.id]);
+      expect(new Set(order).size).toBe(2);
+    });
+
+    it('nobody plays twice, and nobody is skipped, when a SLOW lands on a character that already played', () => {
+      const first = hero('first', 9, 0, 0);
+      const slower = hero('slower', 5, 1, 0, [apply('SLOW', 'ENEMY', 0)]);
+      const last = hero('last', 1, 1, 1);
+
+      const { order } = run([first], [slower, last]);
+
+      expect(order).toEqual([first.id, slower.id, last.id]);
+    });
+
+    it('a character hasting itself acts once', () => {
+      const selfish = hero('selfish', 5, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'HASTE', duration: 2, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }]);
+      const other = hero('other', 1, 1, 0);
+
+      const { order } = run([selfish], [other]);
+
+      expect(order).toEqual([selfish.id, other.id]);
+    });
+
+    it('SPEED stays inside a bracket: a hasted low-bracket character does not overtake a neutral one of a higher bracket', () => {
+      const starter = hero('starter', 9, 0, 0, [apply('HASTE', 'ALLY', 2)]);
+      const neutralSameBracket = hero('neutral', 5, 0, 1);
+      const lowBracket = hero('low', 1, 0, 2, [], -1);
+
+      expect(run([starter, neutralSameBracket, lowBracket], [hero('dummy', 1, 1, 0, [], -2)]).order)
+        .toEqual([starter.id, neutralSameBracket.id, lowBracket.id, expect.any(String)]);
+    });
+
+    it('the initiative and slot ties are frozen when RESOLVE starts: a Swap mid-round does not reshuffle them', () => {
+      const swapper = hero('swapper', 9, 0, 0, [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyAbs(1), allyAbs(2)] }]);
+      const inSlot1 = hero('slot-1', 5, 0, 1);
+      const inSlot2 = hero('slot-2', 5, 0, 2);
+
+      const { order, state } = run([swapper, inSlot1, inSlot2], [hero('dummy', 1, 1, 0)]);
+
+      expect(state.players[0].team.find(c => c.id === inSlot1.id)!.position.slot).toBe(2);
+      expect(order.slice(0, 3)).toEqual([swapper.id, inSlot1.id, inSlot2.id]);
+    });
+
+    it('a stunned and hasted character is logged once, skipped', () => {
+      const starter = hero('starter', 9, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'STUN', duration: 1, targets: [{ side: 'ALLY', mode: 'ABSOLUTE', n: [1] }] }, apply('HASTE', 'ALLY', 1)]);
+      const target = hero('target', 1, 0, 1);
+
+      const { log } = run([starter, target], [hero('dummy', 5, 1, 0)]);
+
+      const steps = log.filter(step => step.characterId === target.id);
+      expect(steps).toHaveLength(1);
+      expect(steps[0].skipped).toBe(true);
+    });
+
+    it('a SLOW that cancels a HASTE exactly leaves the character neutral again', () => {
+      // Both are hasted at the start, so the faster starter plays first; its SLOW 1 then cancels the HASTE 1 of the lagging one.
+      const starter = { ...hero('starter', 9, 0, 0, [apply('SLOW', 'ALLY', 2)]), states: { SPEED: { value: 1, touchedRound: 0 } } };
+      const middle = hero('middle', 5, 0, 1);
+      const lagging = { ...hero('lagging', 1, 0, 2), states: { SPEED: { value: 1, touchedRound: 0 } } };
+
+      expect(run([starter, middle, lagging], [hero('dummy', 0, 1, 0)]).order.slice(0, 3)).toEqual([starter.id, middle.id, lagging.id]);
     });
   });
 

@@ -35,4 +35,16 @@ describe('CatalogMapper', () => {
         expect('stat' in effects[1]).toBe(false);
         expect('duration' in effects[1]).toBe(false);
     });
+
+    it('describes an ApplyState effect with its state and duration, magnitude 0', () => {
+        const stunFace = { description: 'stun', priority: 0, effects: [
+            { effect: 'ApplyState', state: 'STUN', duration: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] },
+        ] };
+        const stunner = { ...template, baseDieInstructions: [stunFace, stunFace, stunFace, stunFace, stunFace, stunFace] } as unknown as CharacterTemplate;
+
+        const [effect] = CatalogMapper.toDTO(stunner).baseDie[0].effects;
+
+        expect(effect).toMatchObject({ effect: 'ApplyState', magnitude: 0, state: 'STUN', duration: 1 });
+        expect('stat' in effect).toBe(false);
+    });
 });

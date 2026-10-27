@@ -42,15 +42,23 @@ describe("character templates", () => {
     for (const face of tmpl.baseDieInstructions) {
       expect(face.targetConstraint).toBeUndefined();
       for (const e of face.effects) {
-        expect(["Damage", "FixedDamage", "Heal", "Shield", "Swap"]).toContain(e.effect);
+        expect(["Damage", "FixedDamage", "Heal", "Shield", "Swap", "ApplyStat", "ApplyState"]).toContain(e.effect);
         expect(Array.isArray(e.targets) && e.targets.length > 0).toBe(true);
       }
     }
   });
 
   it("Alicent's self-cost face sacrifices HP with FixedDamage, not Damage", () => {
-    const tmpl = JSON.parse(fs.readFileSync(path.join(tmpltDir, "Alicent.json"), "utf-8"));
+    // Alicent now lives in the test templates (tests/fixtures/characters), no longer in the shipped roster.
+    const tmpl = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "characters", "Alicent.json"), "utf-8"));
     const face = tmpl.baseDieInstructions.find((f: { description: string }) => f.description.startsWith("Take 3 damage"));
     expect(face.effects[0]).toMatchObject({ effect: "FixedDamage", magnitude: 3, targets: [{ side: "ALLY" }] });
+  });
+
+  it("Garran's self-cost face sacrifices HP with FixedDamage, not Damage", () => {
+    const tmpl = JSON.parse(fs.readFileSync(path.join(tmpltDir, "Garran.json"), "utf-8"));
+    const face = tmpl.baseDieInstructions.find((f: { description: string }) => f.description.startsWith("Take 8 damage"));
+    expect(face.effects[0]).toMatchObject({ effect: "FixedDamage", magnitude: 8, targets: [{ side: "ALLY" }] });
+    expect(face.effects[1]).toMatchObject({ effect: "Damage", magnitude: 26, targets: [{ side: "ENEMY" }] });
   });
 });

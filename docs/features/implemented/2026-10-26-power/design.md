@@ -1,6 +1,6 @@
 # POWER: a buff/debuff on the damage a character deals — design
 
-**Status:** implemented 2026-10-26. Part of `../../active/2026-10-26-dice-authoring-and-statuses/design.md` (sections 4.1, 4.3, 4.4, 4.5).
+**Status:** implemented 2026-10-26. Part of `../2026-10-26-dice-authoring-and-statuses/design.md` (sections 4.1, 4.3, 4.4, 4.5).
 
 POWER is a stat with a magnitude. A positive value is a buff, a negative value is a debuff (Weak). ARMOR (see its spec) reuses the same machinery.
 

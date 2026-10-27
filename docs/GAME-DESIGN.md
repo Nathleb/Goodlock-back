@@ -21,19 +21,26 @@ Phases: SELECTION -> PLACEMENT -> ROLL -> KEEP -> RESOLVE -> RESULT. There is no
 
 ## 3. Resolution rules
 
-**Priority** (Pokemon-style): two independent keys. Actions sort by `face.priority` (a small bracket modifier) descending, then by `character.baseSpeed` descending within the same bracket. Exact ties go to the player holding the initiative token (`GameState.initiativePlayerIndex`: drawn at init, flipped at the end of each round, public in the DTO), then by slot ascending (0 to 4). The order is a pure sort with no random call, so the client can preview it exactly. Speed never crosses brackets.
+**Priority** (Pokemon-style): Actions sort by `face.priority` (a small bracket modifier) descending, then by the SPEED state (hasted, neutral, slowed), then by `character.baseSpeed` descending within the same bracket. Exact ties go to the player holding the initiative token (`GameState.initiativePlayerIndex`: drawn at init, flipped at the end of each round, public in the DTO), then by slot ascending (0 to 4). The order is deterministic, with no random call: the client can preview it exactly by simulating the resolution, since a HASTE or SLOW landing mid-round changes what follows. The actions that have not played yet are sorted again before every step, so a HASTE or SLOW landing mid-round reorders them; the initiative and slot keys are fixed when the resolution starts. Speed and the SPEED state never cross brackets, and nobody plays twice.
 
 **Auto-targeting**: players never choose targets. Each effect carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies.
 - Off-board cells are dropped; no cell = fizzle.
-- The empty cell is kept, and each effect decides what it does there: Damage, FixedDamage, Heal and Shield do nothing on that cell and the rest of the pattern still applies; Swap moves the character into it, so the hole travels.
+- The empty cell is kept, and each effect decides what it does there: Damage, FixedDamage, Heal, Shield, ApplyStat and ApplyState do nothing on that cell and the rest of the pattern still applies; Swap moves the character into it, so the hole travels.
 
-**Damage types**: `Damage` is inflicted damage: the actor's POWER is added and the target's ARMOR subtracted, then shield absorbs, then HP (the future DIVINE_SHIELD applies to it too). `FixedDamage` is sacrificed HP: it lowers HP by exactly its magnitude, ignores shield, and nothing modifies it. The author picks per face, including for costs on the actor or an ally.
+**Damage types**: `Damage` is inflicted damage: the actor's POWER is added and the target's ARMOR subtracted, then shield absorbs, then HP (DIVINE_SHIELD nullifies it). `FixedDamage` is sacrificed HP: it lowers HP by exactly its magnitude, ignores shield, and nothing modifies it. The author picks per face, including for costs on the actor or an ally.
 
 **Stats (buffs and debuffs)**: `POWER` changes the damage a character deals and `ARMOR` the damage it takes; a negative value is a debuff (Weak, Vulnerable). `ApplyStat` adds an independent instance `{ stat, value, roundsLeft }` with its own magnitude and duration (integer ≥ 1, no cap). The net value of a stat is the sum of its instances, capped at ±9.
 - `Damage` deals `max(0, magnitude + POWER(actor) - ARMOR(target))` per cell, on any side, with a single floor at 0. ARMOR is read on each target cell, so an area pattern is reduced cell by cell. Heal, Shield and `FixedDamage` ignore both stats.
 - Changes are immediate: a later action of the same round sees them.
 - At the end of each round every instance loses one round and is removed at 0, except an instance applied during that round, which starts ticking next round. A duration *d* applied in round *N* is therefore active through round *N + d*.
 - `ApplyStat` gives nothing to a dead character.
+
+**States**: a state has a fixed effect, and a signed counter per axis holds its duration. `ApplyState` pushes the duration onto the axis (HASTE, REGEN, STUN, ROOT, DIVINE_SHIELD add it, SLOW and POISON subtract it), so opposite states fight over the duration (Haste 3 then Slow 2 leaves Haste 1); the same direction adds up; there is no cap. At the end of each round every counter moves one step toward 0, except one touched during that round, so a duration *d* applied in round *N* is active through round *N + d*. `ApplyState` gives nothing to a dead character.
+- **STUN**: the character's action is skipped when its turn comes, so a stun landing earlier in the round cancels it. A STUN of 1 also cancels the action of the next round.
+- **ROOT**: a Swap involving the cell of a living rooted character fizzles. A rooted character still acts and still takes damage; a dead one is no longer rooted.
+- **DIVINE_SHIELD**: a `Damage` hit that would deal more than 0 is nullified and spends the whole state. `FixedDamage`, Heal and Shield ignore it; a dead character is not protected.
+- **POISON / REGEN**: at the start of each round, before the roll, a poisoned character loses 5 HP (ignoring ARMOR, the armour shield and DIVINE_SHIELD) and a regenerating one gains 5 (never above max HP, never reviving). The poison can end the match.
+- **HASTE / SLOW**: see the priority rule above.
 
 **Dead characters**: a character at 0 HP stays on the board and is displayed, cannot act, but can still be targeted.
 

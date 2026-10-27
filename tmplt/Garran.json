@@ -7,7 +7,7 @@
         { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
         { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
         { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Take 8 damage, then deal 26 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 8, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }, { "effect": "Damage", "magnitude": 26, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Take 8 damage, then deal 26 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "FixedDamage", "magnitude": 8, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }, { "effect": "Damage", "magnitude": 26, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
         { "description": "Gain 15 shield.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 15, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
         { "description": "Nothing.", "priority": 0, "effects": [] }
     ]

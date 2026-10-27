@@ -6,7 +6,7 @@ import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
-import { validateEffectTargets, validateStatParams } from "./TargetResolution.service";
+import { validateEffectTargets, validateStatParams, validateStateParams } from "./TargetResolution.service";
 import { CatalogId } from "@shared/branded.types";
 
 export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, factory: EffectFactory): Character {
@@ -51,6 +51,7 @@ export function createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, po
         baseDie,
         shield: 0,
         modifiers: [],
+        states: {},
         face: baseDie[0],
         isFaceLocked: false,
         position,
@@ -89,10 +90,20 @@ export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: E
             throw new Error(`Invalid stat parameters for effect "${entry.effect}" on face "${dieFace.description}": ${statErrors.join('; ')}`);
         }
     }
-    const params = entry.effect === EffectLabel.ApplyStat ? { stat: entry.stat, duration: entry.duration } : undefined;
-    const impl = factory.createEffect(entry.effect, entry.magnitude, params);
+    if (entry.effect === EffectLabel.ApplyState) {
+        const stateErrors = validateStateParams(entry);
+        if (stateErrors.length > 0) {
+            throw new Error(`Invalid state parameters for effect "${entry.effect}" on face "${dieFace.description}": ${stateErrors.join('; ')}`);
+        }
+    }
+    const params = entry.effect === EffectLabel.ApplyStat ? { stat: entry.stat, duration: entry.duration }
+        : entry.effect === EffectLabel.ApplyState ? { state: entry.state, duration: entry.duration }
+        : undefined;
+    // A state has no magnitude: the face effect carries 0.
+    const magnitude = entry.effect === EffectLabel.ApplyState ? 0 : entry.magnitude;
+    const impl = factory.createEffect(entry.effect, magnitude, params);
     return {
         ...dieFace,
-        effects: [...dieFace.effects, { label: entry.effect, magnitude: entry.magnitude, ...params, targets: entry.targets, impl }],
+        effects: [...dieFace.effects, { label: entry.effect, magnitude, ...params, targets: entry.targets, impl }],
     };
 }

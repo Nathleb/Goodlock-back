@@ -2,6 +2,7 @@ import Die from "./Die.type";
 import DieFace from "./DieFace.type";
 import Modifier from "./Modifier.type";
 import Position from "./Position.type";
+import { CharacterStates } from "./State.type";
 import { CatalogId } from "@shared/branded.types";
 
 type Character = {
@@ -16,6 +17,7 @@ type Character = {
     readonly shield: number;
     readonly position: Position;
     readonly modifiers: readonly Modifier[];
+    readonly states: CharacterStates;
 
     readonly face: DieFace;
     readonly isFaceLocked: boolean;

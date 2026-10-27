@@ -1,6 +1,7 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import EffectFactory from "@domain/factories/EffectFactory.class";
 import Damage from "@domain/strategies/Damage.class";
+import ApplyState from "@domain/strategies/ApplyState.class";
 import ApplyStat from "@domain/strategies/ApplyStat.class";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import { buildEffectFactory } from "@domain/services/GameInit.service";
@@ -57,6 +58,18 @@ describe('EffectFactory', () => {
       expect(() => factory.createEffect(EffectLabel.ApplyStat, 3)).toThrow(/ApplyStat needs a stat and a duration/);
       expect(() => factory.createEffect(EffectLabel.ApplyStat, 3, { stat: 'POWER' })).toThrow(/ApplyStat needs a stat and a duration/);
       expect(() => factory.createEffect(EffectLabel.ApplyStat, 3, { duration: 2 })).toThrow(/ApplyStat needs a stat and a duration/);
+    });
+
+    it('refuses to create ApplyState without its state and duration, with a clear message', () => {
+      const factory = buildEffectFactory();
+      expect(() => factory.createEffect(EffectLabel.ApplyState, 0)).toThrow(/ApplyState needs a state and a duration/);
+      expect(() => factory.createEffect(EffectLabel.ApplyState, 0, { state: 'STUN' })).toThrow(/ApplyState needs a state and a duration/);
+      expect(() => factory.createEffect(EffectLabel.ApplyState, 0, { duration: 1 })).toThrow(/ApplyState needs a state and a duration/);
+    });
+
+    it('creates ApplyState when both are given', () => {
+      const factory = buildEffectFactory();
+      expect(factory.createEffect(EffectLabel.ApplyState, 0, { state: 'STUN', duration: 1 })).toBeInstanceOf(ApplyState);
     });
 
     it('creates ApplyStat when both are given', () => {

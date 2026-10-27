@@ -1,9 +1,10 @@
 import Effect from "../types/Effect.type";
 import EffectLabel from "../types/EffectLabels.type";
 import { StatName } from "../types/Modifier.type";
+import { StateName } from "../types/State.type";
 
-/** Extra template parameters for effects that need more than a magnitude (ApplyStat). */
-export type EffectParams = { readonly stat?: StatName; readonly duration?: number };
+/** Extra template parameters for effects that need more than a magnitude (ApplyStat, ApplyState). */
+export type EffectParams = { readonly stat?: StatName; readonly state?: StateName; readonly duration?: number };
 
 type EffectConstructor = (amount: number, params?: EffectParams) => Effect;
 
