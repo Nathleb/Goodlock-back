@@ -17,7 +17,7 @@ import { checkPhase, checkNotReady, beginRollPhase, beginResultPhase } from '@do
 import { toErrorPayload } from '@application/errors/toErrorPayload';
 import { domainError, DomainError } from '@domain/errors/DomainError';
 import { invariant } from '@application/errors/invariant';
-import { Result } from '@shared/result.type';
+import { Result, ok, err } from '@shared/result.type';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, selectedDecks } from '@domain/services/Room.service';
@@ -53,18 +53,15 @@ export class GameCoordinatorService {
         @Inject(CATALOG_PORT) private readonly catalogPort: CatalogPort,
     ) {}
 
-    private getContext(socketId: string): GameContext | null {
+    private getContext(socketId: string): Result<GameContext, DomainError> {
+        const unavailable = err(domainError('ACTION_NOT_AVAILABLE', 'Action not available'));
         const session = this.sessionPort.getSession(socketId);
-        if (!session?.roomId) return null;
+        if (!session?.roomId) return unavailable;
         const room = this.roomPort.getRoom(session.roomId);
-        if (!room?.gameState) return null;
+        if (!room?.gameState) return unavailable;
         const idx = resolvePlayerIndex(room, session.sessionId);
-        if (idx === -1) return null;
-        return { session, room, playerIndex: idx as PlayerIndex };
-    }
-
-    private emitError(socketId: string, message: string): void {
-        this.wsPort.emitToSocket(socketId, 'error', { message });
+        if (idx === -1) return unavailable;
+        return ok({ session, room, playerIndex: idx as PlayerIndex });
     }
 
     /** A Result error or a thrown value, as the `error { code, message }` event. */
@@ -201,8 +198,9 @@ export class GameCoordinatorService {
     }
 
     confirmSelection(socketId: string, characterIds: string[]): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             if (!Array.isArray(characterIds) || characterIds.some(id => typeof id !== 'string')) {
@@ -226,8 +224,9 @@ export class GameCoordinatorService {
     }
 
     cancelSelection(socketId: string): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             const cancelled = domainCancelSelection(room.gameState, playerIndex);
@@ -243,8 +242,9 @@ export class GameCoordinatorService {
     }
 
     rearrangeTeam(socketId: string, slots: (string | null)[]): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             const placed = checkPhase(room.gameState, GamePhase.PLACEMENT)
@@ -266,8 +266,9 @@ export class GameCoordinatorService {
     }
 
     confirmPlacement(socketId: string): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
@@ -289,8 +290,9 @@ export class GameCoordinatorService {
     }
 
     confirmKeep(socketId: string, lockedCharacterIds: string[]): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         if (!Array.isArray(lockedCharacterIds)) { this.emitFailure(socketId, domainError('INVALID_LOCK', 'lockedCharacterIds must be an array')); return; }
         const { room, playerIndex } = ctx;
         const player = room.gameState.players[playerIndex];
@@ -310,8 +312,9 @@ export class GameCoordinatorService {
     }
 
     cancelPlacement(socketId: string): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             const cancelled = domainCancelPlacement(room.gameState, playerIndex);
@@ -327,8 +330,9 @@ export class GameCoordinatorService {
     }
 
     cancelKeep(socketId: string): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             const cancelled = domainCancelKeep(room.gameState, playerIndex);
@@ -341,24 +345,25 @@ export class GameCoordinatorService {
     }
 
     claimVictory(socketId: string): void {
-        const ctx = this.getContext(socketId);
-        if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        const ctx = context.value;
         const { room, playerIndex } = ctx;
         try {
             const opponentIndex = (1 - playerIndex) as PlayerIndex;
             const opponentPresence = room.presence?.[opponentIndex];
-            if (!opponentPresence) { this.emitError(socketId, 'Action not available'); return; }
+            if (!opponentPresence) { this.emitFailure(socketId, domainError('ACTION_NOT_AVAILABLE', 'Action not available')); return; }
 
             const verdict = evaluateClaim(
                 room.gameState, playerIndex, opponentPresence, room.phaseStartedAt, Date.now(), this.claimConfig,
             );
-            if (verdict.valid === false) { this.emitError(socketId, verdict.error); return; }
+            if (verdict.isErr()) { this.emitFailure(socketId, verdict.error); return; }
 
             this.roomPort.updateGameState(room.roomId, beginResultPhase(room.gameState));
-            const payload: GameOverDTO = { winner: playerIndex, reason: verdict.reason };
+            const payload: GameOverDTO = { winner: playerIndex, reason: verdict.value };
             this.wsPort.emitToRoom(room.roomId, 'gameOver', payload);
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 }

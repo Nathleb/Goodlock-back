@@ -72,7 +72,7 @@ describe('claimVictory', () => {
     it('rejects an invalid claim with an error and does not end the game', () => {
         mockRoom.getRoom.mockReturnValue(room({}));
         coordinator.claimVictory(SOCKET);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'CLAIM_NOT_ALLOWED', message: 'No valid claim: opponent is neither forfeited nor AFK' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
@@ -84,9 +84,16 @@ describe('claimVictory', () => {
         });
         mockRoom.getRoom.mockReturnValue(r);
         coordinator.claimVictory(SOCKET);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'CLAIM_NOT_ALLOWED', message: 'Game is already over' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('refuses a claim when the room has no presence for the opponent', () => {
+        mockRoom.getRoom.mockReturnValue(room({ presence: undefined }));
+        coordinator.claimVictory(SOCKET);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
 

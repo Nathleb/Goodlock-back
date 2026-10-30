@@ -97,35 +97,35 @@ describe('context guards (tested via rearrangeTeam)', () => {
     it('emits error when session is not found', () => {
         mockSession.getSession.mockReturnValue(undefined);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when session has no roomId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, roomId: undefined });
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when room is not found', () => {
         mockRoom.getRoom.mockReturnValue(undefined);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when room has no game state', () => {
         mockRoom.getRoom.mockReturnValue(lobbyRoom);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when sessionId is not in room.playersId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, sessionId: 'unknown' });
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });

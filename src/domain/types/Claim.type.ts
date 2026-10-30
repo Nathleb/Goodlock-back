@@ -5,6 +5,5 @@ export type ClaimConfig = {
 
 export type GameOverReason = 'elimination' | 'forfeit' | 'afk' | 'concede';
 
-export type ClaimVerdict =
-    | { readonly valid: true; readonly reason: 'forfeit' | 'afk' }
-    | { readonly valid: false; readonly error: string };
+/** Why a claim to win succeeded. A refused claim is a DomainError (CLAIM_NOT_ALLOWED). */
+export type ClaimReason = 'forfeit' | 'afk';
