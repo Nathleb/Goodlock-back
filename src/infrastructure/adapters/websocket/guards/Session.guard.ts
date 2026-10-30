@@ -12,7 +12,7 @@ export class SessionGuard implements CanActivate {
         const client: Socket = context.switchToWs().getClient();
         const session = this.sessionPort.getSession(client.id);
         // The gateway's WsErrorFilter is the only emitter of 'error'.
-        if (!session) throw new WsException('Not connected');
+        if (!session) throw new WsException({ code: 'NOT_CONNECTED', message: 'Not connected' });
         return true;
     }
 }

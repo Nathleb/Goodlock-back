@@ -1,12 +1,16 @@
 import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
+import { ErrorCode, ErrorPayload } from '@application/dtos/Error.dto';
+import { toErrorPayload } from '@application/errors/toErrorPayload';
+
+// The codes the gateway itself raises (a WsException may carry one of these, anything else is a plain bad request).
+const GATEWAY_CODES: readonly ErrorCode[] = ['INVALID_REQUEST', 'NOT_CONNECTED'];
 
 /**
- * Answers a failed gateway handler (invalid payload, unexpected throw) with the same
- * `'error' { message }` event the coordinators emit. Only WsException messages reach the client:
- * anything else is logged here and reported generically, so internals do not leak and a server
- * bug still leaves a trace.
+ * Answers a failed gateway handler with the `error { code, message }` event the coordinators emit.
+ * A WsException is a request the gateway refused (bad payload, no session); a DomainError that
+ * reached it keeps its code; anything else is a bug: it is logged and the client only sees INTERNAL.
  */
 @Catch()
 export class WsErrorFilter implements ExceptionFilter {
@@ -14,17 +18,19 @@ export class WsErrorFilter implements ExceptionFilter {
 
     catch(exception: unknown, host: ArgumentsHost): void {
         const client = host.switchToWs().getClient<Socket>();
-        client.emit('error', { message: this.messageOf(exception) });
+        const payload = exception instanceof WsException
+            ? this.refusal(exception)
+            : toErrorPayload(exception, this.logger);
+        client.emit('error', payload);
     }
 
-    private messageOf(exception: unknown): string {
-        if (!(exception instanceof WsException)) {
-            this.logger.error(exception);
-            return 'Internal error';
-        }
+    private refusal(exception: WsException): ErrorPayload {
         const error = exception.getError();
-        if (typeof error === 'string') return error;
-        const message = (error as { message?: unknown }).message;
-        return typeof message === 'string' ? message : 'Invalid request';
+        if (typeof error === 'string') return { code: 'INVALID_REQUEST', message: error };
+        const { code, message } = error as { code?: unknown; message?: unknown };
+        return {
+            code: GATEWAY_CODES.includes(code as ErrorCode) ? (code as ErrorCode) : 'INVALID_REQUEST',
+            message: typeof message === 'string' ? message : 'Invalid request',
+        };
     }
 }

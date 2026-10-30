@@ -9,6 +9,8 @@ import { SessionCoordinatorService } from '@application/services/SessionCoordina
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { SESSION_PORT } from '@application/ports/tokens';
+import { domainError } from '@domain/errors/DomainError';
+import { Logger } from '@nestjs/common';
 
 // The gateway is mounted for real (Nest pipes, filters and guards included) and driven by a
 // socket.io client: calling the handlers directly would skip the validation under test.
@@ -61,9 +63,11 @@ describe('SessionGateway — payload validation', () => {
     });
 
     it('answers a confirmKeep payload that is not an array with an error event, without calling the coordinator', async () => {
-        const error = next<{ message: string }>('error');
+        const error = next<{ code: string; message: string }>('error');
         client.emit('confirmKeep', { lockedCharacterIds: 'a' });
-        expect((await error).message).toMatch(/lockedCharacterIds/);
+        const { code, message } = await error;
+        expect(code).toBe('INVALID_REQUEST');
+        expect(message).toMatch(/lockedCharacterIds/);
         expect(game.confirmKeep).not.toHaveBeenCalled();
     });
 
@@ -85,14 +89,31 @@ describe('SessionGateway — payload validation', () => {
 
     it('answers a message from a socket without a session with exactly one error event', async () => {
         sessions.getSession.mockReturnValue(undefined);
-        const errors: { message: string }[] = [];
-        const collect = (e: { message: string }) => errors.push(e);
+        const errors: { code: string; message: string }[] = [];
+        const collect = (e: { code: string; message: string }) => errors.push(e);
         client.on('error', collect);
         client.emit('confirmKeep', { lockedCharacterIds: ['a'] });
         await settle();
         client.off('error', collect);
-        expect(errors).toEqual([{ message: 'Not connected' }]);
+        expect(errors).toEqual([{ code: 'NOT_CONNECTED', message: 'Not connected' }]);
         expect(game.confirmKeep).not.toHaveBeenCalled();
+    });
+
+    it('forwards the code of a domain error thrown by a handler', async () => {
+        game.confirmKeep.mockImplementationOnce(() => { throw domainError('WRONG_PHASE', 'Expected phase KEEP_PHASE, got ROLL_PHASE'); });
+        const error = next<{ code: string; message: string }>('error');
+        client.emit('confirmKeep', { lockedCharacterIds: [] });
+        expect(await error).toEqual({ code: 'WRONG_PHASE', message: 'Expected phase KEEP_PHASE, got ROLL_PHASE' });
+    });
+
+    it('reports an unexpected throw as INTERNAL without its message', async () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        game.confirmKeep.mockImplementationOnce(() => { throw new TypeError('secret detail'); });
+        const error = next<{ code: string; message: string }>('error');
+        client.emit('confirmKeep', { lockedCharacterIds: [] });
+        expect(await error).toEqual({ code: 'INTERNAL', message: 'Internal error' });
+        expect(logError).toHaveBeenCalled();
+        logError.mockRestore();
     });
 
     it('refuses properties the payload does not declare', async () => {
