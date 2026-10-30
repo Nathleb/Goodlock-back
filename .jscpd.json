@@ -1,0 +1,9 @@
+{
+  "path": ["src"],
+  "format": ["typescript"],
+  "minTokens": 50,
+  "threshold": 0.8,
+  "reporters": ["console", "markdown"],
+  "output": "reports/jscpd",
+  "gitignore": true
+}
