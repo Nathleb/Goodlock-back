@@ -14,6 +14,7 @@ import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
 } from "@domain/services/GameLoop.service";
 import { enemyAbs, allyAbs, enemyRel, allyRel } from "./helpers/targets";
+import { unwrap } from "./helpers/result";
 
 const factory = buildEffectFactory();
 
@@ -44,8 +45,8 @@ function makeTeam(die: DieFn, playerIndex: 0 | 1, maxHp = 50) {
  * and skips directly to RESOLVE without a re-roll.
  */
 function advanceToResolve(gameState: GameState): GameState {
-    let state = confirmPlacement(gameState, 0);
-    state = confirmPlacement(state, 1);
+    let state = unwrap(confirmPlacement(gameState, 0));
+    state = unwrap(confirmPlacement(state, 1));
     state = performRoll(state);
     state = {
         ...state,
@@ -89,7 +90,7 @@ describe('Domain integration — Phase flow', () => {
 
     it('confirmPlacement by one player stays in PLACEMENT with only that player ready', () => {
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const afterP0Confirms = confirmPlacement(gameState, 0);
+        const afterP0Confirms = unwrap(confirmPlacement(gameState, 0));
         expect(afterP0Confirms.phase).toBe(GamePhase.PLACEMENT);
         expect(afterP0Confirms.playersReady[0]).toBe(true);
         expect(afterP0Confirms.playersReady[1]).toBe(false);

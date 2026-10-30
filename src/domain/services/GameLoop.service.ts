@@ -2,7 +2,7 @@ import GameState from "../types/GameState.type";
 import GamePhase from "../types/GamePhase.type";
 import { PlayerIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
-import { assertPhase, assertNotReady, beginPlacementPhase, beginRollPhase, beginKeepPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
+import { assertPhase, assertNotReady, checkPhase, checkNotReady, beginPlacementPhase, beginRollPhase, beginKeepPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
 import { rollDiceForTurn, allDiceLocked, createPlayer } from "./Player.service";
 import { ResolveStep } from "../types/PriorityQueue.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog, createPriorityQueue } from "./PriorityQueue.service";
@@ -11,6 +11,8 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
 import { roll1D } from "../utils/Random.utils";
+import { DomainError } from "../errors/DomainError";
+import { Result } from "@shared/result.type";
 
 function markPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     const ready: [boolean, boolean] = [gs.playersReady[0], gs.playersReady[1]];
@@ -99,12 +101,13 @@ export function cancelSelection(gs: GameState, playerIndex: PlayerIndex): GameSt
     return unmarkPlayerReady({ ...gs, selection: { ...gs.selection, picks } }, playerIndex);
 }
 
-export function confirmPlacement(gs: GameState, playerIndex: PlayerIndex): GameState {
-    assertPhase(gs, GamePhase.PLACEMENT);
-    assertNotReady(gs, playerIndex);
-    const updated = markPlayerReady(gs, playerIndex);
-    if (!areBothReady(updated)) return updated;
-    return resetReady(beginRollPhase(updated));
+export function confirmPlacement(gs: GameState, playerIndex: PlayerIndex): Result<GameState, DomainError> {
+    return checkPhase(gs, GamePhase.PLACEMENT)
+        .andThen(g => checkNotReady(g, playerIndex))
+        .map(g => {
+            const updated = markPlayerReady(g, playerIndex);
+            return areBothReady(updated) ? resetReady(beginRollPhase(updated)) : updated;
+        });
 }
 
 export function performRoll(gs: GameState): GameState {
@@ -132,10 +135,9 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): GameState 
     return resetReady(rerolled);
 }
 
-export function cancelPlacement(gs: GameState, playerIndex: PlayerIndex): GameState {
-    assertPhase(gs, GamePhase.PLACEMENT);
-    if (!gs.playersReady[playerIndex]) return gs;
-    return unmarkPlayerReady(gs, playerIndex);
+export function cancelPlacement(gs: GameState, playerIndex: PlayerIndex): Result<GameState, DomainError> {
+    return checkPhase(gs, GamePhase.PLACEMENT)
+        .map(g => (g.playersReady[playerIndex] ? unmarkPlayerReady(g, playerIndex) : g));
 }
 
 export function cancelKeep(gs: GameState, playerIndex: PlayerIndex): GameState {

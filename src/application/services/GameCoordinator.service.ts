@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
@@ -13,7 +13,8 @@ import GamePhase from '@domain/types/GamePhase.type';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
-import { assertPhase, assertNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
+import { checkPhase, checkNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
+import { toErrorPayload } from '@application/errors/toErrorPayload';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
@@ -38,6 +39,8 @@ type GameContext = { session: Session; room: Room; playerIndex: PlayerIndex };
 
 @Injectable()
 export class GameCoordinatorService {
+    private readonly logger = new Logger(GameCoordinatorService.name);
+
     constructor(
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
@@ -59,6 +62,11 @@ export class GameCoordinatorService {
 
     private emitError(socketId: string, message: string): void {
         this.wsPort.emitToSocket(socketId, 'error', { message });
+    }
+
+    /** A Result error or a thrown value, as the `error { code, message }` event. */
+    private emitFailure(socketId: string, error: unknown): void {
+        this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
     private withTimers(roomId: string, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
@@ -220,9 +228,11 @@ export class GameCoordinatorService {
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
-            assertPhase(room.gameState, GamePhase.PLACEMENT);
-            assertNotReady(room.gameState, playerIndex);
-            const updatedPlayer = placeTeam(room.gameState.players[playerIndex], slots);
+            const placed = checkPhase(room.gameState, GamePhase.PLACEMENT)
+                .andThen(gs => checkNotReady(gs, playerIndex))
+                .andThen(gs => placeTeam(gs.players[playerIndex], slots));
+            if (placed.isErr()) { this.emitFailure(socketId, placed.error); return; }
+            const updatedPlayer = placed.value;
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;
             const updatedGs = { ...room.gameState, players };
@@ -232,7 +242,7 @@ export class GameCoordinatorService {
             // opponent is not notified, so the arrangement stays secret.
             this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(updatedGs, playerIndex), updatedGs));
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -243,7 +253,9 @@ export class GameCoordinatorService {
         try {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
             const wasOtherReady = room.gameState.playersReady[otherIndex];
-            let gs = confirmPlacement(room.gameState, playerIndex);
+            const confirmed = confirmPlacement(room.gameState, playerIndex);
+            if (confirmed.isErr()) { this.emitFailure(socketId, confirmed.error); return; }
+            let gs = confirmed.value;
             if (wasOtherReady) {
                 gs = performRoll(gs);
                 this.roomPort.updateGameState(room.roomId, gs);
@@ -253,7 +265,7 @@ export class GameCoordinatorService {
                 this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
             }
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -283,13 +295,15 @@ export class GameCoordinatorService {
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
-            const gs = domainCancelPlacement(room.gameState, playerIndex);
+            const cancelled = domainCancelPlacement(room.gameState, playerIndex);
+            if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
+            const gs = cancelled.value;
             if (gs !== room.gameState) {
                 this.roomPort.updateGameState(room.roomId, gs);
                 this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
             }
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 

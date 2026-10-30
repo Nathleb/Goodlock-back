@@ -1,5 +1,6 @@
 import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
@@ -308,6 +309,27 @@ describe('rearrangeTeam', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
+    it('reports a wrong phase with its code', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
+        coordinator.rearrangeTeam(SOCKET_0, [a, b, c, d, null]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'WRONG_PHASE', message: expect.stringContaining('Expected phase') });
+    });
+
+    it('reports an invalid layout with its code', () => {
+        coordinator.rearrangeTeam(SOCKET_0, [a, a, c, d, null]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_PLACEMENT', message: 'Duplicate character IDs in placement' });
+    });
+
+    it('hides an unexpected failure behind INTERNAL and does not leak its message', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        const bug = new TypeError('secret detail');
+        mockRoom.updateGameState.mockImplementationOnce(() => { throw bug; });
+        coordinator.rearrangeTeam(SOCKET_0, [d, null, c, b, a]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
+        expect(logError).toHaveBeenCalledWith(bug);
+        logError.mockRestore();
+    });
+
     it('saves the layout, empty cell included, and echoes masked gameStateUpdated to the acting socket only', () => {
         coordinator.rearrangeTeam(SOCKET_0, [d, null, c, b, a]);
         expect(placedSlots()).toEqual([d, null, c, b, a]);
@@ -506,7 +528,7 @@ describe('double-confirm guards', () => {
     it('emits error on second confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.confirmPlacement(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
@@ -522,7 +544,7 @@ describe('post-confirm mutation guards', () => {
     it('emits error when rearrangeTeam called after confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.rearrangeTeam(SOCKET_0, ['id0', 'id1', 'id2', 'id3', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 

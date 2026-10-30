@@ -13,6 +13,7 @@ import {
     cancelPlacement, cancelKeep, createSelectionState,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
+import { unwrap, unwrapErr } from "./helpers/result";
 import GameState from "@domain/types/GameState.type";
 
 const factory = buildEffectFactory();
@@ -41,28 +42,33 @@ function lockAllPlayers(state: GameState): GameState {
 
 describe('confirmPlacement', () => {
     it('marks player 0 ready but stays in PLACEMENT', () => {
-        const result = confirmPlacement(gs, 0);
+        const result = unwrap(confirmPlacement(gs, 0));
         expect(result.phase).toBe(GamePhase.PLACEMENT);
         expect(result.playersReady[0]).toBe(true);
         expect(result.playersReady[1]).toBe(false);
     });
 
     it('marks player 1 ready but stays in PLACEMENT', () => {
-        const result = confirmPlacement(gs, 1);
+        const result = unwrap(confirmPlacement(gs, 1));
         expect(result.phase).toBe(GamePhase.PLACEMENT);
         expect(result.playersReady[1]).toBe(true);
         expect(result.playersReady[0]).toBe(false);
     });
 
     it('transitions to ROLL and resets playersReady when both confirm', () => {
-        const after0 = confirmPlacement(gs, 0);
-        const result = confirmPlacement(after0, 1);
+        const after0 = unwrap(confirmPlacement(gs, 0));
+        const result = unwrap(confirmPlacement(after0, 1));
         expect(result.phase).toBe(GamePhase.ROLL);
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('throws when called outside PLACEMENT phase', () => {
-        expect(() => confirmPlacement(beginRollPhase(gs), 0)).toThrow();
+    it('returns a WRONG_PHASE error when called outside PLACEMENT phase', () => {
+        expect(unwrapErr(confirmPlacement(beginRollPhase(gs), 0)).code).toBe('WRONG_PHASE');
+    });
+
+    it('returns an ALREADY_CONFIRMED error when the player already confirmed', () => {
+        const after0 = unwrap(confirmPlacement(gs, 0));
+        expect(unwrapErr(confirmPlacement(after0, 0)).code).toBe('ALREADY_CONFIRMED');
     });
 });
 
@@ -181,20 +187,20 @@ describe('performResolve', () => {
 
 describe('cancelPlacement', () => {
     it('sets playersReady[i] to false when player was confirmed', () => {
-        const confirmed = confirmPlacement(gs, 0);
+        const confirmed = unwrap(confirmPlacement(gs, 0));
         expect(confirmed.playersReady[0]).toBe(true);
-        const result = cancelPlacement(confirmed, 0);
+        const result = unwrap(cancelPlacement(confirmed, 0));
         expect(result.playersReady[0]).toBe(false);
         expect(result.phase).toBe(GamePhase.PLACEMENT);
     });
 
     it('returns the same reference when player was not confirmed', () => {
-        const result = cancelPlacement(gs, 0);
+        const result = unwrap(cancelPlacement(gs, 0));
         expect(result).toBe(gs);
     });
 
-    it('throws when called outside PLACEMENT phase', () => {
-        expect(() => cancelPlacement(beginRollPhase(gs), 0)).toThrow();
+    it('returns a WRONG_PHASE error when called outside PLACEMENT phase', () => {
+        expect(unwrapErr(cancelPlacement(beginRollPhase(gs), 0)).code).toBe('WRONG_PHASE');
     });
 });
 
