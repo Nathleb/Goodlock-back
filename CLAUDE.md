@@ -34,7 +34,7 @@ npm run format
 
 ## Architecture
 
-Hexagonal Architecture, three layers. Dependencies point inward only:
+Hexagonal Architecture, three layers. Dependencies point inward only (enforced by `no-restricted-imports` in `eslint.config.mjs`: domain imports no other layer, no NestJS, Prisma or socket.io; application imports no infrastructure):
 
 ```
 src/
