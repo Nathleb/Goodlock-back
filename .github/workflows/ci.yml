@@ -17,6 +17,50 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm run test
+      - run: npm run test:scripts
       - run: npm run lint:check
       - run: npx tsc --noEmit
       - run: npm run build
+
+  # Architecture, duplication and dead code. Each one is a ratchet: it fails when the code gets
+  # worse than the recorded level (see the quality-gates block in CLAUDE.md).
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run quality
+      - name: Duplication report
+        if: always()
+        run: cat reports/jscpd/jscpd-report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+  # Mutation testing, incremental: the cache keeps the results of the unchanged code, so only
+  # the mutants of changed files are re-tested. Fails under thresholds.break in stryker.config.json.
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - uses: actions/cache@v4
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-${{ github.sha }}
+          restore-keys: stryker-
+      - run: npm run test:mutation
+      - name: Mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: reports/mutation/index.html

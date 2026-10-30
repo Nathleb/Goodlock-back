@@ -24,7 +24,8 @@
     "check:dup": "jscpd",
     "check:arch": "depcruise src --config .dependency-cruiser.cjs --ignore-known",
     "check:dead": "node scripts/quality-ratchet.mjs",
-    "test:scripts": "node --test scripts/"
+    "test:scripts": "node --test scripts/quality-ratchet.test.mjs",
+    "quality": "npm run check:arch && npm run check:dup && npm run check:dead"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
