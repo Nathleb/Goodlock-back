@@ -14,5 +14,5 @@ Each slice: write the new tests first and watch them fail, then change the code 
 - [x] **J5 claim and context**: `evaluateClaim` returns a Result; `getContext` returns a Result (`ACTION_NOT_AVAILABLE`), replacing the eight copies of the `if (!ctx)` emit.
 - [x] **J6 boundaries**: coordinators keep a `try/catch` only for unexpected errors; `WsErrorFilter` maps `WsException` to `INVALID_REQUEST` and anything else to `INTERNAL`; `SessionGuard` is `NOT_CONNECTED`. Test first: gateway spec on a real socket, one case per kind.
 - [ ] **J7 protocol and client**: `code` in `ErrorPayload` and in `ServerEvents` + `npm run protocol:schema` (they exist on `feat/protocol-schema`, not on `main`: settle the merge order with the user), mirror in Goodlock-app by a `sonnet` subagent in its own worktree.
-- [ ] **J8 docs**: CLAUDE.md "Errors" and "Result over exceptions" rewritten to what is true; implemented specs that quote error messages are checked; memory updated.
+- [x] **J8 docs**: CLAUDE.md "Errors" and "Result over exceptions" rewritten to what is true; implemented specs that quote error messages are checked; memory updated.
 - [ ] **Review and PR**: FULL `reviewer` (this spec, `main...HEAD`, Stryker survivors of the touched files), fixes, blockers report, push, PR. At the end, `git mv` this folder to `implemented/` and set the status line.
