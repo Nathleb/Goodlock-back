@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage --config jest.config.ts",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --config jest.config.ts",
     "test:e2e": "jest --config ./tests/jest-e2e.json",
-    "test:failed": "jest --onlyFailures"
+    "test:failed": "jest --onlyFailures",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
@@ -44,6 +45,9 @@
     "@nestjs/cli": "^11.0.5",
     "@nestjs/schematics": "^11.0.2",
     "@nestjs/testing": "^11.0.11",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/jest-runner": "^10.1.1",
+    "@stryker-mutator/typescript-checker": "^10.1.1",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "29.5.14",
