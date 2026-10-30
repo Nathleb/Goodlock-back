@@ -393,15 +393,31 @@ describe('confirmKeep', () => {
     it('emits an error instead of throwing when the locked ids are not an array', () => {
         const confirm = () => coordinator.confirmKeep(SOCKET_0, undefined as unknown as string[]);
         expect(confirm).not.toThrow();
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: expect.any(String) });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_LOCK', message: expect.any(String) });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('refuses to lock a character of the opponent\'s team', () => {
         const opponentId = keepGs.players[1].team[0].id;
         coordinator.confirmKeep(SOCKET_0, [opponentId]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: `Unknown character id: ${opponentId}` });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_LOCK', message: `Unknown character id: ${opponentId}` });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('reports a confirm outside KEEP with its code', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(baseGs));
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'WRONG_PHASE', message: expect.stringContaining('Expected phase') });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('hides an unexpected failure while resolving behind INTERNAL', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
+        mockRoom.updateGameState.mockImplementationOnce(() => { throw new TypeError('db down'); });
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
+        logError.mockRestore();
     });
 
     it('rerolls and emits gameStateUpdated still in KEEP when both confirm with rollsLeft > 0', () => {
@@ -552,7 +568,7 @@ describe('double-confirm guards', () => {
     it('emits error on second confirmKeep', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
         coordinator.confirmKeep(SOCKET_0, []);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });

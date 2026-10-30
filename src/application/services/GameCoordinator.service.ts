@@ -15,7 +15,9 @@ import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { checkPhase, checkNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
 import { toErrorPayload } from '@application/errors/toErrorPayload';
-import { domainError } from '@domain/errors/DomainError';
+import { domainError, DomainError } from '@domain/errors/DomainError';
+import { invariant } from '@application/errors/invariant';
+import { Result } from '@shared/result.type';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
@@ -79,7 +81,7 @@ export class GameCoordinatorService {
     }
 
     private resolveRound(roomId: string, gs: GameState): void {
-        const { state: resolved, log } = performResolve(gs);
+        const { state: resolved, log } = invariant(performResolve(gs));
         let next = resolved;
         const winner = checkWinner(next);
 
@@ -105,7 +107,7 @@ export class GameCoordinatorService {
             this.wsPort.emitToRoom(roomId, 'gameOver', payload);
             return;
         }
-        next = performRoll(beginRollPhase(next));
+        next = invariant(performRoll(beginRollPhase(next)));
         this.roomPort.updateGameState(roomId, next);
         this.wsPort.emitToRoom(roomId, 'gameStateUpdated', this.withTimers(roomId, GameStateMapper.toDTO(next), next));
     }
@@ -114,13 +116,15 @@ export class GameCoordinatorService {
         socketId: string,
         ctx: GameContext,
         gs: GameState,
-        domainFn: (gs: GameState, pi: PlayerIndex) => GameState,
+        domainFn: (gs: GameState, pi: PlayerIndex) => Result<GameState, DomainError>,
     ): void {
         const { room, playerIndex } = ctx;
         try {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
             const wasOtherReady = gs.playersReady[otherIndex];
-            const confirmed = domainFn(gs, playerIndex);
+            const result = domainFn(gs, playerIndex);
+            if (result.isErr()) { this.emitFailure(socketId, result.error); return; }
+            const confirmed = result.value;
             if (confirmed.phase === GamePhase.RESOLVE) {
                 // Last KEEP confirm ends the input stage: resolve immediately.
                 this.resolveRound(room.roomId, confirmed);
@@ -137,7 +141,7 @@ export class GameCoordinatorService {
                 this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForViewer(confirmed, playerIndex), confirmed));
             }
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -263,7 +267,7 @@ export class GameCoordinatorService {
             if (confirmed.isErr()) { this.emitFailure(socketId, confirmed.error); return; }
             let gs = confirmed.value;
             if (wasOtherReady) {
-                gs = performRoll(gs);
+                gs = invariant(performRoll(gs));
                 this.roomPort.updateGameState(room.roomId, gs);
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gs), gs));
             } else {
@@ -278,12 +282,12 @@ export class GameCoordinatorService {
     confirmKeep(socketId: string, lockedCharacterIds: string[]): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
-        if (!Array.isArray(lockedCharacterIds)) { this.emitError(socketId, 'lockedCharacterIds must be an array'); return; }
+        if (!Array.isArray(lockedCharacterIds)) { this.emitFailure(socketId, domainError('INVALID_LOCK', 'lockedCharacterIds must be an array')); return; }
         const { room, playerIndex } = ctx;
         const player = room.gameState.players[playerIndex];
         const teamIds = new Set(player.team.map(c => c.id));
         for (const id of lockedCharacterIds) {
-            if (!teamIds.has(id)) { this.emitError(socketId, `Unknown character id: ${id}`); return; }
+            if (!teamIds.has(id)) { this.emitFailure(socketId, domainError('INVALID_LOCK', `Unknown character id: ${id}`)); return; }
         }
         const lockedSet = new Set(lockedCharacterIds);
         const updatedPlayer: Player = {
@@ -318,10 +322,12 @@ export class GameCoordinatorService {
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
-            const gs = domainCancelKeep(room.gameState, playerIndex);
+            const cancelled = domainCancelKeep(room.gameState, playerIndex);
+            if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
+            const gs = cancelled.value;
             if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 

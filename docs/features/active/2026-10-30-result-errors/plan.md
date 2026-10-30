@@ -9,7 +9,7 @@ Each slice: write the new tests first and watch them fail, then change the code 
 - [x] **J0c foundation, application**: `application/dtos/Error.dto.ts` and `application/errors/toErrorPayload.ts`. Test first: a `DomainError` becomes `{ code, message }`; a thrown `TypeError` is logged and becomes `INTERNAL` with the message "Internal error".
 - [x] **J1 placement path**: `placeTeam`, `assertPhase`/`assertNotReady`, `confirmPlacement`, `cancelPlacement` and their `GameCoordinatorService` methods (`rearrangeTeam`, `confirmPlacement`, `cancelPlacement`).
 - [x] **J2 selection path**: `confirmSelection`, `cancelSelection` and their coordinator methods.
-- [ ] **J3 keep, roll, resolve path**: `performRoll`, `confirmKeep`, `cancelKeep`, `performResolve` and their coordinator methods (this removes the M8 `Array.isArray` special case in favour of the same typed path).
+- [x] **J3 keep, roll, resolve path**: `performRoll`, `confirmKeep`, `cancelKeep`, `performResolve` and their coordinator methods (this removes the M8 `Array.isArray` special case in favour of the same typed path).
 - [ ] **J4 rooms**: `addPlayerToRoom`, `startRoom`, `selectDeckInRoom`, `assertDecksSelected`, `room.manager` (`ROOM_NOT_FOUND`), the `RoomPort` methods, `RoomCoordinatorService`, `GameCoordinatorService.startGame`.
 - [ ] **J5 claim and context**: `evaluateClaim` returns a Result; `getContext` returns a Result (`ACTION_NOT_AVAILABLE`), replacing the eight copies of the `if (!ctx)` emit.
 - [ ] **J6 boundaries**: coordinators keep a `try/catch` only for unexpected errors; `WsErrorFilter` maps `WsException` to `INVALID_REQUEST` and anything else to `INTERNAL`; `SessionGuard` is `NOT_CONNECTED`. Test first: gateway spec on a real socket, one case per kind.

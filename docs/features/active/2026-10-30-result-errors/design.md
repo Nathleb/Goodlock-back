@@ -25,7 +25,7 @@ One event, `error { code, message }`, for four kinds of error:
 | Socket without a session | `NOT_CONNECTED` | `SessionGuard` |
 | Anything thrown (bug, invariant) | `INTERNAL`, message "Internal error" | logged on the server, never detailed to the client |
 
-Domain codes: `ROOM_NOT_FOUND`, `ROOM_FULL`, `GAME_ALREADY_STARTED`, `ROOM_NOT_READY`, `NOT_IN_ROOM`, `NOT_ROOM_OWNER`, `DECKS_NOT_CHOSEN`, `WRONG_PHASE`, `ALREADY_CONFIRMED`, `NO_ROLLS_LEFT`, `NO_SELECTION`, `INVALID_SELECTION` (count, duplicate, not in deck), `INVALID_PLACEMENT` (the five placement checks), `ACTION_NOT_AVAILABLE`, `CLAIM_NOT_ALLOWED`. Existing messages are kept word for word. The change to the payload is additive (a new `code` field): a client that only reads `message` keeps working.
+Domain codes: `ROOM_NOT_FOUND`, `ROOM_FULL`, `GAME_ALREADY_STARTED`, `ROOM_NOT_READY`, `NOT_IN_ROOM`, `NOT_ROOM_OWNER`, `DECKS_NOT_CHOSEN`, `WRONG_PHASE`, `ALREADY_CONFIRMED`, `NO_ROLLS_LEFT`, `NO_SELECTION`, `INVALID_SELECTION` (count, duplicate, not in deck), `INVALID_PLACEMENT` (the five placement checks), `INVALID_LOCK` (a die lock that names no character of the player), `ACTION_NOT_AVAILABLE`, `CLAIM_NOT_ALLOWED`. Existing messages are kept word for word. The change to the payload is additive (a new `code` field): a client that only reads `message` keeps working.
 
 ## Out of scope
 
