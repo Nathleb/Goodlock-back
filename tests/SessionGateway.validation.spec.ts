@@ -18,8 +18,10 @@ const room = { joinRoom: jest.fn(), selectDeck: jest.fn() };
 let app: INestApplication;
 let client: Socket;
 
+const sessions = { getSession: jest.fn() };
+
 const next = <T>(event: string): Promise<T> => new Promise((resolve) => client.once(event, resolve));
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 
 beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -30,7 +32,7 @@ beforeAll(async () => {
             { provide: RoomCoordinatorService, useValue: room },
             { provide: GameCoordinatorService, useValue: game },
             { provide: JwtService, useValue: { verify: () => ({ sub: 'user-1' }) } },
-            { provide: SESSION_PORT, useValue: { getSession: () => ({ sessionId: 's' }) } },
+            { provide: SESSION_PORT, useValue: sessions },
         ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -41,16 +43,20 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    client.close();
-    await app.close();
+    client?.close();
+    await app?.close();
 });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+    jest.clearAllMocks();
+    sessions.getSession.mockReturnValue({ sessionId: 's' });
+});
 
 describe('SessionGateway — payload validation', () => {
     it('forwards a valid confirmKeep payload to the coordinator', async () => {
+        const forwarded = new Promise<void>((resolve) => game.confirmKeep.mockImplementationOnce(() => resolve()));
         client.emit('confirmKeep', { lockedCharacterIds: ['a', 'b'] });
-        await settle();
+        await forwarded;
         expect(game.confirmKeep).toHaveBeenCalledWith(expect.any(String), ['a', 'b']);
     });
 
@@ -64,7 +70,9 @@ describe('SessionGateway — payload validation', () => {
     it('answers a confirmKeep with no payload at all with an error event', async () => {
         const error = next<{ message: string }>('error');
         client.emit('confirmKeep');
-        expect(await error).toEqual({ message: expect.any(String) });
+        const { message } = await error;
+        expect(message).not.toBe('Internal error');
+        expect(message.length).toBeGreaterThan(0);
         expect(game.confirmKeep).not.toHaveBeenCalled();
     });
 
@@ -73,6 +81,18 @@ describe('SessionGateway — payload validation', () => {
         client.emit('joinRoom', { roomId: 42 });
         expect((await error).message).toMatch(/roomId/);
         expect(room.joinRoom).not.toHaveBeenCalled();
+    });
+
+    it('answers a message from a socket without a session with exactly one error event', async () => {
+        sessions.getSession.mockReturnValue(undefined);
+        const errors: { message: string }[] = [];
+        const collect = (e: { message: string }) => errors.push(e);
+        client.on('error', collect);
+        client.emit('confirmKeep', { lockedCharacterIds: ['a'] });
+        await settle();
+        client.off('error', collect);
+        expect(errors).toEqual([{ message: 'Not connected' }]);
+        expect(game.confirmKeep).not.toHaveBeenCalled();
     });
 
     it('refuses properties the payload does not declare', async () => {
