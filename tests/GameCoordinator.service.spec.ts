@@ -1,6 +1,7 @@
 import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
+import { unwrap } from './helpers/result';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
@@ -229,7 +230,7 @@ describe('team selection', () => {
     });
 
     it('second confirm starts PLACEMENT with a per-viewer view that hides the opponent', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
         coordinator.confirmSelection(SOCKET_0, PICK_P0);
 
         expect(lastState().phase).toBe(GamePhase.PLACEMENT);
@@ -242,7 +243,7 @@ describe('team selection', () => {
     });
 
     it("never sends a player the opponent's pick during SELECTION", () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
         coordinator.cancelSelection(SOCKET_1); // no-op for p1, must not leak anything either
         coordinator.confirmSelection(SOCKET_1, ['c4', 'c5', 'c6', 'c7']);
         for (const payload of sentTo(SOCKET_1)) {
@@ -261,10 +262,26 @@ describe('team selection', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
+    it('reports an invalid pick with its code', () => {
+        coordinator.confirmSelection(SOCKET_0, ['c0', 'c0', 'c1', 'c2']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'A character can only be picked once' });
+    });
+
+    it('reports a payload that is not a list of ids with the same code', () => {
+        coordinator.confirmSelection(SOCKET_0, 'c0' as unknown as string[]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'characterIds must be an array of catalog ids' });
+    });
+
+    it('reports a second confirm with its code', () => {
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
+        coordinator.confirmSelection(SOCKET_0, PICK_P0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
+    });
+
     it('cancelSelection outside SELECTION emits an error and changes nothing', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(baseGs)); // PLACEMENT
         coordinator.cancelSelection(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: expect.stringContaining('SELECTION_PHASE') });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'WRONG_PHASE', message: expect.stringContaining('SELECTION_PHASE') });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
@@ -275,7 +292,7 @@ describe('team selection', () => {
     });
 
     it('cancelSelection un-readies the player and echoes to them only', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
         coordinator.cancelSelection(SOCKET_0);
         expect(lastState().playersReady).toEqual([false, false]);
         expect(sentTo(SOCKET_0)[0].selection.myPicks).toBeNull();

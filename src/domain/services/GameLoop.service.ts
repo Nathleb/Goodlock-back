@@ -11,8 +11,8 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
 import { roll1D } from "../utils/Random.utils";
-import { DomainError } from "../errors/DomainError";
-import { Result } from "@shared/result.type";
+import { DomainError, domainError } from "../errors/DomainError";
+import { Result, ok, err } from "@shared/result.type";
 
 function markPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     const ready: [boolean, boolean] = [gs.playersReady[0], gs.playersReady[1]];
@@ -55,12 +55,20 @@ export function createSelectionState(decks: readonly [readonly CharacterTemplate
     };
 }
 
-function assertValidPick(deck: readonly CharacterTemplate[], picks: readonly CatalogId[]): void {
-    if (picks.length !== TEAM_SIZE) throw new Error(`Pick exactly ${TEAM_SIZE} characters (got ${picks.length})`);
-    if (new Set(picks).size !== picks.length) throw new Error('A character can only be picked once');
+type Selection = NonNullable<GameState['selection']>;
+
+function checkSelectionInProgress(gs: GameState): Result<Selection, DomainError> {
+    return gs.selection ? ok(gs.selection) : err(domainError('NO_SELECTION', 'No selection in progress'));
+}
+
+function checkPick(deck: readonly CharacterTemplate[], picks: readonly CatalogId[]): Result<readonly CatalogId[], DomainError> {
+    const invalid = (message: string) => err(domainError('INVALID_SELECTION', message));
+    if (picks.length !== TEAM_SIZE) return invalid(`Pick exactly ${TEAM_SIZE} characters (got ${picks.length})`);
+    if (new Set(picks).size !== picks.length) return invalid('A character can only be picked once');
     const own = new Set(deck.map(t => t.id));
     const foreign = picks.filter(id => !own.has(id));
-    if (foreign.length > 0) throw new Error(`Not in your deck: ${foreign.join(', ')}`);
+    if (foreign.length > 0) return invalid(`Not in your deck: ${foreign.join(', ')}`);
+    return ok(picks);
 }
 
 /**
@@ -72,13 +80,20 @@ export function confirmSelection(
     playerIndex: PlayerIndex,
     picks: readonly CatalogId[],
     build: (template: CharacterTemplate) => Character,
-): GameState {
-    assertPhase(gs, GamePhase.SELECTION);
-    assertNotReady(gs, playerIndex);
-    const selection = gs.selection;
-    if (!selection) throw new Error('No selection in progress');
-    assertValidPick(selection.decks[playerIndex], picks);
+): Result<GameState, DomainError> {
+    return checkPhase(gs, GamePhase.SELECTION)
+        .andThen(g => checkNotReady(g, playerIndex))
+        .andThen(g => checkSelectionInProgress(g))
+        .andThen(selection => checkPick(selection.decks[playerIndex], picks).map(() => applyPick(gs, selection, playerIndex, picks, build)));
+}
 
+function applyPick(
+    gs: GameState,
+    selection: Selection,
+    playerIndex: PlayerIndex,
+    picks: readonly CatalogId[],
+    build: (template: CharacterTemplate) => Character,
+): GameState {
     const pickTuple: [readonly CatalogId[] | null, readonly CatalogId[] | null] = [selection.picks[0], selection.picks[1]];
     pickTuple[playerIndex] = [...picks];
     const updated = markPlayerReady({ ...gs, selection: { ...selection, picks: pickTuple } }, playerIndex);
@@ -93,12 +108,13 @@ export function confirmSelection(
     return resetReady(beginPlacementPhase({ ...withoutSelection, players: [teamFor(0), teamFor(1)] }));
 }
 
-export function cancelSelection(gs: GameState, playerIndex: PlayerIndex): GameState {
-    assertPhase(gs, GamePhase.SELECTION);
-    if (!gs.playersReady[playerIndex] || !gs.selection) return gs;
-    const picks: [readonly CatalogId[] | null, readonly CatalogId[] | null] = [gs.selection.picks[0], gs.selection.picks[1]];
-    picks[playerIndex] = null;
-    return unmarkPlayerReady({ ...gs, selection: { ...gs.selection, picks } }, playerIndex);
+export function cancelSelection(gs: GameState, playerIndex: PlayerIndex): Result<GameState, DomainError> {
+    return checkPhase(gs, GamePhase.SELECTION).map(g => {
+        if (!g.playersReady[playerIndex] || !g.selection) return g;
+        const picks: [readonly CatalogId[] | null, readonly CatalogId[] | null] = [g.selection.picks[0], g.selection.picks[1]];
+        picks[playerIndex] = null;
+        return unmarkPlayerReady({ ...g, selection: { ...g.selection, picks } }, playerIndex);
+    });
 }
 
 export function confirmPlacement(gs: GameState, playerIndex: PlayerIndex): Result<GameState, DomainError> {

@@ -15,6 +15,7 @@ import { Player } from '@domain/types/Player.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { checkPhase, checkNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
 import { toErrorPayload } from '@application/errors/toErrorPayload';
+import { domainError } from '@domain/errors/DomainError';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
@@ -192,10 +193,13 @@ export class GameCoordinatorService {
         const { room, playerIndex } = ctx;
         try {
             if (!Array.isArray(characterIds) || characterIds.some(id => typeof id !== 'string')) {
-                throw new Error('characterIds must be an array of catalog ids');
+                this.emitFailure(socketId, domainError('INVALID_SELECTION', 'characterIds must be an array of catalog ids'));
+                return;
             }
-            const gs = domainConfirmSelection(room.gameState, playerIndex, characterIds as CatalogId[],
+            const confirmed = domainConfirmSelection(room.gameState, playerIndex, characterIds as CatalogId[],
                 template => createCharacterFromTemplate(template, this.effectFactory));
+            if (confirmed.isErr()) { this.emitFailure(socketId, confirmed.error); return; }
+            const gs = confirmed.value;
             this.roomPort.updateGameState(room.roomId, gs);
             if (gs.phase === GamePhase.PLACEMENT) {
                 this.emitPerViewer(room.roomId, room.playerOrder ?? room.playersId, gs);
@@ -204,7 +208,7 @@ export class GameCoordinatorService {
                 this.emitToViewer(socketId, room.roomId, gs, playerIndex);
             }
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -213,13 +217,15 @@ export class GameCoordinatorService {
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
         const { room, playerIndex } = ctx;
         try {
-            const gs = domainCancelSelection(room.gameState, playerIndex);
+            const cancelled = domainCancelSelection(room.gameState, playerIndex);
+            if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
+            const gs = cancelled.value;
             if (gs !== room.gameState) {
                 this.roomPort.updateGameState(room.roomId, gs);
                 this.emitToViewer(socketId, room.roomId, gs, playerIndex);
             }
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 
