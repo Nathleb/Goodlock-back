@@ -4,7 +4,7 @@
 
 Each slice: write the new tests first and watch them fail, then change the code until `tsc` is green, then run `npm run test`, `npm run lint:check`, `npx tsc --noEmit` and `npm run build`, and make one commit that also ticks its checkbox. Existing tests are changed only as listed in the approved plan (`toThrow` assertions on migrated functions, the emitted `error` payload gaining `code`, happy-path calls going through `unwrap`); each file's before/after is shown to the user first.
 
-- [ ] **J0a foundation, shared**: `neverthrow` dependency, `shared/result.type.ts` re-export, `tests/helpers/result.ts` (`unwrap`, `unwrapErr`). Test first: `tests/Result.spec.ts` (the re-export builds and unwraps an ok and an err).
+- [x] **J0a foundation, shared**: `neverthrow` dependency, `shared/result.type.ts` re-export, `tests/helpers/result.ts` (`unwrap`, `unwrapErr`). Test first: `tests/Result.spec.ts` (the re-export builds and unwraps an ok and an err).
 - [ ] **J0b foundation, domain**: `domain/errors/DomainError.ts` (type, code union, `domainError` builder). Test first: `tests/DomainError.spec.ts`.
 - [ ] **J0c foundation, application**: `application/dtos/Error.dto.ts` and `application/errors/reportError.ts`. Test first: a `DomainError` becomes `{ code, message }`; a thrown `TypeError` is logged and becomes `INTERNAL` with the message "Internal error".
 - [ ] **J1 placement path**: `placeTeam`, `assertPhase`/`assertNotReady`, `confirmPlacement`, `cancelPlacement` and their `GameCoordinatorService` methods (`rearrangeTeam`, `confirmPlacement`, `cancelPlacement`).
