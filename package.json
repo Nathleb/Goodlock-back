@@ -21,7 +21,8 @@
     "test:e2e": "jest --config ./tests/jest-e2e.json",
     "test:failed": "jest --onlyFailures",
     "test:mutation": "stryker run",
-    "check:dup": "jscpd"
+    "check:dup": "jscpd",
+    "check:arch": "depcruise src --config .dependency-cruiser.cjs --ignore-known"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
@@ -56,6 +57,7 @@
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
+    "dependency-cruiser": "^18.7.0",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.3",
