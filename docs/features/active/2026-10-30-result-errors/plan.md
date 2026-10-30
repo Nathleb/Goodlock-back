@@ -6,7 +6,7 @@ Each slice: write the new tests first and watch them fail, then change the code 
 
 - [x] **J0a foundation, shared**: `neverthrow` dependency, `shared/result.type.ts` re-export, `tests/helpers/result.ts` (`unwrap`, `unwrapErr`). Test first: `tests/Result.spec.ts` (the re-export builds and unwraps an ok and an err).
 - [x] **J0b foundation, domain**: `domain/errors/DomainError.ts` (type, code union, `domainError` builder). Test first: `tests/DomainError.spec.ts`.
-- [ ] **J0c foundation, application**: `application/dtos/Error.dto.ts` and `application/errors/reportError.ts`. Test first: a `DomainError` becomes `{ code, message }`; a thrown `TypeError` is logged and becomes `INTERNAL` with the message "Internal error".
+- [x] **J0c foundation, application**: `application/dtos/Error.dto.ts` and `application/errors/toErrorPayload.ts`. Test first: a `DomainError` becomes `{ code, message }`; a thrown `TypeError` is logged and becomes `INTERNAL` with the message "Internal error".
 - [ ] **J1 placement path**: `placeTeam`, `assertPhase`/`assertNotReady`, `confirmPlacement`, `cancelPlacement` and their `GameCoordinatorService` methods (`rearrangeTeam`, `confirmPlacement`, `cancelPlacement`).
 - [ ] **J2 selection path**: `confirmSelection`, `cancelSelection` and their coordinator methods.
 - [ ] **J3 keep, roll, resolve path**: `performRoll`, `confirmKeep`, `cancelKeep`, `performResolve` and their coordinator methods (this removes the M8 `Array.isArray` special case in favour of the same typed path).
