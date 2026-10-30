@@ -7,6 +7,7 @@ import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
+import { ok } from '@shared/result.type';
 
 const NOW = 1_000_000;
 const SOCKET = 'sock-0';
@@ -111,7 +112,7 @@ describe('afkClaimInMs in emitted game state', () => {
         mockRoom.startGame.mockImplementation((_id: string, state: GameState) => {
             const started = room({ gameState: state, phaseStartedAt: NOW });
             mockRoom.getRoom.mockReturnValue(started);
-            return started;
+            return ok(started);
         });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? { sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' }

@@ -2,6 +2,7 @@ import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { unwrap } from './helpers/result';
+import { ok } from '@shared/result.type';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
@@ -134,6 +135,7 @@ describe('context guards (tested via rearrangeTeam)', () => {
 describe('startGame', () => {
     beforeEach(() => {
         mockRoom.getRoom.mockReturnValue(lobbyRoom);
+        mockRoom.startGame.mockReturnValue(ok({ ...lobbyRoom, isStarted: true }));
     });
 
     it('does nothing when session has no roomId', () => {
@@ -145,18 +147,17 @@ describe('startGame', () => {
     it('emits error when caller is not the room owner', () => {
         mockSession.getSession.mockReturnValue(SESSION_1);
         coordinator.startGame(SOCKET_1);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'error', { code: 'NOT_ROOM_OWNER', message: 'Only the room owner can start the game' });
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 
     it('emits error when room is not ready (only 1 player)', () => {
         mockRoom.getRoom.mockReturnValue(singlePlayerRoom);
         coordinator.startGame(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ROOM_NOT_READY', message: 'Room is not ready to start' });
     });
 
     it('starts the game and emits a per-viewer masked state to each player socket', () => {
-        mockRoom.startGame.mockReturnValue({ ...lobbyRoom, isStarted: true });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
@@ -178,7 +179,6 @@ describe('startGame', () => {
     });
 
     it('sends each player a selection view with both decks', () => {
-        mockRoom.startGame.mockReturnValue({ ...lobbyRoom, isStarted: true });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
@@ -191,14 +191,17 @@ describe('startGame', () => {
     it('emits error until both players have chosen a deck', () => {
         mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0 } });
         coordinator.startGame(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Both players must choose a deck' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'DECKS_NOT_CHOSEN', message: 'Both players must choose a deck' });
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 
-    it('emits error when a chosen deck references a character the catalog does not have', () => {
+    it('reports a deck that references a character the catalog does not have as INTERNAL, and logs it', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
         mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0, p1: [...DECK_P1.slice(0, 5), 'ghost' as CatalogId] } });
         coordinator.startGame(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
+        expect(logError).toHaveBeenCalled();
+        logError.mockRestore();
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 });

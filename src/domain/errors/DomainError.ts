@@ -4,6 +4,7 @@
  */
 export const DOMAIN_ERROR_CODES = [
     'ROOM_NOT_FOUND',
+    'DECK_NOT_FOUND',
     'ROOM_FULL',
     'GAME_ALREADY_STARTED',
     'ROOM_NOT_READY',

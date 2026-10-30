@@ -20,7 +20,7 @@ import { invariant } from '@application/errors/invariant';
 import { Result } from '@shared/result.type';
 import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
-import { isRoomReady, resolvePlayerIndex, assertDecksSelected } from '@domain/services/Room.service';
+import { isRoomReady, resolvePlayerIndex, selectedDecks } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
 import { upkeep } from '@domain/services/Upkeep.service';
 import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
@@ -178,16 +178,25 @@ export class GameCoordinatorService {
         if (!room) return;
 
         try {
-            if (room.ownerId !== session.sessionId) throw new Error('Only the room owner can start the game');
-            if (!isRoomReady(room)) throw new Error('Room is not ready to start');
+            if (room.ownerId !== session.sessionId) {
+                this.emitFailure(socketId, domainError('NOT_ROOM_OWNER', 'Only the room owner can start the game'));
+                return;
+            }
+            if (!isRoomReady(room)) {
+                this.emitFailure(socketId, domainError('ROOM_NOT_READY', 'Room is not ready to start'));
+                return;
+            }
+            const decks = selectedDecks(room);
+            if (decks.isErr()) { this.emitFailure(socketId, decks.error); return; }
 
-            const [deck0, deck1] = assertDecksSelected(room);
+            const [deck0, deck1] = decks.value;
             const gameState = createSelectionState([this.templatesFor(deck0), this.templatesFor(deck1)]);
 
-            this.roomPort.startGame(room.roomId, gameState);
+            const started = this.roomPort.startGame(room.roomId, gameState);
+            if (started.isErr()) { this.emitFailure(socketId, started.error); return; }
             this.emitPerViewer(room.roomId, room.playersId, gameState);
         } catch (e: unknown) {
-            this.emitError(socketId, (e as Error).message);
+            this.emitFailure(socketId, e);
         }
     }
 
