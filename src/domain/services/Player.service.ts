@@ -1,7 +1,7 @@
 import Character from "../types/Character.type";
-import { isDead, rollForTurn, rollDie } from "./Character.service";
+import { isDead, rollForTurn } from "./Character.service";
 import { Player } from "../types/Player.type";
-import Position, { BOARD_SIZE, SlotIndex, PlayerIndex } from "../types/Position.type";
+import { BOARD_SIZE, SlotIndex, PlayerIndex } from "../types/Position.type";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
 
@@ -19,17 +19,10 @@ export function allDiceLocked(player: Player): boolean {
 }
 
 /** Dead characters that lose the match (out of TEAM_SIZE). */
-export const LOSS_DEATHS = 2;
+const LOSS_DEATHS = 2;
 
 export function hasLost(player: Player): boolean {
     return player.team.filter(char => isDead(char)).length >= LOSS_DEATHS;
-}
-
-export function rollDieFromPlayer(player: Player, position: Position): Player {
-    const newTeam = player.team.map(char =>
-        char.position.slot === position.slot ? rollDie(char) : char
-    );
-    return { ...player, team: newTeam };
 }
 
 /**

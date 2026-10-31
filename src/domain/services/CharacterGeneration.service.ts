@@ -31,7 +31,7 @@ export function createCharacterFromTemplate(template: CharacterTemplate): Charac
     });
 }
 
-export type CharacterParams = {
+type CharacterParams = {
     readonly catalogId: CatalogId;
     readonly name: string;
     readonly maxHp: number;
@@ -58,12 +58,6 @@ export function createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, po
     };
 }
 
-export function setDieFace(character: Character, faceIndex: number, dieFace: DieFace): Character {
-    const newBaseDie = [...character.baseDie];
-    newBaseDie[faceIndex] = dieFace;
-    return { ...character, baseDie: newBaseDie };
-}
-
 export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
     return baseDieInstructions.map(faceData =>
         generateFaceFromEffectEntries(
@@ -73,11 +67,11 @@ export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
     ) as Die;
 }
 
-export function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly EffectEntry[]): DieFace {
+function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly EffectEntry[]): DieFace {
     return effectEntries.reduce((acc, entry) => addEffectToFace(acc, entry), face);
 }
 
-export function addEffectToFace(dieFace: DieFace, entry: EffectEntry): DieFace {
+function addEffectToFace(dieFace: DieFace, entry: EffectEntry): DieFace {
     // Template load is a startup boundary: a bad template is a non-recoverable config error.
     const errors = validateEffectTargets(entry.effect, entry.targets ?? []);
     if (errors.length > 0) {

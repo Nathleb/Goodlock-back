@@ -1,5 +1,5 @@
-export type Side = 'ALLY' | 'ENEMY';
-export type TargetMode = 'ABSOLUTE' | 'RELATIVE';
+type Side = 'ALLY' | 'ENEMY';
+type TargetMode = 'ABSOLUTE' | 'RELATIVE';
 
 /**
  * A group of target cells for one effect. Side is relative to the acting
