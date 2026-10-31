@@ -3,13 +3,13 @@ import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/toke
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
-import { UserId, CatalogId } from '@shared/branded.types';
+import { UserId, CatalogId, SocketId } from '@shared/branded.types';
 import { Logger, NotFoundException } from '@nestjs/common';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { domainError } from '@domain/errors/DomainError';
 import { ok, err } from '@shared/result.type';
 
-const SOCKET = 'socket-0';
+const SOCKET = 'socket-0' as SocketId;
 const USER_ID = 'user-uuid-0' as UserId;
 const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
 const SESSION_IN_ROOM: Session = { ...SESSION, roomId: 'old-room' };

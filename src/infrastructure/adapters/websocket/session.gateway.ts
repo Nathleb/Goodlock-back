@@ -22,6 +22,7 @@ import { SelectDeckPayload } from './payloads/SelectDeck.payload';
 import { ConfirmSelectionPayload } from './payloads/ConfirmSelection.payload';
 
 import { SessionGuard } from './guards/Session.guard';
+import { socketIdOf } from './socketIdOf';
 import { WsErrorFilter } from './filters/WsError.filter';
 import { UserId } from '@shared/branded.types';
 
@@ -59,21 +60,21 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         }
         try {
             const payload = this.jwtService.verify<{ sub: string }>(token);
-            this.sessionCoordinator.handleConnect(client.id, payload.sub as UserId);
+            this.sessionCoordinator.handleConnect(socketIdOf(client), payload.sub as UserId);
         } catch {
             client.disconnect();
         }
     }
 
     handleDisconnect(client: Socket): void {
-        this.sessionCoordinator.handleDisconnect(client.id);
+        this.sessionCoordinator.handleDisconnect(socketIdOf(client));
     }
 
     // ── Lobby ────────────────────────────────────────────────────────────────
 
     @SubscribeMessage('createRoom')
     handleCreateRoom(@ConnectedSocket() client: Socket): void {
-        this.roomCoordinator.createRoom(client.id);
+        this.roomCoordinator.createRoom(socketIdOf(client));
     }
 
     @SubscribeMessage('joinRoom')
@@ -81,12 +82,12 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: JoinRoomPayload,
     ): void {
-        this.roomCoordinator.joinRoom(client.id, data.roomId);
+        this.roomCoordinator.joinRoom(socketIdOf(client), data.roomId);
     }
 
     @SubscribeMessage('quitRoom')
     handleQuitRoom(@ConnectedSocket() client: Socket): void {
-        this.roomCoordinator.quitRoom(client.id);
+        this.roomCoordinator.quitRoom(socketIdOf(client));
     }
 
     @SubscribeMessage('selectDeck')
@@ -94,7 +95,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: SelectDeckPayload,
     ): Promise<void> {
-        return this.roomCoordinator.selectDeck(client.id, data.deckId);
+        return this.roomCoordinator.selectDeck(socketIdOf(client), data.deckId);
     }
 
     // ── Game ─────────────────────────────────────────────────────────────────
@@ -104,17 +105,17 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: ConfirmSelectionPayload,
     ): void {
-        this.gameCoordinator.confirmSelection(client.id, data.characterIds);
+        this.gameCoordinator.confirmSelection(socketIdOf(client), data.characterIds);
     }
 
     @SubscribeMessage('cancelSelection')
     handleCancelSelection(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.cancelSelection(client.id);
+        this.gameCoordinator.cancelSelection(socketIdOf(client));
     }
 
     @SubscribeMessage('startGame')
     handleStartGame(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.startGame(client.id);
+        this.gameCoordinator.startGame(socketIdOf(client));
     }
 
     @SubscribeMessage('rearrangeTeam')
@@ -122,12 +123,12 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: RearrangeTeamPayload,
     ): void {
-        this.gameCoordinator.rearrangeTeam(client.id, data.slots);
+        this.gameCoordinator.rearrangeTeam(socketIdOf(client), data.slots);
     }
 
     @SubscribeMessage('confirmPlacement')
     handleConfirmPlacement(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.confirmPlacement(client.id);
+        this.gameCoordinator.confirmPlacement(socketIdOf(client));
     }
 
     @SubscribeMessage('confirmKeep')
@@ -135,22 +136,22 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: ConfirmKeepPayload,
     ): void {
-        this.gameCoordinator.confirmKeep(client.id, data.lockedCharacterIds);
+        this.gameCoordinator.confirmKeep(socketIdOf(client), data.lockedCharacterIds);
     }
 
     @SubscribeMessage('claimVictory')
     handleClaimVictory(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.claimVictory(client.id);
+        this.gameCoordinator.claimVictory(socketIdOf(client));
     }
 
     @SubscribeMessage('cancelPlacement')
     handleCancelPlacement(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.cancelPlacement(client.id);
+        this.gameCoordinator.cancelPlacement(socketIdOf(client));
     }
 
     @SubscribeMessage('cancelKeep')
     handleCancelKeep(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.cancelKeep(client.id);
+        this.gameCoordinator.cancelKeep(socketIdOf(client));
     }
 
 }

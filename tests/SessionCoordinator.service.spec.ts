@@ -5,13 +5,13 @@ import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import { UserId, CatalogId } from '@shared/branded.types';
+import { UserId, CatalogId, SocketId } from '@shared/branded.types';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
 import { unwrap } from './helpers/result';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { testTemplate } from './helpers/catalog';
 
-const SOCKET = 'socket-0';
+const SOCKET = 'socket-0' as SocketId;
 const USER_ID = 'user-uuid-1' as UserId;
 const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
 const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: 'room-1' };

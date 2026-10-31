@@ -17,14 +17,14 @@ import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
-import { UserId, CatalogId } from '@shared/branded.types';
+import { UserId, CatalogId, SocketId } from '@shared/branded.types';
 import { CATALOG_PORT } from '@application/ports/tokens';
 import GameState from '@domain/types/GameState.type';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
-const SOCKET_0 = 'socket-0';
-const SOCKET_1 = 'socket-1';
+const SOCKET_0 = 'socket-0' as SocketId;
+const SOCKET_1 = 'socket-1' as SocketId;
 const USER_ID_0 = 'user-uuid-0' as UserId;
 const USER_ID_1 = 'user-uuid-1' as UserId;
 const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, userId: USER_ID_0, roomId: 'room-1' };

@@ -3,6 +3,7 @@ import { Socket } from 'socket.io';
 import { WsException } from '@nestjs/websockets';
 import { SESSION_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
+import { socketIdOf } from '../socketIdOf';
 
 @Injectable()
 export class SessionGuard implements CanActivate {
@@ -10,7 +11,7 @@ export class SessionGuard implements CanActivate {
 
     canActivate(context: ExecutionContext): boolean {
         const client: Socket = context.switchToWs().getClient();
-        const session = this.sessionPort.getSession(client.id);
+        const session = this.sessionPort.getSession(socketIdOf(client));
         // The gateway's WsErrorFilter is the only emitter of 'error'.
         if (!session) throw new WsException({ code: 'NOT_CONNECTED', message: 'Not connected' });
         return true;

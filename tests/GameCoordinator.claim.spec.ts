@@ -1,4 +1,4 @@
-import { CatalogId } from '@shared/branded.types';
+import { CatalogId, SocketId } from '@shared/branded.types';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
 import { makeTestCatalog } from './helpers/catalog';
@@ -9,7 +9,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 import { ok } from '@shared/result.type';
 
 const NOW = 1_000_000;
-const SOCKET = 'sock-0';
+const SOCKET = 'sock-0' as SocketId;
 
 const mockSession = { getSession: jest.fn(), getSessionById: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setPresence: jest.fn(), listOpenRooms: jest.fn() };
@@ -121,7 +121,7 @@ describe('afkClaimInMs in emitted game state', () => {
         });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? { sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' }
-            : id === 'p1' ? { sessionId: 'p1', socketId: 'sock-1', userId: 'u2', roomId: 'room-1' }
+            : id === 'p1' ? { sessionId: 'p1', socketId: 'sock-1' as SocketId, userId: 'u2', roomId: 'room-1' }
             : undefined);
         coordinator.startGame(SOCKET);
         // Per-viewer selection emit carries the timer fields (afkClaimInMs).

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConnectResult, SessionPort } from '@application/ports/SessionPort';
 import { Session } from '@application/dtos/Session.dto';
-import { UserId } from '@shared/branded.types';
+import { UserId, SocketId } from '@shared/branded.types';
 
 @Injectable()
 export class SessionManager implements SessionPort {
@@ -14,7 +14,7 @@ export class SessionManager implements SessionPort {
     // this index lets coordinators resolve a player's live socket to emit to.
     private readonly bySessionId = new Map<string, Session>();
 
-    createOrReconnectSession(socketId: string, userId: UserId): ConnectResult {
+    createOrReconnectSession(socketId: SocketId, userId: UserId): ConnectResult {
         const existing = this.byUserId.get(userId);
         if (existing) {
             const evictedSocketId = existing.socketId !== socketId && this.bySockId.has(existing.socketId)
@@ -38,7 +38,7 @@ export class SessionManager implements SessionPort {
         return { session, evictedSocketId: null };
     }
 
-    getSession(socketId: string): Session | undefined {
+    getSession(socketId: SocketId): Session | undefined {
         return this.bySockId.get(socketId);
     }
 
@@ -46,7 +46,7 @@ export class SessionManager implements SessionPort {
         return this.bySessionId.get(sessionId);
     }
 
-    setSessionRoom(socketId: string, roomId: string | undefined): void {
+    setSessionRoom(socketId: SocketId, roomId: string | undefined): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         const updated: Session = { ...session, roomId };
@@ -55,14 +55,14 @@ export class SessionManager implements SessionPort {
         this.bySessionId.set(session.sessionId, updated);
     }
 
-    disconnectSession(socketId: string): void {
+    disconnectSession(socketId: SocketId): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         this.bySockId.delete(socketId);
         // byUserId / bySessionId entries stay — enables reconnection
     }
 
-    deleteSession(socketId: string): void {
+    deleteSession(socketId: SocketId): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         this.bySockId.delete(socketId);
