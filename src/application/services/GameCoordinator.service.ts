@@ -249,12 +249,12 @@ export class GameCoordinatorService {
         try {
             const placed = checkPhase(room.gameState, GamePhase.PLACEMENT)
                 .andThen(gs => checkNotReady(gs, playerIndex))
-                .andThen(gs => placeTeam(gs.players[playerIndex], slots));
+                .andThen(gs => placeTeam(gs.players[playerIndex], slots).map(player => ({ gs, player })));
             if (placed.isErr()) { this.emitFailure(socketId, placed.error); return; }
-            const updatedPlayer = placed.value;
-            const players = [...room.gameState.players] as [Player, Player];
-            players[playerIndex] = updatedPlayer;
-            const updatedGs = { ...room.gameState, players };
+            const { gs, player } = placed.value;
+            const players = [...gs.players] as [Player, Player];
+            players[playerIndex] = player;
+            const updatedGs = { ...gs, players };
             this.roomPort.updateGameState(room.roomId, updatedGs);
             // Echo the persisted layout back to the actor only: the client is
             // prop-controlled and would otherwise snap the drag back. The

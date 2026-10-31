@@ -83,8 +83,8 @@ export function confirmSelection(
 ): Result<GameState, DomainError> {
     return checkPhase(gs, GamePhase.SELECTION)
         .andThen(g => checkNotReady(g, playerIndex))
-        .andThen(g => checkSelectionInProgress(g))
-        .andThen(selection => checkPick(selection.decks[playerIndex], picks).map(() => applyPick(gs, selection, playerIndex, picks, build)));
+        .andThen(g => checkSelectionInProgress(g).map(selection => ({ g, selection })))
+        .andThen(({ g, selection }) => checkPick(selection.decks[playerIndex], picks).map(() => applyPick(g, selection, playerIndex, picks, build)));
 }
 
 function applyPick(
