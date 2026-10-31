@@ -1,6 +1,6 @@
 # Branded IDs: plan
 
-**Status:** in progress (started 2026-11-01)
+**Status:** implemented 2026-11-01
 
 Each step is a type-only refactor: no behavior changes, and tests are green before and after.
 - The proof for a step is `tsc`: an ID swap, injected in a scratch copy, must fail `tsc`.
@@ -12,4 +12,4 @@ Each step is a type-only refactor: no behavior changes, and tests are green befo
 - [x] **3 `RoomId`**: `Room.type.roomId`, `Session.dto.roomId`, `RoomPort`, `SessionPort.setSessionRoom`, `WebSocketPort`, managers, coordinators, gateway.
 - [x] **4 `CharacterId`**: `Character.id`, `PriorityQueue.type`, `PriorityQueue.service`, `GameCoordinator`.
 - [x] **5** Delete `PlayerId` and `DeviceId`. Knip baseline down to the measured count.
-- [ ] **6 Record**: project `CLAUDE.md` (Branded IDs), move the spec to `implemented/`, memory.
+- [x] **6 Record**: project `CLAUDE.md` (Branded IDs), move the spec to `implemented/`, memory.

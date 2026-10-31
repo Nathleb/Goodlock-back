@@ -160,7 +160,7 @@ The HTTP coordinators (auth, collection, decks) still throw Nest exceptions from
 
 **Randomness**: domain code calls `Math.random` directly through `domain/utils/Random.utils.ts` (`roll1D`: dice rolls and the initiative draw). Resolution itself is never random. Tests make it deterministic with `jest.spyOn(Math, 'random')` and restore it with `jest.restoreAllMocks()` in `afterEach` (Jest's `restoreMocks` is off). A `mockReturnValueOnce` sequence depends on the number and order of calls, so changing how a roll is drawn can break such tests without any behavior change.
 
-**Branded IDs**: never accept a raw `string` as an identifier in service signatures. Always use `SessionId`, `RoomId`, `PlayerId`, etc. If a new identifier type is needed, add it to `shared/branded.types.ts`.
+**Branded IDs**: never accept a raw `string` as an identifier in service signatures. Use `SocketId`, `SessionId` (a room's players are sessions), `RoomId`, `CharacterId`, `UserId`, `CatalogId`, `DeckId` from `shared/branded.types.ts`, and add a new type there if needed. A raw string becomes an ID with an `as` cast only where it enters the system: the gateway (`socketIdOf`, payload ids), the generators (`randomUUID() as ...`). Ids sent by the client for matching (`confirmKeep`, `rearrangeTeam`) stay `string` until matched against the real team. Wire DTOs keep `string`. Tests cast through `tests/helpers/ids.ts`.
 
 **Test colocation**: tests live in `tests/` mirroring `src/` structure. One spec file per service or strategy. Domain specs must not import NestJS.
 
