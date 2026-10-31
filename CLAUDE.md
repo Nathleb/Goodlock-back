@@ -41,7 +41,7 @@ src/
   domain/          # Pure game logic and types. No NestJS, no I/O. Imports nothing from the other layers.
   application/     # Use cases: coordinators, ports (interfaces), DTOs, mappers. Imports domain only.
   infrastructure/  # NestJS adapters: WebSocket gateway, HTTP controllers, in-memory managers, Prisma repositories, catalog loader. Implements the ports.
-  shared/          # Cross-layer utilities (branded IDs; no Result type yet)
+  shared/          # Cross-layer utilities (branded IDs, the Result re-export)
 ```
 
 **Path aliases** (`tsconfig.json`): `@domain/*`, `@application/*`, `@infrastructure/*`, `@shared/*` map to the matching `src/` folder.
