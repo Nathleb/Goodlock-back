@@ -25,7 +25,7 @@
     "check:arch": "depcruise src --config .dependency-cruiser.cjs --ignore-known",
     "check:dead": "node scripts/quality-ratchet.mjs",
     "test:scripts": "node --test scripts/quality-ratchet.test.mjs",
-    "quality": "npm run check:arch && npm run check:dup && npm run check:dead"
+    "quality": "npm run check:arch; a=$?; npm run check:dup; b=$?; npm run check:dead; c=$?; [ $a -eq 0 ] && [ $b -eq 0 ] && [ $c -eq 0 ]"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
