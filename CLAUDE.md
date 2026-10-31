@@ -92,6 +92,8 @@ The general workflow (plan, TDD, verify, review, record, git rules, conventional
 
 These are guardrails (rules in `~/.claude/CLAUDE.md`). Each one is a ratchet: it was measured on the existing code and fails when the code gets worse than that level. When a gate blocks, fix the cause. Never silence a finding, exclude a file or raise a threshold. When a cleanup improves a level, tighten it in the same commit.
 
+Stryker and dependency-cruiser need Node 22 or later (the app itself and the `verify` CI job use Node 20, like the Dockerfile), so the `quality` and `mutation` CI jobs run on Node 22.
+
 The level of each ratchet is the number in the file named below (not repeated here, so it cannot go stale).
 
 | Gate | Tool | Where the level is set |
