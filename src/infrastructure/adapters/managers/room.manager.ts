@@ -13,8 +13,8 @@ const ABANDONED_ROOM_TTL_MS = 10 * 60_000;
 
 @Injectable()
 export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
-    private readonly rooms = new Map<string, Room>();
-    private readonly playerToRoom = new Map<string, string>();
+    private readonly rooms = new Map<RoomId, Room>();
+    private readonly playerToRoom = new Map<SessionId, RoomId>();
     private sweepInterval?: ReturnType<typeof setInterval>;
 
     onModuleInit(): void {
@@ -104,8 +104,8 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
 
     // A player who quits a started game is marked disconnected by the concession flow
     // (RoomCoordinator), so quit rooms still satisfy the "all players disconnected" rule here.
-    sweepAbandonedRooms(now: number, thresholdMs: number): string[] {
-        const deletedRoomIds: string[] = [];
+    sweepAbandonedRooms(now: number, thresholdMs: number): RoomId[] {
+        const deletedRoomIds: RoomId[] = [];
         for (const room of this.rooms.values()) {
             if (!room.presence) continue;
             const allAbandoned = room.presence.every(

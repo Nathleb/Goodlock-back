@@ -8,11 +8,11 @@ export class SessionManager implements SessionPort {
     // One active session per userId. A second connect evicts the previous socketId entry
     // (reconnect wins). The caller is responsible for disconnecting the evicted socket
     // (see ConnectResult.evictedSocketId).
-    private readonly bySockId = new Map<string, Session>();
+    private readonly bySockId = new Map<SocketId, Session>();
     private readonly byUserId = new Map<UserId, Session>();
     // sessionId is stable across reconnects; rooms reference players by it, so
     // this index lets coordinators resolve a player's live socket to emit to.
-    private readonly bySessionId = new Map<string, Session>();
+    private readonly bySessionId = new Map<SessionId, Session>();
 
     createOrReconnectSession(socketId: SocketId, userId: UserId): ConnectResult {
         const existing = this.byUserId.get(userId);

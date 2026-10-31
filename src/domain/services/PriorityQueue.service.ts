@@ -49,10 +49,10 @@ function findCharacter(gameState: GameState, characterId: CharacterId): Characte
 
 // Tie-break keys, captured when RESOLVE starts so that a Swap during the round does not
 // reshuffle ties: the initiative holder first, then the slot (0 -> 4).
-type TieKeys = ReadonlyMap<string, { readonly initiative: number; readonly slot: number }>;
+type TieKeys = ReadonlyMap<CharacterId, { readonly initiative: number; readonly slot: number }>;
 
 function captureTieKeys(state: GameState): TieKeys {
-    const keys = new Map<string, { initiative: number; slot: number }>();
+    const keys = new Map<CharacterId, { initiative: number; slot: number }>();
     for (const [, characterId] of state.priorityQueue) {
         const holds = state.players.some(p => p.playerIndex === state.initiativePlayerIndex && p.team.some(c => c.id === characterId));
         // An actor missing from the state sorts as a non-holder in slot 0.
