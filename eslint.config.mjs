@@ -9,6 +9,14 @@ export default [
   {languageOptions: { globals: globals.browser }},
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
+  // Rules are changed in this file only: an inline `/* eslint ... */` or `eslint-disable` comment cannot
+  // switch the complexity cap (or any other rule) off for a file.
+  { linterOptions: { noInlineConfig: true } },
+  // Ratchet: the highest complexity in src/ when the rule was added. Lower it after a refactor, never raise it.
+  {
+    files: ["src/**/*.ts"],
+    rules: { complexity: ["error", 12] },
+  },
   {
     rules: {
       "@typescript-eslint/no-unused-vars": [

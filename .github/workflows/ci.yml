@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same branch makes the previous run (up to two hours for the mutation job) pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run test
+      - run: npm run test:scripts
+      - run: npm run lint:check
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  # Architecture, duplication and dead code. Each one is a ratchet: it fails when the code gets
+  # worse than the recorded level (see the quality-gates block in CLAUDE.md). `npm run quality`
+  # runs all three even when one fails, so a run shows every problem at once.
+  quality:
+    # Node 22: Stryker and dependency-cruiser do not run on Node 20 (the version `verify` uses, as the Dockerfile does).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Quality gates
+        shell: bash
+        run: npm run quality 2>&1 | tee quality.log
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Quality gates'
+            echo '```'
+            sed 's/\x1b\[[0-9;]*m//g' quality.log
+            echo '```'
+            cat reports/jscpd/jscpd-report.md
+          } >> "$GITHUB_STEP_SUMMARY" || true
+
+  # Mutation testing, incremental. The cache keeps the results of the code that did not change, so
+  # only the mutants of changed files are re-tested. Stryker only notices changes to the mutated
+  # files and to the test files, so the cache key also covers everything else the tests read (test
+  # helpers and fixtures, the character templates, shared code, infrastructure, tool and
+  # dependency config): when one of those changes, the cache is not reused and the run is full.
+  # The cache is saved even when the run fails or times out, so the next run does not start over.
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      # hashFiles is only available inside a step, so the hash goes through a step output.
+      - name: Hash the inputs the tests read
+        id: inputs
+        run: echo "hash=${{ hashFiles('tests/helpers/**', 'tests/fixtures/**', 'tmplt/**', 'src/shared/**', 'src/infrastructure/**', 'jest.config.ts', 'tsconfig.json', 'stryker.config.json', 'package-lock.json') }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
+          restore-keys: stryker-${{ steps.inputs.outputs.hash }}-
+      - name: Mutation testing
+        shell: bash
+        run: npm run test:mutation 2>&1 | tee mutation.log
+      - name: Save the incremental results
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Mutation testing'
+            echo '```'
+            sed 's/\x1b\[[0-9;]*m//g' mutation.log | grep -aE 'All files|Final mutation score' || echo 'no score printed'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: reports/mutation/index.html
