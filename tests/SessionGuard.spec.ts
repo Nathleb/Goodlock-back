@@ -44,7 +44,7 @@ describe('SessionGuard', () => {
     it('throws a WsException and does not emit when session does not exist, so the filter is the only emitter', () => {
         mockSessionPort.getSession.mockReturnValue(undefined);
         const { ctx, emit } = makeContext('socket-0');
-        expect(() => guard.canActivate(ctx)).toThrow(new WsException('Not connected'));
+        expect(() => guard.canActivate(ctx)).toThrow(new WsException({ code: 'NOT_CONNECTED', message: 'Not connected' }));
         expect(emit).not.toHaveBeenCalled();
     });
 });

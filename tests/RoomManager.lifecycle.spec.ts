@@ -2,6 +2,7 @@ import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import { CatalogId } from '@shared/branded.types';
+import { unwrap, unwrapErr } from './helpers/result';
 
 function gs(phase: GamePhase, rollsLeft: number): GameState {
     return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
@@ -9,8 +10,8 @@ function gs(phase: GamePhase, rollsLeft: number): GameState {
 
 function startedRoom(manager: RoomManager): string {
     const room = manager.createRoom('p0');
-    manager.joinRoom('p1', room.roomId);
-    manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2));
+    unwrap(manager.joinRoom('p1', room.roomId));
+    unwrap(manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2)));
     return room.roomId;
 }
 
@@ -100,18 +101,50 @@ describe('sweepAbandonedRooms', () => {
     });
 });
 
+describe('joinRoom', () => {
+    it('returns ROOM_NOT_FOUND for an unknown room', () => {
+        expect(unwrapErr(new RoomManager().joinRoom('p1', 'nope')).code).toBe('ROOM_NOT_FOUND');
+    });
+
+    it('refuses a third player and does not register him in the room', () => {
+        const manager = new RoomManager();
+        const room = manager.createRoom('p0');
+        unwrap(manager.joinRoom('p1', room.roomId));
+
+        expect(unwrapErr(manager.joinRoom('p2', room.roomId)).code).toBe('ROOM_FULL');
+
+        expect(manager.getRoom(room.roomId)!.playersId).toEqual(['p0', 'p1']);
+        expect(manager.quitRoom('p2')).toBeNull(); // p2 was never mapped to the room
+    });
+});
+
+describe('startGame', () => {
+    it('returns ROOM_NOT_FOUND for an unknown room', () => {
+        expect(unwrapErr(new RoomManager().startGame('nope', gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_FOUND');
+    });
+
+    it('refuses to start a room that is not ready and leaves it unstarted', () => {
+        const manager = new RoomManager();
+        const room = manager.createRoom('p0');
+
+        expect(unwrapErr(manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_READY');
+
+        expect(manager.getRoom(room.roomId)!.isStarted).toBe(false);
+    });
+});
+
 describe('setDeckSelection', () => {
     const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
 
     it('stores the snapshot on the room and returns the updated room', () => {
         const manager = new RoomManager();
         const room = manager.createRoom('p0');
-        const updated = manager.setDeckSelection(room.roomId, 'p0', SEVEN);
+        const updated = unwrap(manager.setDeckSelection(room.roomId, 'p0', SEVEN));
         expect(updated.deckSelections).toEqual({ p0: SEVEN });
         expect(manager.getRoom(room.roomId)!.deckSelections).toEqual({ p0: SEVEN });
     });
 
-    it('throws for an unknown room', () => {
-        expect(() => new RoomManager().setDeckSelection('nope', 'p0', SEVEN)).toThrow(/not found/i);
+    it('returns a ROOM_NOT_FOUND error for an unknown room', () => {
+        expect(unwrapErr(new RoomManager().setDeckSelection('nope', 'p0', SEVEN)).code).toBe('ROOM_NOT_FOUND');
     });
 });

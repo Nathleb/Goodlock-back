@@ -26,7 +26,7 @@ import { WsErrorFilter } from './filters/WsError.filter';
 import { UserId } from '@shared/branded.types';
 
 // Global pipes do not reach gateways: payloads are validated here, and a rejected one is
-// answered with the usual 'error' { message } event.
+// answered with an 'error' { code: 'INVALID_REQUEST', message } event by the WsErrorFilter.
 const payloadPipe = new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,

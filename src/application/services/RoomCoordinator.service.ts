@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
@@ -10,15 +10,24 @@ import { resolvePlayerIndex } from '@domain/services/Room.service';
 import { GameOverDTO } from '@application/dtos/GameState.dto';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { DeckId } from '@shared/branded.types';
+import { domainError } from '@domain/errors/DomainError';
+import { toErrorPayload } from '@application/errors/toErrorPayload';
 
 @Injectable()
 export class RoomCoordinatorService {
+    private readonly logger = new Logger(RoomCoordinatorService.name);
+
     constructor(
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
         private readonly decks: DeckCoordinatorService,
     ) {}
+
+    /** A Result error or a thrown value, as the `error { code, message }` event. */
+    private emitFailure(socketId: string, error: unknown): void {
+        this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
+    }
 
     private leaveCurrentRoom(socketId: string, sessionId: string, roomId: string): void {
         const room = this.roomPort.getRoom(roomId);
@@ -54,7 +63,7 @@ export class RoomCoordinatorService {
             this.wsPort.joinRoom(socketId, room.roomId);
             this.wsPort.emitToSocket(socketId, 'roomCreated', RoomMapper.toDTO(room));
         } catch (e: unknown) {
-            this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -66,12 +75,14 @@ export class RoomCoordinatorService {
             if (session.roomId) {
                 this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
             }
-            const room = this.roomPort.joinRoom(session.sessionId, roomId);
+            const joined = this.roomPort.joinRoom(session.sessionId, roomId);
+            if (joined.isErr()) { this.emitFailure(socketId, joined.error); return; }
+            const room = joined.value;
             this.sessionPort.setSessionRoom(socketId, room.roomId);
             this.wsPort.joinRoom(socketId, room.roomId);
             this.wsPort.emitToRoom(room.roomId, 'roomUpdated', RoomMapper.toDTO(room));
         } catch (e: unknown) {
-            this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -82,7 +93,7 @@ export class RoomCoordinatorService {
         try {
             this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
         } catch (e: unknown) {
-            this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
+            this.emitFailure(socketId, e);
         }
     }
 
@@ -95,17 +106,20 @@ export class RoomCoordinatorService {
         if (!session) return;
         const roomId = session.roomId;
         if (!roomId) {
-            this.wsPort.emitToSocket(socketId, 'error', { message: 'Join a room before choosing a deck' });
+            this.emitFailure(socketId, domainError('NOT_IN_ROOM', 'Join a room before choosing a deck'));
             return;
         }
         try {
             const characterIds = await this.decks.getOwnDeckCharacterIds(session.userId, deckId as DeckId);
             // The world may have moved during the await: only store if the player is still in that room.
             if (this.sessionPort.getSession(socketId)?.roomId !== roomId) return;
-            const room = this.roomPort.setDeckSelection(roomId, session.sessionId, characterIds);
-            this.wsPort.emitToRoom(roomId, 'roomUpdated', RoomMapper.toDTO(room));
+            const selected = this.roomPort.setDeckSelection(roomId, session.sessionId, characterIds);
+            if (selected.isErr()) { this.emitFailure(socketId, selected.error); return; }
+            this.wsPort.emitToRoom(roomId, 'roomUpdated', RoomMapper.toDTO(selected.value));
         } catch (e: unknown) {
-            this.wsPort.emitToSocket(socketId, 'error', { message: (e as Error).message });
+            // DeckCoordinator is shared with the HTTP side and throws Nest exceptions: here, a missing
+            // or foreign deck is a rule the player broke, not a server failure.
+            this.emitFailure(socketId, e instanceof NotFoundException ? domainError('DECK_NOT_FOUND', e.message) : e);
         }
     }
 }
