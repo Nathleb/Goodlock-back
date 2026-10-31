@@ -179,8 +179,8 @@ describe('stats in the DTO', () => {
     });
 
     it('carries stat and duration on an ApplyStat face effect, and nothing extra on others', () => {
-        const apply = { label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2, targets: [], impl: { solve: jest.fn() } };
-        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [], impl: { solve: jest.fn() } };
+        const apply = { label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2, targets: [] };
+        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [] };
         const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
@@ -214,8 +214,8 @@ describe('states in the DTO', () => {
     });
 
     it('carries state and duration on an ApplyState face effect, and nothing extra on others', () => {
-        const apply = { label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1, targets: [], impl: { solve: jest.fn() } };
-        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [], impl: { solve: jest.fn() } };
+        const apply = { label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1, targets: [] };
+        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [] };
         const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });

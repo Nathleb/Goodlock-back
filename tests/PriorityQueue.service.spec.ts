@@ -51,6 +51,18 @@ describe('PriorityQueueService', () => {
     expect(reset.priorityQueue.length).toBe(0);
   });
 
+  it('applies a face built from data alone: the strategy comes from the effect label', () => {
+    const hit: DieFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 7, targets: [enemyAbs(0)] }] };
+    const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+    const victim = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Victim", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
+    const state: GameState = {
+      ...createGameState({ playerIndex: 0, team: [actor] }, { playerIndex: 1, team: [victim] }),
+      priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(), hit, actor.id, actor.baseSpeed),
+    };
+    const { state: after } = unstackPriorityQueueWithLog(state);
+    expect(after.players[1].team[0].hp).toBe(93);
+  });
+
   it('unstacks the priority queue and clears it', () => {
     const { state } = unstackPriorityQueueWithLog(gameState);
     expect(state.priorityQueue.length).toBe(0);

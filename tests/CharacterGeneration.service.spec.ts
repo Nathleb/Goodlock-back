@@ -4,6 +4,7 @@ import { CatalogId } from "@shared/branded.types";
 import { buildEffectFactory, createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
+import { effectFor } from "@domain/strategies/effectFor";
 
 describe('CharacterGenerationService', () => {
   const factory = buildEffectFactory();
@@ -67,7 +68,7 @@ describe('CharacterGenerationService', () => {
       { description: 'd', priority: 0, effects: [{ effect: 'FixedDamage', magnitude: 3, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
     const c = createCharacterFromJsonTemplate(json, factory);
     expect(c.baseDie[0].effects[0]).toMatchObject({ label: 'FixedDamage', magnitude: 3 });
-    expect(c.baseDie[0].effects[0].impl).toBeInstanceOf(FixedDamage);
+    expect(effectFor(c.baseDie[0].effects[0])).toBeInstanceOf(FixedDamage);
   });
 
   it('the built FixedDamage lowers hp by the template magnitude, shield untouched', () => {
@@ -77,7 +78,7 @@ describe('CharacterGenerationService', () => {
     const victim = { ...createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 0, slot: 0 } }), shield: 4 };
     const state = createGameState(createPlayer([victim], 0), createPlayer([], 1));
 
-    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 0, slot: 0 }], victim.id);
+    const { state: after } = effectFor(built.baseDie[0].effects[0]).solve(state, [{ playerIndex: 0, slot: 0 }], victim.id);
 
     expect(after.players[0].team[0].hp).toBe(7);
     expect(after.players[0].team[0].shield).toBe(4);
@@ -90,7 +91,7 @@ describe('CharacterGenerationService', () => {
     const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 0, slot: 0 } });
     const state = { ...createGameState(createPlayer([target], 0), createPlayer([], 1)), currentRound: 4 };
 
-    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 0, slot: 0 }], target.id);
+    const { state: after } = effectFor(built.baseDie[0].effects[0]).solve(state, [{ playerIndex: 0, slot: 0 }], target.id);
 
     expect(after.players[0].team[0].modifiers).toEqual([{ stat: 'POWER', value: -3, roundsLeft: 2, appliedRound: 4 }]);
     expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyStat', magnitude: -3, stat: 'POWER', duration: 2 });
@@ -103,7 +104,7 @@ describe('CharacterGenerationService', () => {
     const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 1, slot: 0 } });
     const state = { ...createGameState(createPlayer([], 0), createPlayer([target], 1)), currentRound: 2 };
 
-    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 1, slot: 0 }], target.id);
+    const { state: after } = effectFor(built.baseDie[0].effects[0]).solve(state, [{ playerIndex: 1, slot: 0 }], target.id);
 
     expect(after.players[1].team[0].modifiers).toEqual([{ stat: 'ARMOR', value: -3, roundsLeft: 2, appliedRound: 2 }]);
     expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyStat', stat: 'ARMOR', duration: 2 });
@@ -116,7 +117,7 @@ describe('CharacterGenerationService', () => {
     const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 1, slot: 0 } });
     const state = { ...createGameState(createPlayer([], 0), createPlayer([target], 1)), currentRound: 4 };
 
-    const { state: after } = built.baseDie[0].effects[0].impl.solve(state, [{ playerIndex: 1, slot: 0 }], target.id);
+    const { state: after } = effectFor(built.baseDie[0].effects[0]).solve(state, [{ playerIndex: 1, slot: 0 }], target.id);
 
     expect(after.players[1].team[0].states).toEqual({ SPEED: { value: -2, touchedRound: 4 } });
     expect(built.baseDie[0].effects[0]).toMatchObject({ label: 'ApplyState', magnitude: 0, state: 'SLOW', duration: 2 });

@@ -4,6 +4,7 @@ import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
 import { stateValue } from "./Character.service";
+import { effectFor } from "../strategies/effectFor";
 
 export function createPriorityQueue(): PriorityQueue {
     return [];
@@ -104,7 +105,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             const targets = resolveTargets(faceEffect.targets, actor.position);
             effects.push({ effect: faceEffect.label, targets });
             if (targets.length === 0) continue;
-            const { state: newState, affected } = faceEffect.impl.solve(state, targets, characterId);
+            const { state: newState, affected } = effectFor(faceEffect).solve(state, targets, characterId);
             state = newState;
             affected.forEach(id => affectedIds.add(id));
         }

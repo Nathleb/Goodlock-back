@@ -122,7 +122,7 @@ describe('DIVINE_SHIELD', () => {
     });
 
     it('shows up in the resolve log: the nullified target is listed with its shield spent and hp intact', () => {
-        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }], impl: new Damage(5) }] };
+        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }] }] };
         const attacker = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'att', maxHp: 20, baseSpeed: 5, baseDie: Array(6).fill(hitFace) as unknown as Die, position: { playerIndex: 0, slot: 0 } });
         const victim = { ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'vic', maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: 1, slot: 0 } }), ...shielded() };
         const start = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([victim], 1)));

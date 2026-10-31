@@ -1,5 +1,4 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
-import Damage from "@domain/strategies/Damage.class";
 import Swap from "@domain/strategies/Swap.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
@@ -82,7 +81,7 @@ describe('ROOT', () => {
 
     it('a rooted character still acts and still takes damage', () => {
         const rooted = (c: ReturnType<typeof createCharacter>) => ({ ...c, states: { ROOT: { value: 1, touchedRound: 0 } } });
-        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }], impl: new Damage(5) }] };
+        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }] }] };
         const attacker = rooted(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'att', maxHp: 20, baseSpeed: 5, baseDie: Array(6).fill(hitFace) as unknown as Die, position: { playerIndex: 0, slot: 0 } }));
         const victim = rooted(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'vic', maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: 1, slot: 0 } }));
         const gs = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([victim], 1)));
@@ -97,7 +96,7 @@ describe('ROOT', () => {
         const base = createGameState(five(0, 'A'), five(1, 'B'));
         const gs = root(base, 0, 1);
         const rooted = occupant(gs, 0, 1)!;
-        const moveFace = { description: 'move', priority: 0, effects: [{ label: EffectLabel.Swap, magnitude: 0, targets: [{ side: 'ALLY' as const, mode: 'RELATIVE' as const, n: [0] }, { side: 'ALLY' as const, mode: 'ABSOLUTE' as const, n: [0] }], impl: new Swap() }] };
+        const moveFace = { description: 'move', priority: 0, effects: [{ label: EffectLabel.Swap, magnitude: 0, targets: [{ side: 'ALLY' as const, mode: 'RELATIVE' as const, n: [0] }, { side: 'ALLY' as const, mode: 'ABSOLUTE' as const, n: [0] }] }] };
         const withFace = { ...gs, players: [{ ...gs.players[0], team: gs.players[0].team.map(c => c.id === rooted.id ? { ...c, face: moveFace } : { ...c, face: { description: 'rest', priority: 0, effects: [] } }) }, gs.players[1]] as GameState['players'] };
 
         const { state } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(withFace));

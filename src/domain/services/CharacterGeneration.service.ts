@@ -101,9 +101,10 @@ export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: E
         : undefined;
     // A state has no magnitude: the face effect carries 0.
     const magnitude = entry.effect === EffectLabel.ApplyState ? 0 : entry.magnitude;
-    const impl = factory.createEffect(entry.effect, magnitude, params);
+    // Fails here, at catalog load, on parameters the strategy cannot be built from.
+    factory.createEffect(entry.effect, magnitude, params);
     return {
         ...dieFace,
-        effects: [...dieFace.effects, { label: entry.effect, magnitude, ...params, targets: entry.targets, impl }],
+        effects: [...dieFace.effects, { label: entry.effect, magnitude, ...params, targets: entry.targets }],
     };
 }
