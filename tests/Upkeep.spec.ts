@@ -1,6 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { upkeep, POISON_DAMAGE, REGEN_HEAL } from "@domain/services/Upkeep.service";
 import { endOfRound } from "@domain/services/Round.service";

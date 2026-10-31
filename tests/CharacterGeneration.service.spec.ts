@@ -1,7 +1,7 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, createCharacterFromJsonTemplate, createCharacterFromTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { CatalogId } from "@shared/branded.types";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import { effectFor } from "@domain/strategies/effectFor";

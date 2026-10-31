@@ -5,7 +5,7 @@ import { SlotIndex } from "@domain/types/Position.type";
 import GamePhase from "@domain/types/GamePhase.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { beginKeepPhase, beginRollPhase } from "@domain/services/Phase.service";
 import {

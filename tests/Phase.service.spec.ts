@@ -1,7 +1,7 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { SlotIndex, PlayerIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer, placeTeam } from "@domain/services/Player.service";
 import { Player } from "@domain/types/Player.type";
 import { unwrap, unwrapErr } from './helpers/result';
