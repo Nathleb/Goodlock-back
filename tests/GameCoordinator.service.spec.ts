@@ -1,5 +1,9 @@
 import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
+import { unwrap } from './helpers/result';
+import { ok, err } from '@shared/result.type';
+import { domainError } from '@domain/errors/DomainError';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
@@ -69,6 +73,8 @@ const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: j
 
 let coordinator: GameCoordinatorService;
 
+afterEach(() => jest.restoreAllMocks());
+
 beforeEach(async () => {
     jest.clearAllMocks();
     const module = await Test.createTestingModule({
@@ -94,35 +100,35 @@ describe('context guards (tested via rearrangeTeam)', () => {
     it('emits error when session is not found', () => {
         mockSession.getSession.mockReturnValue(undefined);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when session has no roomId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, roomId: undefined });
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when room is not found', () => {
         mockRoom.getRoom.mockReturnValue(undefined);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when room has no game state', () => {
         mockRoom.getRoom.mockReturnValue(lobbyRoom);
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error when sessionId is not in room.playersId', () => {
         mockSession.getSession.mockReturnValue({ ...SESSION_0, sessionId: 'unknown' });
         coordinator.rearrangeTeam(SOCKET_0, ['a', 'b', 'c', 'd', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Action not available' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });
@@ -132,6 +138,7 @@ describe('context guards (tested via rearrangeTeam)', () => {
 describe('startGame', () => {
     beforeEach(() => {
         mockRoom.getRoom.mockReturnValue(lobbyRoom);
+        mockRoom.startGame.mockReturnValue(ok({ ...lobbyRoom, isStarted: true }));
     });
 
     it('does nothing when session has no roomId', () => {
@@ -143,18 +150,17 @@ describe('startGame', () => {
     it('emits error when caller is not the room owner', () => {
         mockSession.getSession.mockReturnValue(SESSION_1);
         coordinator.startGame(SOCKET_1);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'error', { code: 'NOT_ROOM_OWNER', message: 'Only the room owner can start the game' });
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 
     it('emits error when room is not ready (only 1 player)', () => {
         mockRoom.getRoom.mockReturnValue(singlePlayerRoom);
         coordinator.startGame(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ROOM_NOT_READY', message: 'Room is not ready to start' });
     });
 
     it('starts the game and emits a per-viewer masked state to each player socket', () => {
-        mockRoom.startGame.mockReturnValue({ ...lobbyRoom, isStarted: true });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
@@ -163,6 +169,14 @@ describe('startGame', () => {
         // No room-wide broadcast — that would leak the opponent's real order.
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'gameStateUpdated', expect.anything());
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'gameStateUpdated', expect.anything());
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
+    it('reports the error and sends no game state when the room refuses to start', () => {
+        mockRoom.startGame.mockReturnValue(err(domainError('ROOM_NOT_READY', 'Room is not ready to start')));
+        coordinator.startGame(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledTimes(1);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ROOM_NOT_READY', message: 'Room is not ready to start' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -176,7 +190,6 @@ describe('startGame', () => {
     });
 
     it('sends each player a selection view with both decks', () => {
-        mockRoom.startGame.mockReturnValue({ ...lobbyRoom, isStarted: true });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
@@ -189,14 +202,16 @@ describe('startGame', () => {
     it('emits error until both players have chosen a deck', () => {
         mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0 } });
         coordinator.startGame(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Both players must choose a deck' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'DECKS_NOT_CHOSEN', message: 'Both players must choose a deck' });
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 
-    it('emits error when a chosen deck references a character the catalog does not have', () => {
+    it('reports a deck that references a character the catalog does not have as INTERNAL, and logs it', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
         mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0, p1: [...DECK_P1.slice(0, 5), 'ghost' as CatalogId] } });
         coordinator.startGame(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
+        expect(logError).toHaveBeenCalled();
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 });
@@ -228,7 +243,7 @@ describe('team selection', () => {
     });
 
     it('second confirm starts PLACEMENT with a per-viewer view that hides the opponent', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
         coordinator.confirmSelection(SOCKET_0, PICK_P0);
 
         expect(lastState().phase).toBe(GamePhase.PLACEMENT);
@@ -241,7 +256,7 @@ describe('team selection', () => {
     });
 
     it("never sends a player the opponent's pick during SELECTION", () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
         coordinator.cancelSelection(SOCKET_1); // no-op for p1, must not leak anything either
         coordinator.confirmSelection(SOCKET_1, ['c4', 'c5', 'c6', 'c7']);
         for (const payload of sentTo(SOCKET_1)) {
@@ -260,10 +275,26 @@ describe('team selection', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
+    it('reports an invalid pick with its code', () => {
+        coordinator.confirmSelection(SOCKET_0, ['c0', 'c0', 'c1', 'c2']);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'A character can only be picked once' });
+    });
+
+    it('reports a payload that is not a list of ids with the same code', () => {
+        coordinator.confirmSelection(SOCKET_0, 'c0' as unknown as string[]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'characterIds must be an array of catalog ids' });
+    });
+
+    it('reports a second confirm with its code', () => {
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
+        coordinator.confirmSelection(SOCKET_0, PICK_P0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
+    });
+
     it('cancelSelection outside SELECTION emits an error and changes nothing', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(baseGs)); // PLACEMENT
         coordinator.cancelSelection(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: expect.stringContaining('SELECTION_PHASE') });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'WRONG_PHASE', message: expect.stringContaining('SELECTION_PHASE') });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
@@ -274,7 +305,7 @@ describe('team selection', () => {
     });
 
     it('cancelSelection un-readies the player and echoes to them only', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
         coordinator.cancelSelection(SOCKET_0);
         expect(lastState().playersReady).toEqual([false, false]);
         expect(sentTo(SOCKET_0)[0].selection.myPicks).toBeNull();
@@ -306,6 +337,26 @@ describe('rearrangeTeam', () => {
         coordinator.rearrangeTeam(SOCKET_0, slots() as unknown as (string | null)[]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', expect.anything());
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('reports a wrong phase with its code', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
+        coordinator.rearrangeTeam(SOCKET_0, [a, b, c, d, null]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'WRONG_PHASE', message: expect.stringContaining('Expected phase') });
+    });
+
+    it('reports an invalid layout with its code', () => {
+        coordinator.rearrangeTeam(SOCKET_0, [a, a, c, d, null]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_PLACEMENT', message: 'Duplicate character IDs in placement' });
+    });
+
+    it('hides an unexpected failure behind INTERNAL and does not leak its message', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        const bug = new TypeError('secret detail');
+        mockRoom.updateGameState.mockImplementationOnce(() => { throw bug; });
+        coordinator.rearrangeTeam(SOCKET_0, [d, null, c, b, a]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
+        expect(logError).toHaveBeenCalledWith(bug);
     });
 
     it('saves the layout, empty cell included, and echoes masked gameStateUpdated to the acting socket only', () => {
@@ -354,15 +405,31 @@ describe('confirmKeep', () => {
     it('emits an error instead of throwing when the locked ids are not an array', () => {
         const confirm = () => coordinator.confirmKeep(SOCKET_0, undefined as unknown as string[]);
         expect(confirm).not.toThrow();
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: expect.any(String) });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_LOCK', message: expect.any(String) });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('refuses to lock a character of the opponent\'s team', () => {
         const opponentId = keepGs.players[1].team[0].id;
         coordinator.confirmKeep(SOCKET_0, [opponentId]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: `Unknown character id: ${opponentId}` });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_LOCK', message: `Unknown character id: ${opponentId}` });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('reports a confirm outside KEEP with its code', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(baseGs));
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'WRONG_PHASE', message: expect.stringContaining('Expected phase') });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('hides an unexpected failure while resolving behind INTERNAL', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
+        mockRoom.updateGameState.mockImplementationOnce(() => { throw new TypeError('db down'); });
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'db down' }));
     });
 
     it('rerolls and emits gameStateUpdated still in KEEP when both confirm with rollsLeft > 0', () => {
@@ -506,14 +573,14 @@ describe('double-confirm guards', () => {
     it('emits error on second confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.confirmPlacement(SOCKET_0);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
     it('emits error on second confirmKeep', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
         coordinator.confirmKeep(SOCKET_0, []);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });
@@ -522,7 +589,7 @@ describe('post-confirm mutation guards', () => {
     it('emits error when rearrangeTeam called after confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.rearrangeTeam(SOCKET_0, ['id0', 'id1', 'id2', 'id3', null]);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: 'Player has already confirmed' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 

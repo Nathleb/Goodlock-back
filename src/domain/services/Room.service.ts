@@ -2,6 +2,8 @@ import { Room } from '../types/Room.type';
 import GameState from '../types/GameState.type';
 import { PlayerPresence } from '../types/Presence.type';
 import { CatalogId } from '@shared/branded.types';
+import { DomainError, domainError } from '../errors/DomainError';
+import { Result, ok, err } from '@shared/result.type';
 
 const CONNECTED: PlayerPresence = { connected: true, disconnectedAt: null };
 
@@ -14,25 +16,25 @@ export function createRoom(ownerId: string): Room {
     };
 }
 
-export function addPlayerToRoom(room: Room, playerId: string): Room {
-    if (room.playersId.length >= 2) throw new Error('Room is full');
-    if (room.isStarted) throw new Error('Game already started');
-    return { ...room, playersId: [...room.playersId, playerId] };
+export function addPlayerToRoom(room: Room, playerId: string): Result<Room, DomainError> {
+    if (room.playersId.length >= 2) return err(domainError('ROOM_FULL', 'Room is full'));
+    if (room.isStarted) return err(domainError('GAME_ALREADY_STARTED', 'Game already started'));
+    return ok({ ...room, playersId: [...room.playersId, playerId] });
 }
 
 export function isRoomReady(room: Room): boolean {
     return room.playersId.length === 2 && !room.isStarted;
 }
 
-export function startRoom(room: Room, gameState: GameState): Room {
-    if (!isRoomReady(room)) throw new Error('Room is not ready to start');
-    return {
+export function startRoom(room: Room, gameState: GameState): Result<Room, DomainError> {
+    if (!isRoomReady(room)) return err(domainError('ROOM_NOT_READY', 'Room is not ready to start'));
+    return ok({
         ...room,
         isStarted: true,
         gameState,
         playerOrder: [room.playersId[0], room.playersId[1]],
         presence: [CONNECTED, CONNECTED],
-    };
+    });
 }
 
 export function removePlayerFromRoom(room: Room, playerId: string): Room | null {
@@ -47,17 +49,19 @@ export function removePlayerFromRoom(room: Room, playerId: string): Room | null 
     };
 }
 
-export function selectDeckInRoom(room: Room, playerId: string, characterIds: readonly CatalogId[]): Room {
-    if (room.isStarted) throw new Error('Game already started');
-    if (!room.playersId.includes(playerId)) throw new Error('Player is not in this room');
-    return { ...room, deckSelections: { ...room.deckSelections, [playerId]: [...characterIds] } };
+export function selectDeckInRoom(room: Room, playerId: string, characterIds: readonly CatalogId[]): Result<Room, DomainError> {
+    if (room.isStarted) return err(domainError('GAME_ALREADY_STARTED', 'Game already started'));
+    if (!room.playersId.includes(playerId)) return err(domainError('NOT_IN_ROOM', 'Player is not in this room'));
+    return ok({ ...room, deckSelections: { ...room.deckSelections, [playerId]: [...characterIds] } });
 }
 
-/** Both players' deck snapshots, in playersId order. Throws until both have chosen a deck. */
-export function assertDecksSelected(room: Room): [readonly CatalogId[], readonly CatalogId[]] {
+/** Both players' deck snapshots, in playersId order; an error until both have chosen a deck. */
+export function selectedDecks(room: Room): Result<[readonly CatalogId[], readonly CatalogId[]], DomainError> {
     const decks = room.playersId.map(id => room.deckSelections?.[id]);
-    if (decks.length !== 2 || decks.some(d => d === undefined)) throw new Error('Both players must choose a deck');
-    return [decks[0] as readonly CatalogId[], decks[1] as readonly CatalogId[]];
+    if (decks.length !== 2 || decks.some(d => d === undefined)) {
+        return err(domainError('DECKS_NOT_CHOSEN', 'Both players must choose a deck'));
+    }
+    return ok([decks[0] as readonly CatalogId[], decks[1] as readonly CatalogId[]]);
 }
 
 export function resolvePlayerIndex(room: Room, sessionId: string): number {

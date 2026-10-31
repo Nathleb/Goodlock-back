@@ -2,6 +2,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 import GameState from '@domain/types/GameState.type';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
 import { cancelSelection, confirmSelection, createSelectionState } from '@domain/services/GameLoop.service';
+import { unwrap, unwrapErr } from './helpers/result';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { TEAM_SIZE } from '@domain/services/Deck.service';
@@ -36,7 +37,7 @@ describe('createSelectionState', () => {
 
 describe('confirmSelection', () => {
     it('first confirm stores the pick and marks the player ready, nothing else', () => {
-        const next = confirmSelection(gs, 0, PICK_0, build);
+        const next = unwrap(confirmSelection(gs, 0, PICK_0, build));
         expect(next.phase).toBe(GamePhase.SELECTION);
         expect(next.playersReady).toEqual([true, false]);
         expect(next.selection?.picks).toEqual([PICK_0, null]);
@@ -44,7 +45,7 @@ describe('confirmSelection', () => {
     });
 
     it('second confirm builds both teams in pick order and moves to PLACEMENT', () => {
-        const next = confirmSelection(confirmSelection(gs, 0, PICK_0, build), 1, PICK_1, build);
+        const next = unwrap(confirmSelection(unwrap(confirmSelection(gs, 0, PICK_0, build)), 1, PICK_1, build));
         expect(next.phase).toBe(GamePhase.PLACEMENT);
         expect(next.selection).toBeUndefined();
         expect(next.playersReady).toEqual([false, false]);
@@ -55,12 +56,12 @@ describe('confirmSelection', () => {
     });
 
     it('rejects outside SELECTION', () => {
-        expect(() => confirmSelection({ ...gs, phase: GamePhase.PLACEMENT }, 0, PICK_0, build)).toThrow();
+        expect(unwrapErr(confirmSelection({ ...gs, phase: GamePhase.PLACEMENT }, 0, PICK_0, build)).code).toBe('WRONG_PHASE');
     });
 
     it('rejects a second confirm from the same player', () => {
-        const once = confirmSelection(gs, 0, PICK_0, build);
-        expect(() => confirmSelection(once, 0, PICK_0, build)).toThrow(/already confirmed/);
+        const once = unwrap(confirmSelection(gs, 0, PICK_0, build));
+        expect(unwrapErr(confirmSelection(once, 0, PICK_0, build))).toEqual({ code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
     });
 
     it.each([
@@ -70,23 +71,30 @@ describe('confirmSelection', () => {
         ["a character from the opponent's deck", ids('b0', 'a1', 'a2', 'a3')],
         ['an unknown character', ids('zz', 'a1', 'a2', 'a3')],
     ])('rejects a pick with %s, leaving state untouched', (_label, pick) => {
-        expect(() => confirmSelection(gs, 0, pick, build)).toThrow();
+        expect(unwrapErr(confirmSelection(gs, 0, pick, build)).code).toBe('INVALID_SELECTION');
         expect(gs.selection?.picks).toEqual([null, null]);
+    });
+});
+
+describe('confirmSelection without a selection in progress', () => {
+    it('returns a NO_SELECTION error', () => {
+        const { selection: _removed, ...withoutSelection } = gs;
+        expect(unwrapErr(confirmSelection(withoutSelection, 0, PICK_0, build)).code).toBe('NO_SELECTION');
     });
 });
 
 describe('cancelSelection', () => {
     it('un-readies the player and clears their pick', () => {
-        const next = cancelSelection(confirmSelection(gs, 0, PICK_0, build), 0);
+        const next = unwrap(cancelSelection(unwrap(confirmSelection(gs, 0, PICK_0, build)), 0));
         expect(next.playersReady).toEqual([false, false]);
         expect(next.selection?.picks).toEqual([null, null]);
     });
 
     it('is a no-op when the player had not confirmed', () => {
-        expect(cancelSelection(gs, 1)).toBe(gs);
+        expect(unwrap(cancelSelection(gs, 1))).toBe(gs);
     });
 
     it('rejects outside SELECTION', () => {
-        expect(() => cancelSelection({ ...gs, phase: GamePhase.PLACEMENT }, 0)).toThrow();
+        expect(unwrapErr(cancelSelection({ ...gs, phase: GamePhase.PLACEMENT }, 0)).code).toBe('WRONG_PHASE');
     });
 });

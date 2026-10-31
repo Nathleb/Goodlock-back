@@ -7,6 +7,7 @@ import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
+import { ok } from '@shared/result.type';
 
 const NOW = 1_000_000;
 const SOCKET = 'sock-0';
@@ -71,7 +72,7 @@ describe('claimVictory', () => {
     it('rejects an invalid claim with an error and does not end the game', () => {
         mockRoom.getRoom.mockReturnValue(room({}));
         coordinator.claimVictory(SOCKET);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'CLAIM_NOT_ALLOWED', message: 'No valid claim: opponent is neither forfeited nor AFK' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
@@ -83,9 +84,16 @@ describe('claimVictory', () => {
         });
         mockRoom.getRoom.mockReturnValue(r);
         coordinator.claimVictory(SOCKET);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'CLAIM_NOT_ALLOWED', message: 'Game is already over' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('refuses a claim when the room has no presence for the opponent', () => {
+        mockRoom.getRoom.mockReturnValue(room({ presence: undefined }));
+        coordinator.claimVictory(SOCKET);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'ACTION_NOT_AVAILABLE', message: 'Action not available' });
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });
 
@@ -111,7 +119,7 @@ describe('afkClaimInMs in emitted game state', () => {
         mockRoom.startGame.mockImplementation((_id: string, state: GameState) => {
             const started = room({ gameState: state, phaseStartedAt: NOW });
             mockRoom.getRoom.mockReturnValue(started);
-            return started;
+            return ok(started);
         });
         mockSession.getSessionById.mockImplementation((id: string) =>
             id === 'p0' ? { sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' }

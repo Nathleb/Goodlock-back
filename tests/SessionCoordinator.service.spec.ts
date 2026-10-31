@@ -7,6 +7,7 @@ import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import { UserId, CatalogId } from '@shared/branded.types';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
+import { unwrap } from './helpers/result';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { testTemplate } from './helpers/catalog';
@@ -128,7 +129,7 @@ describe('handleConnect — reconnect before combat keeps secrets', () => {
 
     it("during SELECTION, the snapshot has the player's own pick and never the opponent's", () => {
         // Only the opponent (player 1) has picked; the reconnecting player is player 0.
-        const selecting = confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build);
+        const selecting = unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build));
 
         const snapshot = reconnectInto(selecting);
 
@@ -140,7 +141,7 @@ describe('handleConnect — reconnect before combat keeps secrets', () => {
     });
 
     it('during PLACEMENT, the snapshot hides the opponent team', () => {
-        const placing = confirmSelection(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build), 0, PICK_P0, build);
+        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build)), 0, PICK_P0, build));
 
         const snapshot = reconnectInto(placing);
 

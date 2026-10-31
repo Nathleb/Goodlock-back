@@ -49,7 +49,7 @@ src/
   domain/          # Pure game logic and types. No NestJS, no I/O. Imports nothing from the other layers.
   application/     # Use cases: coordinators, ports (interfaces), DTOs, mappers. Imports domain only.
   infrastructure/  # NestJS adapters: WebSocket gateway, HTTP controllers, in-memory managers, Prisma repositories, catalog loader. Implements the ports.
-  shared/          # Cross-layer utilities (branded IDs; no Result type yet)
+  shared/          # Cross-layer utilities (branded IDs, the Result re-export)
 ```
 
 **Path aliases** (`tsconfig.json`): `@domain/*`, `@application/*`, `@infrastructure/*`, `@shared/*` map to the matching `src/` folder.
@@ -135,7 +135,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
 
 **Add an effect**: add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first, one spec per strategy); register it in `buildEffectFactory()` (`domain/services/GameInit.service.ts`; `CatalogModule` provides the result as `EFFECT_FACTORY`); check that `validateEffectTargets` accepts its target groups; use it in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
 
-**Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (it catches errors and emits them, see Conventions); handler in `session.gateway.ts` with the existing guards; payload class in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. The gateway validates every `@MessageBody()` with a `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`), so every property of a payload class needs a class-validator decorator, or every real client message is refused with "property X should not exist". `tests/SessionGateway.validation.spec.ts` mounts the gateway on a real socket: add a case there for the new payload. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Then mirror the event in Goodlock-app (see Client contract).
+**Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (a failed Result is reported as `error { code, message }`, see Conventions); handler in `session.gateway.ts` with the existing guards; payload class in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. The gateway validates every `@MessageBody()` with a `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`), so every property of a payload class needs a class-validator decorator, or every real client message is refused with "property X should not exist". `tests/SessionGateway.validation.spec.ts` mounts the gateway on a real socket: add a case there for the new payload. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Then mirror the event in Goodlock-app (see Client contract).
 
 **Schema change** (`prisma/schema.prisma`): there is no natural red test for a schema step. Verify it with `npx prisma validate`, `npx prisma generate` and `npx tsc --noEmit`, plus a repository or module spec if behavior changes. Create the migration without applying it: `npx prisma migrate dev --create-only --name <topic>` (needs the local Postgres up). Applying it (`npx prisma migrate dev`) is a human-only step. Run `npx prisma generate` after any schema change, or `tsc` fails on the client types.
 
@@ -150,9 +150,13 @@ The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no 
 
 ## Conventions for this codebase
 
-**Errors**: the subject of domain errors is not settled yet. Today the domain throws plain `Error`, the WebSocket coordinators catch it and emit `'error' { message }`, and the HTTP coordinators throw Nest exceptions. Do not introduce custom error classes or a new error scheme without discussing it first.
+**Errors (WebSocket path)**: a function in `src/domain/` or `src/application/` that can fail because of a player action returns `Result<T, DomainError>` (`Result` is `neverthrow`, re-exported by `shared/result.type.ts`; `DomainError` is a plain `{ code, message }` object built with `domainError(code, message)` in `domain/errors/DomainError.ts`). Add a code to `DOMAIN_ERROR_CODES` when a new rule can be broken, and keep the message player-readable. Chain checks with `andThen`/`map` (see `confirmKeep`).
 
-**Result over exceptions** (target convention; `Result<T, E>` is not implemented yet, and introducing it is a dedicated change, not something to slip into a feature): once `shared/result.type.ts` exists, any function in `src/domain/` or `src/application/` that can fail in a domain-meaningful way returns `Result<T, E>`, and throwing is reserved for non-recoverable `infrastructure/` errors.
+A bug, a broken invariant or an authoring/boot error is not a `DomainError`: it stays a thrown plain `Error` (`EffectFactory`, template and catalog validation, config readers, "Unknown character in deck"). For a step the coordinator has just set up itself, `invariant(result)` (`application/errors/invariant.ts`) turns a failure into such a throw.
+
+Coordinators send every failure to the client with `emitFailure`: a `DomainError` keeps its code and message, anything thrown is logged and reported as `INTERNAL` / "Internal error" (`toErrorPayload`). The gateway answers a refused request through `WsErrorFilter` (`INVALID_REQUEST` for a bad payload, `NOT_CONNECTED` without a session). The client always receives `error { code, message }`; the codes are `DOMAIN_ERROR_CODES` in `domain/errors/DomainError.ts` plus `INVALID_REQUEST`, `NOT_CONNECTED` and `INTERNAL` in `application/dtos/Error.dto.ts`.
+
+The HTTP coordinators (auth, collection, decks) still throw Nest exceptions from `application/`; moving them to the same scheme is a separate change. Do not add custom error classes.
 
 **Randomness**: domain code calls `Math.random` directly through `domain/utils/Random.utils.ts` (`roll1D`: dice rolls and the initiative draw). Resolution itself is never random. Tests make it deterministic with `jest.spyOn(Math, 'random')` and restore it with `jest.restoreAllMocks()` in `afterEach` (Jest's `restoreMocks` is off). A `mockReturnValueOnce` sequence depends on the number and order of calls, so changing how a roll is drawn can break such tests without any behavior change.
 

@@ -2,7 +2,9 @@ import GameState from "../types/GameState.type";
 import GamePhase from "../types/GamePhase.type";
 import { PlayerIndex } from "../types/Position.type";
 import { PlayerPresence } from "../types/Presence.type";
-import { ClaimConfig, ClaimVerdict } from "../types/Claim.type";
+import { ClaimConfig, ClaimReason } from "../types/Claim.type";
+import { DomainError, domainError } from "../errors/DomainError";
+import { Result, ok, err } from "@shared/result.type";
 
 const CONFIRM_PHASES: readonly GamePhase[] = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP];
 
@@ -13,14 +15,14 @@ export function evaluateClaim(
     phaseStartedAt: number | undefined,
     now: number,
     config: ClaimConfig,
-): ClaimVerdict {
+): Result<ClaimReason, DomainError> {
     if (gs.phase === GamePhase.RESULT) {
-        return { valid: false, error: 'Game is already over' };
+        return err(domainError('CLAIM_NOT_ALLOWED', 'Game is already over'));
     }
     if (!opponentPresence.connected
         && opponentPresence.disconnectedAt !== null
         && now - opponentPresence.disconnectedAt >= config.graceMs) {
-        return { valid: true, reason: 'forfeit' };
+        return ok('forfeit');
     }
     const opponentIndex = (1 - claimantIndex) as PlayerIndex;
     if (CONFIRM_PHASES.includes(gs.phase)
@@ -28,9 +30,9 @@ export function evaluateClaim(
         && !gs.playersReady[opponentIndex]
         && phaseStartedAt !== undefined
         && now - phaseStartedAt >= config.afkLimitMs) {
-        return { valid: true, reason: 'afk' };
+        return ok('afk');
     }
-    return { valid: false, error: 'No valid claim: opponent is neither forfeited nor AFK' };
+    return err(domainError('CLAIM_NOT_ALLOWED', 'No valid claim: opponent is neither forfeited nor AFK'));
 }
 
 /**

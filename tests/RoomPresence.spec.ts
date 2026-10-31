@@ -1,10 +1,11 @@
 import { createRoom, addPlayerToRoom, startRoom, resolvePlayerIndex, setPresenceInRoom } from '@domain/services/Room.service';
+import { unwrap } from './helpers/result';
 import GameState from '@domain/types/GameState.type';
 
 const GS = {} as GameState; // startRoom stores it opaquely
 
 function startedRoom() {
-    return startRoom(addPlayerToRoom(createRoom('p0'), 'p1'), GS);
+    return unwrap(startRoom(unwrap(addPlayerToRoom(createRoom('p0'), 'p1')), GS));
 }
 
 describe('startRoom presence & playerOrder', () => {
@@ -28,7 +29,7 @@ describe('resolvePlayerIndex', () => {
     });
 
     it('falls back to playersId for lobby rooms', () => {
-        const room = addPlayerToRoom(createRoom('p0'), 'p1');
+        const room = unwrap(addPlayerToRoom(createRoom('p0'), 'p1'));
         expect(resolvePlayerIndex(room, 'p1')).toBe(1);
     });
 
