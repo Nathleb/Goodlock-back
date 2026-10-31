@@ -100,7 +100,7 @@ The level of each ratchet is the number in the file named below (not repeated he
 | --- | --- | --- |
 | Tests | jest | all green |
 | Complexity | ESLint `complexity` | `eslint.config.mjs` |
-| Layers, cycles | dependency-cruiser | the known cycles in `.dependency-cruiser-known-violations.json`, no new one |
+| Layers, cycles | dependency-cruiser | none tolerated: no layer violation, no cycle, no baseline of known ones |
 | Duplication | jscpd | `threshold` in `.jscpd.json` |
 | Dead code | knip, production mode (code only tests use counts as dead) | `knipIssues` in `quality-baseline.json` |
 | Useless tests | Stryker | `thresholds.break` in `stryker.config.json` |
@@ -124,7 +124,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
   ],
   "guardFiles": [
     "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
-    ".dependency-cruiser.cjs", ".dependency-cruiser-known-violations.json",
+    ".dependency-cruiser.cjs",
     "quality-baseline.json", "scripts/quality-ratchet.mjs", "package.json", ".gitignore",
     "jest.config.ts", "tsconfig.json", ".github/workflows/"
   ]
