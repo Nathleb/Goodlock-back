@@ -64,7 +64,7 @@ Supporting pieces:
 - `phaseStartedAt` is stamped in exactly one place: `RoomManager.updateGameState` sets it when `gameState.phase` or `gameState.rollsLeft` changed (also set by `startGame`). The `rollsLeft` clause covers KEEP rerolls, which start a new confirmation window without leaving KEEP.
 - `claimVictory` (no payload) -> `GameCoordinatorService.claimVictory` runs `evaluateClaim` against the opponent's presence. Valid: the game moves to RESULT and `gameOver { winner, reason }` goes to the room. Invalid: the standard `error` event.
 - Elimination also emits `gameOver { winner, reason: 'elimination' }` so the contract is uniform; `winner` is `0`, `1` or `'draw'`.
-- `computeAfkClaimInMs` and `computeForfeitClaimInMs` produce the countdown values.
+- `computeAfkClaimInMs` produces the AFK countdown. The forfeit countdown in `presenceChanged` is `graceMs` itself: it is sent at the moment of the disconnect.
 - Config from env, validated at boot (`src/infrastructure/config/claim.config.ts`): `CLAIM_GRACE_MS` (60000) and `CLAIM_AFK_LIMIT_MS` (120000), injected as `CLAIM_CONFIG`.
 
 ### WebSocket contract
