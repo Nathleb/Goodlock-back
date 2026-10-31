@@ -10,7 +10,9 @@ import { resolvePlayerIndex } from '@domain/services/Room.service';
 import { GameOverDTO } from '@application/dtos/GameState.dto';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { DeckId } from '@shared/branded.types';
-import { domainError } from '@domain/errors/DomainError';
+import { DomainError, domainError } from '@domain/errors/DomainError';
+import { Room } from '@domain/types/Room.type';
+import { Result, ok } from '@shared/result.type';
 import { toErrorPayload } from '@application/errors/toErrorPayload';
 
 @Injectable()
@@ -51,23 +53,21 @@ export class RoomCoordinatorService {
     }
 
     createRoom(socketId: string): void {
-        const session = this.sessionPort.getSession(socketId);
-        if (!session) return;
-
-        try {
-            if (session.roomId) {
-                this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
-            }
-            const room = this.roomPort.createRoom(session.sessionId);
-            this.sessionPort.setSessionRoom(socketId, room.roomId);
-            this.wsPort.joinRoom(socketId, room.roomId);
-            this.wsPort.emitToSocket(socketId, 'roomCreated', RoomMapper.toDTO(room));
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+        this.enterRoom(socketId, sessionId => ok(this.roomPort.createRoom(sessionId)),
+            room => this.wsPort.emitToSocket(socketId, 'roomCreated', RoomMapper.toDTO(room)));
     }
 
     joinRoom(socketId: string, roomId: string): void {
+        this.enterRoom(socketId, sessionId => this.roomPort.joinRoom(sessionId, roomId),
+            room => this.wsPort.emitToRoom(room.roomId, 'roomUpdated', RoomMapper.toDTO(room)));
+    }
+
+    /** Leaves the current room if any, enters the one `enter` gives, then lets `announce` tell the clients. */
+    private enterRoom(
+        socketId: string,
+        enter: (sessionId: string) => Result<Room, DomainError>,
+        announce: (room: Room) => void,
+    ): void {
         const session = this.sessionPort.getSession(socketId);
         if (!session) return;
 
@@ -75,12 +75,12 @@ export class RoomCoordinatorService {
             if (session.roomId) {
                 this.leaveCurrentRoom(socketId, session.sessionId, session.roomId);
             }
-            const joined = this.roomPort.joinRoom(session.sessionId, roomId);
-            if (joined.isErr()) { this.emitFailure(socketId, joined.error); return; }
-            const room = joined.value;
+            const entered = enter(session.sessionId);
+            if (entered.isErr()) { this.emitFailure(socketId, entered.error); return; }
+            const room = entered.value;
             this.sessionPort.setSessionRoom(socketId, room.roomId);
             this.wsPort.joinRoom(socketId, room.roomId);
-            this.wsPort.emitToRoom(room.roomId, 'roomUpdated', RoomMapper.toDTO(room));
+            announce(room);
         } catch (e: unknown) {
             this.emitFailure(socketId, e);
         }
