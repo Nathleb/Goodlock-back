@@ -1,3 +1,4 @@
+import { P0, P1, asRoom } from './helpers/ids';
 import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
@@ -17,18 +18,18 @@ import { createGameState } from './helpers/gameState';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
-import { UserId, CatalogId } from '@shared/branded.types';
+import { UserId, CatalogId, SocketId } from '@shared/branded.types';
 import { CATALOG_PORT } from '@application/ports/tokens';
 import GameState from '@domain/types/GameState.type';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
-const SOCKET_0 = 'socket-0';
-const SOCKET_1 = 'socket-1';
+const SOCKET_0 = 'socket-0' as SocketId;
+const SOCKET_1 = 'socket-1' as SocketId;
 const USER_ID_0 = 'user-uuid-0' as UserId;
 const USER_ID_1 = 'user-uuid-1' as UserId;
-const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, userId: USER_ID_0, roomId: 'room-1' };
-const SESSION_1: Session = { sessionId: 'p1', socketId: SOCKET_1, userId: USER_ID_1, roomId: 'room-1' };
+const SESSION_0: Session = { sessionId: P0, socketId: SOCKET_0, userId: USER_ID_0, roomId: asRoom('room-1') };
+const SESSION_1: Session = { sessionId: P1, socketId: SOCKET_1, userId: USER_ID_1, roomId: asRoom('room-1') };
 
 const catalog = makeTestCatalog(10);
 
@@ -56,13 +57,13 @@ const withDeadEnemies = (gs: typeof baseGs) => ({
 });
 
 const makeRoom = (gameState: typeof baseGs): Room => ({
-    roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: true, gameState,
+    roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: true, gameState,
 });
 
 const DECK_P0 = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'] as CatalogId[];
 const DECK_P1 = ['c4', 'c5', 'c6', 'c7', 'c8', 'c9'] as CatalogId[];
-const lobbyRoom: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false, deckSelections: { p0: DECK_P0, p1: DECK_P1 } };
-const singlePlayerRoom: Room = { ...lobbyRoom, playersId: ['p0'] };
+const lobbyRoom: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: false, deckSelections: { p0: DECK_P0, p1: DECK_P1 } };
+const singlePlayerRoom: Room = { ...lobbyRoom, playersId: [P0] };
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ describe('startGame', () => {
 
     it('starts the game and emits a per-viewer masked state to each player socket', () => {
         mockSession.getSessionById.mockImplementation((id: string) =>
-            id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
+            id === P0 ? SESSION_0 : id === P1 ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
         expect(mockRoom.startGame).toHaveBeenCalledWith('room-1', expect.anything());
         // Each player gets their own placement view (own team real, enemy masked).
@@ -189,7 +190,7 @@ describe('startGame', () => {
 
     it('sends each player a selection view with both decks', () => {
         mockSession.getSessionById.mockImplementation((id: string) =>
-            id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
+            id === P0 ? SESSION_0 : id === P1 ? SESSION_1 : undefined);
         coordinator.startGame(SOCKET_0);
         const toP1 = mockWs.emitToSocket.mock.calls.find(c => c[0] === SOCKET_1)?.[2];
         expect(toP1.phase).toBe('SELECTION_PHASE');
@@ -219,7 +220,7 @@ describe('startGame', () => {
 describe('team selection', () => {
     const PICK_P0 = ['c5', 'c0', 'c1', 'c2'];
     const PICK_P1 = ['c9', 'c8', 'c7', 'c6'];
-    const selectingRoom = (gs: GameState): Room => ({ ...makeRoom(gs), playerOrder: ['p0', 'p1'] });
+    const selectingRoom = (gs: GameState): Room => ({ ...makeRoom(gs), playerOrder: [P0, P1] });
     const fresh = () => createSelectionState([
         DECK_P0.map(id => catalog.get(id)!),
         DECK_P1.map(id => catalog.get(id)!),
@@ -229,7 +230,7 @@ describe('team selection', () => {
 
     beforeEach(() => {
         mockRoom.getRoom.mockReturnValue(selectingRoom(fresh()));
-        mockSession.getSessionById.mockImplementation((id: string) => id === 'p0' ? SESSION_0 : id === 'p1' ? SESSION_1 : undefined);
+        mockSession.getSessionById.mockImplementation((id: string) => id === P0 ? SESSION_0 : id === P1 ? SESSION_1 : undefined);
     });
 
     it('first confirm is echoed to the picker only', () => {

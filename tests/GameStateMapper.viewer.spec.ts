@@ -1,3 +1,4 @@
+import { asCharacter } from './helpers/ids';
 import { TEST_CATALOG_ID, testTemplate } from './helpers/catalog';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import GameState, { SelectionState } from '@domain/types/GameState.type';
@@ -17,7 +18,7 @@ const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 
 function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean): Character {
     return {
-        id, catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [], states: {},
+        id: asCharacter(id), catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [], states: {},
         baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked,
         position: { playerIndex, slot: slot as SlotIndex },
     };
@@ -121,7 +122,7 @@ describe('team selection view', () => {
 describe('resolveStepsToDTO', () => {
     it('maps the resolved cells of every effect, including fizzles', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: 'x',
+            characterId: asCharacter('x'),
             skipped: false,
             effects: [
                 { effect: EffectLabel.Damage, targets: [{ playerIndex: 1, slot: 2 }] },
@@ -190,8 +191,8 @@ describe('stats in the DTO', () => {
 
     it('shows up in the resolve-step changes too', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: 'a', skipped: false, effects: [],
-            changes: [{ characterId: 'a', character: { ...char('a', 0, 0, false), modifiers: [power(3)] } }],
+            characterId: asCharacter('a'), skipped: false, effects: [],
+            changes: [{ characterId: asCharacter('a'), character: { ...char('a', 0, 0, false), modifiers: [power(3)] } }],
         }]);
         expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3, ARMOR: 0 });
     });
@@ -224,8 +225,8 @@ describe('states in the DTO', () => {
 
     it('shows up in the resolve-step changes too', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: 'a', skipped: false, effects: [],
-            changes: [{ characterId: 'a', character: { ...char('a', 0, 0, false), states: { ROOT: { value: 2, touchedRound: 1 } } } }],
+            characterId: asCharacter('a'), skipped: false, effects: [],
+            changes: [{ characterId: asCharacter('a'), character: { ...char('a', 0, 0, false), states: { ROOT: { value: 2, touchedRound: 1 } } } }],
         }]);
         expect(dto[0].changes[0].after.states.ROOT).toBe(2);
     });

@@ -7,7 +7,7 @@ import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.t
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
 import { validateEffectTargets, validateStatParams, validateStateParams } from "./TargetResolution.service";
-import { CatalogId } from "@shared/branded.types";
+import { CatalogId, CharacterId } from "@shared/branded.types";
 
 export function createCharacterFromTemplate(template: CharacterTemplate): Character {
     const die = generateFullDie(template.baseDieInstructions);
@@ -32,7 +32,7 @@ type CharacterParams = {
 
 export function createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, position }: CharacterParams): Character {
     return {
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID() as CharacterId,
         catalogId,
         name,
         maxHp,

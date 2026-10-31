@@ -1,7 +1,8 @@
+import { SocketId, RoomId } from '@shared/branded.types';
 export interface WebSocketPort {
-    joinRoom(socketId: string, roomId: string): void;
-    leaveRoom(socketId: string, roomId: string): void;
-    emitToSocket(socketId: string, event: string, data: unknown): void;
-    emitToRoom(roomId: string, event: string, data: unknown): void;
-    disconnectSocket(socketId: string): void;
+    joinRoom(socketId: SocketId, roomId: RoomId): void;
+    leaveRoom(socketId: SocketId, roomId: RoomId): void;
+    emitToSocket(socketId: SocketId, event: string, data: unknown): void;
+    emitToRoom(roomId: RoomId, event: string, data: unknown): void;
+    disconnectSocket(socketId: SocketId): void;
 }

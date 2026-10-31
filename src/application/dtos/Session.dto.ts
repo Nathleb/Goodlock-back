@@ -1,8 +1,8 @@
-import { UserId } from '@shared/branded.types';
+import { UserId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 
 export type Session = {
-    sessionId: string;
-    socketId: string;
+    sessionId: SessionId;
+    socketId: SocketId;
     userId: UserId;
-    roomId?: string;
+    roomId?: RoomId;
 };

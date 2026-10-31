@@ -3,10 +3,10 @@ import DieFace from "./DieFace.type";
 import Modifier from "./Modifier.type";
 import Position from "./Position.type";
 import { CharacterStates } from "./State.type";
-import { CatalogId } from "@shared/branded.types";
+import { CatalogId, CharacterId } from "@shared/branded.types";
 
 type Character = {
-    readonly id: string;
+    readonly id: CharacterId;
     readonly catalogId: CatalogId;
     readonly name: string;
     readonly maxHp: number;

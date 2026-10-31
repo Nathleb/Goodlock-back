@@ -5,6 +5,7 @@ import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
 import { stateValue } from "./Character.service";
 import { effectFor } from "../strategies/effectFor";
+import { CharacterId } from "@shared/branded.types";
 
 export function createPriorityQueue(): PriorityQueue {
     return [];
@@ -13,7 +14,7 @@ export function createPriorityQueue(): PriorityQueue {
 export function addEffectsToPriorityQueue(
     priorityQueue: PriorityQueue,
     dieFace: DieFace,
-    characterId: string,
+    characterId: CharacterId,
     baseSpeed: number
 ): PriorityQueue {
     const newEntry: QueueEntry = [dieFace, characterId, baseSpeed];
@@ -32,13 +33,13 @@ export function resetPriorityQueue(gameState: GameState): GameState {
     return { ...gameState, priorityQueue: createPriorityQueue() };
 }
 
-function isAlive(gameState: GameState, characterId: string): boolean {
+function isAlive(gameState: GameState, characterId: CharacterId): boolean {
     return gameState.players.some(player =>
         player.team.some(char => char.id === characterId && char.hp > 0)
     );
 }
 
-function findCharacter(gameState: GameState, characterId: string): Character | undefined {
+function findCharacter(gameState: GameState, characterId: CharacterId): Character | undefined {
     for (const player of gameState.players) {
         const char = player.team.find(c => c.id === characterId);
         if (char) return char;
@@ -48,10 +49,10 @@ function findCharacter(gameState: GameState, characterId: string): Character | u
 
 // Tie-break keys, captured when RESOLVE starts so that a Swap during the round does not
 // reshuffle ties: the initiative holder first, then the slot (0 -> 4).
-type TieKeys = ReadonlyMap<string, { readonly initiative: number; readonly slot: number }>;
+type TieKeys = ReadonlyMap<CharacterId, { readonly initiative: number; readonly slot: number }>;
 
 function captureTieKeys(state: GameState): TieKeys {
-    const keys = new Map<string, { initiative: number; slot: number }>();
+    const keys = new Map<CharacterId, { initiative: number; slot: number }>();
     for (const [, characterId] of state.priorityQueue) {
         const holds = state.players.some(p => p.playerIndex === state.initiativePlayerIndex && p.team.some(c => c.id === characterId));
         // An actor missing from the state sorts as a non-holder in slot 0.
@@ -65,7 +66,7 @@ function captureTieKeys(state: GameState): TieKeys {
 // sort: no randomness. The SPEED state is read live, so a HASTE or SLOW landing during the round
 // reorders the entries that have not played yet; the bracket is never crossed.
 function compareEntries(state: GameState, tieKeys: TieKeys) {
-    const speedRank = (characterId: string): number => {
+    const speedRank = (characterId: CharacterId): number => {
         const self = findCharacter(state, characterId);
         const speed = self ? stateValue(self, 'SPEED') : 0;
         return speed > 0 ? 0 : speed < 0 ? 2 : 1;
@@ -96,7 +97,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             continue;
         }
 
-        const affectedIds = new Set<string>();
+        const affectedIds = new Set<CharacterId>();
         const effects: ResolvedEffect[] = [];
         for (const faceEffect of face.effects) {
             // Cells are resolved just before each effect, from the actor's *current*

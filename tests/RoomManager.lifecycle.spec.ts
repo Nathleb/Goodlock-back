@@ -1,3 +1,5 @@
+import { RoomId } from '@shared/branded.types';
+import { P0, P1, P2, asRoom } from './helpers/ids';
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
@@ -8,9 +10,9 @@ function gs(phase: GamePhase, rollsLeft: number): GameState {
     return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
 }
 
-function startedRoom(manager: RoomManager): string {
-    const room = manager.createRoom('p0');
-    unwrap(manager.joinRoom('p1', room.roomId));
+function startedRoom(manager: RoomManager): RoomId {
+    const room = manager.createRoom(P0);
+    unwrap(manager.joinRoom(P1, room.roomId));
     unwrap(manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2)));
     return room.roomId;
 }
@@ -45,7 +47,7 @@ describe('phaseStartedAt stamping', () => {
 
     it('ignores updateGameState for lobby rooms', () => {
         const manager = new RoomManager();
-        const room = manager.createRoom('p0');
+        const room = manager.createRoom(P0);
         manager.updateGameState(room.roomId, gs(GamePhase.KEEP, 2));
         expect(manager.getRoom(room.roomId)!.gameState).toBeUndefined();
         expect(manager.getRoom(room.roomId)!.phaseStartedAt).toBeUndefined();
@@ -62,7 +64,7 @@ describe('setPresence', () => {
     });
 
     it('returns undefined for unknown rooms', () => {
-        expect(new RoomManager().setPresence('nope', 0, false, 0)).toBeUndefined();
+        expect(new RoomManager().setPresence(asRoom('nope'), 0, false, 0)).toBeUndefined();
     });
 });
 
@@ -86,7 +88,7 @@ describe('sweepAbandonedRooms', () => {
 
     it('ignores lobby rooms (no presence)', () => {
         const manager = new RoomManager();
-        manager.createRoom('p0');
+        manager.createRoom(P0);
         expect(manager.sweepAbandonedRooms(Number.MAX_SAFE_INTEGER, 0)).toEqual([]);
     });
 
@@ -97,35 +99,35 @@ describe('sweepAbandonedRooms', () => {
         manager.setPresence(roomId, 1, false, 2000);
         manager.sweepAbandonedRooms(2000 + 600_000, 600_000);
         // quitRoom resolves via playerToRoom; null proves the mapping is gone
-        expect(manager.quitRoom('p0')).toBeNull();
+        expect(manager.quitRoom(P0)).toBeNull();
     });
 });
 
 describe('joinRoom', () => {
     it('returns ROOM_NOT_FOUND for an unknown room', () => {
-        expect(unwrapErr(new RoomManager().joinRoom('p1', 'nope')).code).toBe('ROOM_NOT_FOUND');
+        expect(unwrapErr(new RoomManager().joinRoom(P1, asRoom('nope'))).code).toBe('ROOM_NOT_FOUND');
     });
 
     it('refuses a third player and does not register him in the room', () => {
         const manager = new RoomManager();
-        const room = manager.createRoom('p0');
-        unwrap(manager.joinRoom('p1', room.roomId));
+        const room = manager.createRoom(P0);
+        unwrap(manager.joinRoom(P1, room.roomId));
 
-        expect(unwrapErr(manager.joinRoom('p2', room.roomId)).code).toBe('ROOM_FULL');
+        expect(unwrapErr(manager.joinRoom(P2, room.roomId)).code).toBe('ROOM_FULL');
 
-        expect(manager.getRoom(room.roomId)!.playersId).toEqual(['p0', 'p1']);
-        expect(manager.quitRoom('p2')).toBeNull(); // p2 was never mapped to the room
+        expect(manager.getRoom(room.roomId)!.playersId).toEqual([P0, P1]);
+        expect(manager.quitRoom(P2)).toBeNull(); // p2 was never mapped to the room
     });
 });
 
 describe('startGame', () => {
     it('returns ROOM_NOT_FOUND for an unknown room', () => {
-        expect(unwrapErr(new RoomManager().startGame('nope', gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_FOUND');
+        expect(unwrapErr(new RoomManager().startGame(asRoom('nope'), gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_FOUND');
     });
 
     it('refuses to start a room that is not ready and leaves it unstarted', () => {
         const manager = new RoomManager();
-        const room = manager.createRoom('p0');
+        const room = manager.createRoom(P0);
 
         expect(unwrapErr(manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_READY');
 
@@ -138,13 +140,13 @@ describe('setDeckSelection', () => {
 
     it('stores the snapshot on the room and returns the updated room', () => {
         const manager = new RoomManager();
-        const room = manager.createRoom('p0');
-        const updated = unwrap(manager.setDeckSelection(room.roomId, 'p0', SEVEN));
+        const room = manager.createRoom(P0);
+        const updated = unwrap(manager.setDeckSelection(room.roomId, P0, SEVEN));
         expect(updated.deckSelections).toEqual({ p0: SEVEN });
         expect(manager.getRoom(room.roomId)!.deckSelections).toEqual({ p0: SEVEN });
     });
 
     it('returns a ROOM_NOT_FOUND error for an unknown room', () => {
-        expect(unwrapErr(new RoomManager().setDeckSelection('nope', 'p0', SEVEN)).code).toBe('ROOM_NOT_FOUND');
+        expect(unwrapErr(new RoomManager().setDeckSelection(asRoom('nope'), P0, SEVEN)).code).toBe('ROOM_NOT_FOUND');
     });
 });

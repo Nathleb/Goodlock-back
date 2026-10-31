@@ -1,4 +1,5 @@
-import { CatalogId } from '@shared/branded.types';
+import { P0, P1, asRoom } from './helpers/ids';
+import { CatalogId, SocketId } from '@shared/branded.types';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
 import { makeTestCatalog } from './helpers/catalog';
@@ -9,7 +10,7 @@ import GamePhase from '@domain/types/GamePhase.type';
 import { ok } from '@shared/result.type';
 
 const NOW = 1_000_000;
-const SOCKET = 'sock-0';
+const SOCKET = 'sock-0' as SocketId;
 
 const mockSession = { getSession: jest.fn(), getSessionById: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setPresence: jest.fn(), listOpenRooms: jest.fn() };
@@ -21,8 +22,8 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
 
 function room(overrides: Partial<Room>): Room {
     return {
-        roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: true,
-        playerOrder: ['p0', 'p1'],
+        roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: true,
+        playerOrder: [P0, P1],
         presence: [{ connected: true, disconnectedAt: null }, { connected: true, disconnectedAt: null }],
         phaseStartedAt: NOW - 1000,
         gameState: gs(GamePhase.KEEP, [false, false]),
@@ -46,7 +47,7 @@ beforeEach(async () => {
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);
-    mockSession.getSession.mockReturnValue({ sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' });
+    mockSession.getSession.mockReturnValue({ sessionId: P0, socketId: SOCKET, userId: 'u', roomId: asRoom('room-1') });
 });
 
 afterEach(() => jest.restoreAllMocks());
@@ -98,12 +99,12 @@ describe('claimVictory', () => {
 describe('stable player identity', () => {
     it('resolves playerIndex from playerOrder even when playersId shrank', () => {
         const r = room({
-            playersId: ['p0'],
+            playersId: [P0],
             gameState: gs(GamePhase.KEEP, [true, false]),
             phaseStartedAt: NOW - 120_000,
         });
         mockRoom.getRoom.mockReturnValue(r);
-        mockSession.getSession.mockReturnValue({ sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' });
+        mockSession.getSession.mockReturnValue({ sessionId: P0, socketId: SOCKET, userId: 'u', roomId: asRoom('room-1') });
         coordinator.claimVictory(SOCKET);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'afk' });
     });
@@ -120,8 +121,8 @@ describe('afkClaimInMs in emitted game state', () => {
             return ok(started);
         });
         mockSession.getSessionById.mockImplementation((id: string) =>
-            id === 'p0' ? { sessionId: 'p0', socketId: SOCKET, userId: 'u', roomId: 'room-1' }
-            : id === 'p1' ? { sessionId: 'p1', socketId: 'sock-1', userId: 'u2', roomId: 'room-1' }
+            id === P0 ? { sessionId: P0, socketId: SOCKET, userId: 'u', roomId: asRoom('room-1') }
+            : id === P1 ? { sessionId: P1, socketId: 'sock-1' as SocketId, userId: 'u2', roomId: asRoom('room-1') }
             : undefined);
         coordinator.startGame(SOCKET);
         // Per-viewer selection emit carries the timer fields (afkClaimInMs).

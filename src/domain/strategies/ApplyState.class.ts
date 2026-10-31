@@ -4,6 +4,7 @@ import GameState from "../types/GameState.type";
 import { STATE_DEFS, StateName } from "../types/State.type";
 import { applyAtPositions } from "../utils/TargetUtils";
 import Effect from "../types/Effect.type";
+import { CharacterId } from "@shared/branded.types";
 
 /** Pushes the duration of a state onto its axis for the occupant of each cell, once per occurrence. A dead occupant gets nothing. */
 export default class ApplyState implements Effect {
@@ -12,7 +13,7 @@ export default class ApplyState implements Effect {
         private readonly duration: number,
     ) {}
 
-    solve(gameState: GameState, targets: readonly Position[], _actorId: string): { state: GameState; affected: string[] } {
+    solve(gameState: GameState, targets: readonly Position[], _actorId: CharacterId): { state: GameState; affected: CharacterId[] } {
         const { axis, sign } = STATE_DEFS[this.state];
         return applyAtPositions(gameState, targets, c => {
             if (isDead(c)) return c;

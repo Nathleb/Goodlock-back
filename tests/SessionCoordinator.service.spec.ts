@@ -1,3 +1,4 @@
+import { P0, P1, asSession, asRoom } from './helpers/ids';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
@@ -5,18 +6,18 @@ import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import { UserId, CatalogId } from '@shared/branded.types';
+import { UserId, CatalogId, SocketId } from '@shared/branded.types';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
 import { unwrap } from './helpers/result';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { testTemplate } from './helpers/catalog';
 
-const SOCKET = 'socket-0';
+const SOCKET = 'socket-0' as SocketId;
 const USER_ID = 'user-uuid-1' as UserId;
-const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
-const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: 'room-1' };
+const SESSION: Session = { sessionId: P0, socketId: SOCKET, userId: USER_ID };
+const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: asRoom('room-1') };
 
-const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
+const ROOM: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: false };
 
 const GS: GameState = {
     phase: GamePhase.KEEP,
@@ -29,12 +30,12 @@ const GS: GameState = {
 };
 
 const STARTED_ROOM: Room = {
-    roomId: 'room-1',
-    ownerId: 'p0',
-    playersId: ['p0', 'p1'],
+    roomId: asRoom('room-1'),
+    ownerId: P0,
+    playersId: [P0, P1],
     isStarted: true,
     gameState: GS,
-    playerOrder: ['p0', 'p1'],
+    playerOrder: [P0, P1],
     presence: [{ connected: true, disconnectedAt: null }, { connected: true, disconnectedAt: null }],
     phaseStartedAt: 0,
 };
@@ -65,13 +66,13 @@ describe('handleConnect', () => {
         mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
         mockRoom.setPresence.mockReturnValue(STARTED_ROOM);
         coordinator.handleConnect(SOCKET, USER_ID);
-        expect(mockWs.emitToSocket.mock.calls[0]).toEqual([SOCKET, 'sessionStarted', { sessionId: 'p0' }]);
+        expect(mockWs.emitToSocket.mock.calls[0]).toEqual([SOCKET, 'sessionStarted', { sessionId: P0 }]);
     });
 
     it('sends the session id even when not in a room', () => {
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION, evictedSocketId: null });
         coordinator.handleConnect(SOCKET, USER_ID);
-        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'sessionStarted', { sessionId: 'p0' });
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'sessionStarted', { sessionId: P0 });
     });
 
     it('creates a new session without joining a WS room when not in any room', () => {
@@ -153,7 +154,7 @@ describe('handleConnect — reconnect before combat keeps secrets', () => {
 describe('handleConnect — non-participant', () => {
     it('does not send a game state snapshot to sessions outside playerOrder', () => {
         mockSession.createOrReconnectSession.mockReturnValue({
-            session: { ...SESSION_WITH_ROOM, sessionId: 'stranger' }, evictedSocketId: null,
+            session: { ...SESSION_WITH_ROOM, sessionId: asSession('stranger') }, evictedSocketId: null,
         });
         mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
         coordinator.handleConnect(SOCKET, USER_ID);
@@ -181,7 +182,7 @@ describe('handleDisconnect', () => {
         mockRoom.getRoom.mockReturnValue(ROOM);
         mockRoom.quitRoom.mockReturnValue(ROOM);
         coordinator.handleDisconnect(SOCKET);
-        expect(mockRoom.quitRoom).toHaveBeenCalledWith('p0');
+        expect(mockRoom.quitRoom).toHaveBeenCalledWith(P0);
         expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated', expect.anything());
         expect(mockSession.disconnectSession).toHaveBeenCalledWith(SOCKET);

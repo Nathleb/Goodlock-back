@@ -2,6 +2,7 @@ import Character from "../types/Character.type";
 import { Player } from "../types/Player.type";
 import GameState from "../types/GameState.type";
 import Position from "../types/Position.type";
+import { CharacterId } from "@shared/branded.types";
 
 /**
  * Applies an effect to the targeted characters.
@@ -33,9 +34,9 @@ export function applyAtPositions(
     gameState: GameState,
     positions: readonly Position[],
     fn: (character: Character) => Character,
-): { state: GameState; affected: string[] } {
+): { state: GameState; affected: CharacterId[] } {
     let players = gameState.players;
-    const affected: string[] = [];
+    const affected: CharacterId[] = [];
     for (const p of positions) {
         const char = players[p.playerIndex].team.find(c => c.position.slot === p.slot);
         if (!char) continue;

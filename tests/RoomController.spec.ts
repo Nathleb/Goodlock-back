@@ -1,3 +1,4 @@
+import { P0, P1, P2, asRoom } from './helpers/ids';
 import { Test } from '@nestjs/testing';
 import { ExecutionContext } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
@@ -8,8 +9,8 @@ import { Room } from '@domain/types/Room.type';
 
 class AllowAllGuard { canActivate(_ctx: ExecutionContext) { return true; } }
 
-const OPEN_ROOM:    Room = { roomId: 'r1', ownerId: 'p0', playersId: ['p0'],       isStarted: false };
-const STARTED_ROOM: Room = { roomId: 'r2', ownerId: 'p1', playersId: ['p1', 'p2'], isStarted: true  };
+const OPEN_ROOM:    Room = { roomId: asRoom('r1'), ownerId: P0, playersId: [P0],       isStarted: false };
+const STARTED_ROOM: Room = { roomId: asRoom('r2'), ownerId: P1, playersId: [P1, P2], isStarted: true  };
 
 const mockRoom = { listOpenRooms: jest.fn() };
 

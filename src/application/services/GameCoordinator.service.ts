@@ -35,7 +35,7 @@ import {
 } from '@domain/services/GameLoop.service';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
-import { CatalogId } from '@shared/branded.types';
+import { CatalogId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 
 type GameContext = { session: Session; room: Room; playerIndex: PlayerIndex };
 
@@ -51,7 +51,7 @@ export class GameCoordinatorService {
         @Inject(CATALOG_PORT) private readonly catalogPort: CatalogPort,
     ) {}
 
-    private getContext(socketId: string): Result<GameContext, DomainError> {
+    private getContext(socketId: SocketId): Result<GameContext, DomainError> {
         const unavailable = err(domainError('ACTION_NOT_AVAILABLE', 'Action not available'));
         const session = this.sessionPort.getSession(socketId);
         if (!session?.roomId) return unavailable;
@@ -66,7 +66,7 @@ export class GameCoordinatorService {
      * Runs a game action for the acting player. Without a game context for the socket it reports
      * why the action is not available; anything the action throws (a bug) is reported as INTERNAL.
      */
-    private act(socketId: string, action: (ctx: GameContext) => void): void {
+    private act(socketId: SocketId, action: (ctx: GameContext) => void): void {
         const context = this.getContext(socketId);
         if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
         try {
@@ -77,11 +77,11 @@ export class GameCoordinatorService {
     }
 
     /** A Result error or a thrown value, as the `error { code, message }` event. */
-    private emitFailure(socketId: string, error: unknown): void {
+    private emitFailure(socketId: SocketId, error: unknown): void {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
-    private withTimers(roomId: string, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
+    private withTimers(roomId: RoomId, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
         const room = this.roomPort.getRoom(roomId);
         return {
             ...dto,
@@ -89,7 +89,7 @@ export class GameCoordinatorService {
         };
     }
 
-    private resolveRound(roomId: string, gs: GameState): void {
+    private resolveRound(roomId: RoomId, gs: GameState): void {
         const { state: resolved, log } = invariant(performResolve(gs));
         let next = resolved;
         const winner = checkWinner(next);
@@ -122,7 +122,7 @@ export class GameCoordinatorService {
     }
 
     private doConfirm(
-        socketId: string,
+        socketId: SocketId,
         ctx: GameContext,
         gs: GameState,
         domainFn: (gs: GameState, pi: PlayerIndex) => Result<GameState, DomainError>,
@@ -167,7 +167,7 @@ export class GameCoordinatorService {
      * Team preview and placement are secret: each player gets their own view (opponent's pick and
      * team hidden). A room-wide broadcast can't differ per viewer, so emit to each socket.
      */
-    private emitPerViewer(roomId: string, players: readonly string[], gs: GameState): void {
+    private emitPerViewer(roomId: RoomId, players: readonly SessionId[], gs: GameState): void {
         players.forEach((playerSessionId, idx) => {
             const playerSession = this.sessionPort.getSessionById(playerSessionId);
             if (!playerSession) return;
@@ -175,12 +175,12 @@ export class GameCoordinatorService {
         });
     }
 
-    private emitToViewer(socketId: string, roomId: string, gs: GameState, viewerIndex: PlayerIndex): void {
+    private emitToViewer(socketId: SocketId, roomId: RoomId, gs: GameState, viewerIndex: PlayerIndex): void {
         const view = GameStateMapper.toDTOForViewer(gs, viewerIndex);
         this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(roomId, view, gs));
     }
 
-    startGame(socketId: string): void {
+    startGame(socketId: SocketId): void {
         const session = this.sessionPort.getSession(socketId);
         if (!session?.roomId) return;
         const room = this.roomPort.getRoom(session.roomId);
@@ -209,7 +209,7 @@ export class GameCoordinatorService {
         }
     }
 
-    confirmSelection(socketId: string, characterIds: string[]): void {
+    confirmSelection(socketId: SocketId, characterIds: string[]): void {
         this.act(socketId, ({ room, playerIndex }) => {
             if (!Array.isArray(characterIds) || characterIds.some(id => typeof id !== 'string')) {
                 this.emitFailure(socketId, domainError('INVALID_SELECTION', 'characterIds must be an array of catalog ids'));
@@ -229,7 +229,7 @@ export class GameCoordinatorService {
         });
     }
 
-    cancelSelection(socketId: string): void {
+    cancelSelection(socketId: SocketId): void {
         this.act(socketId, ({ room, playerIndex }) => {
             const cancelled = domainCancelSelection(room.gameState, playerIndex);
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
@@ -239,7 +239,7 @@ export class GameCoordinatorService {
         });
     }
 
-    rearrangeTeam(socketId: string, slots: (string | null)[]): void {
+    rearrangeTeam(socketId: SocketId, slots: (string | null)[]): void {
         this.act(socketId, ({ room, playerIndex }) => {
             const placed = checkPhase(room.gameState, GamePhase.PLACEMENT)
                 .andThen(gs => checkNotReady(gs, playerIndex))
@@ -257,7 +257,7 @@ export class GameCoordinatorService {
         });
     }
 
-    confirmPlacement(socketId: string): void {
+    confirmPlacement(socketId: SocketId): void {
         this.act(socketId, ({ room, playerIndex }) => {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
             const wasOtherReady = room.gameState.playersReady[otherIndex];
@@ -275,12 +275,13 @@ export class GameCoordinatorService {
         });
     }
 
-    confirmKeep(socketId: string, lockedCharacterIds: string[]): void {
+    confirmKeep(socketId: SocketId, lockedCharacterIds: string[]): void {
         this.act(socketId, ctx => {
             const { room, playerIndex } = ctx;
             if (!Array.isArray(lockedCharacterIds)) { this.emitFailure(socketId, domainError('INVALID_LOCK', 'lockedCharacterIds must be an array')); return; }
             const player = room.gameState.players[playerIndex];
-            const teamIds = new Set(player.team.map(c => c.id));
+            // The ids come from the client: plain strings until matched against the real team.
+            const teamIds = new Set<string>(player.team.map(c => c.id));
             for (const id of lockedCharacterIds) {
                 if (!teamIds.has(id)) { this.emitFailure(socketId, domainError('INVALID_LOCK', `Unknown character id: ${id}`)); return; }
             }
@@ -296,7 +297,7 @@ export class GameCoordinatorService {
         });
     }
 
-    cancelPlacement(socketId: string): void {
+    cancelPlacement(socketId: SocketId): void {
         this.act(socketId, ({ room, playerIndex }) => {
             const cancelled = domainCancelPlacement(room.gameState, playerIndex);
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
@@ -306,7 +307,7 @@ export class GameCoordinatorService {
         });
     }
 
-    cancelKeep(socketId: string): void {
+    cancelKeep(socketId: SocketId): void {
         this.act(socketId, ({ room, playerIndex }) => {
             const cancelled = domainCancelKeep(room.gameState, playerIndex);
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
@@ -314,7 +315,7 @@ export class GameCoordinatorService {
         });
     }
 
-    claimVictory(socketId: string): void {
+    claimVictory(socketId: SocketId): void {
         this.act(socketId, ({ room, playerIndex }) => {
             const opponentIndex = (1 - playerIndex) as PlayerIndex;
             const opponentPresence = room.presence?.[opponentIndex];

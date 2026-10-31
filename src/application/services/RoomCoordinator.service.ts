@@ -9,7 +9,7 @@ import { beginResultPhase } from '@domain/services/Phase.service';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
 import { GameOverDTO } from '@application/dtos/GameState.dto';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
-import { DeckId } from '@shared/branded.types';
+import { DeckId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
 import { Room } from '@domain/types/Room.type';
 import { Result, ok } from '@shared/result.type';
@@ -27,11 +27,11 @@ export class RoomCoordinatorService {
     ) {}
 
     /** A Result error or a thrown value, as the `error { code, message }` event. */
-    private emitFailure(socketId: string, error: unknown): void {
+    private emitFailure(socketId: SocketId, error: unknown): void {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
-    private leaveCurrentRoom(socketId: string, sessionId: string, roomId: string): void {
+    private leaveCurrentRoom(socketId: SocketId, sessionId: SessionId, roomId: RoomId): void {
         const room = this.roomPort.getRoom(roomId);
         if (room?.isStarted && room.gameState && room.gameState.phase !== GamePhase.RESULT) {
             const quitterIndex = resolvePlayerIndex(room, sessionId);
@@ -52,20 +52,20 @@ export class RoomCoordinatorService {
         }
     }
 
-    createRoom(socketId: string): void {
+    createRoom(socketId: SocketId): void {
         this.enterRoom(socketId, sessionId => ok(this.roomPort.createRoom(sessionId)),
             room => this.wsPort.emitToSocket(socketId, 'roomCreated', RoomMapper.toDTO(room)));
     }
 
-    joinRoom(socketId: string, roomId: string): void {
+    joinRoom(socketId: SocketId, roomId: RoomId): void {
         this.enterRoom(socketId, sessionId => this.roomPort.joinRoom(sessionId, roomId),
             room => this.wsPort.emitToRoom(room.roomId, 'roomUpdated', RoomMapper.toDTO(room)));
     }
 
     /** Leaves the current room if any, enters the one `enter` gives, then lets `announce` tell the clients. */
     private enterRoom(
-        socketId: string,
-        enter: (sessionId: string) => Result<Room, DomainError>,
+        socketId: SocketId,
+        enter: (sessionId: SessionId) => Result<Room, DomainError>,
         announce: (room: Room) => void,
     ): void {
         const session = this.sessionPort.getSession(socketId);
@@ -86,7 +86,7 @@ export class RoomCoordinatorService {
         }
     }
 
-    quitRoom(socketId: string): void {
+    quitRoom(socketId: SocketId): void {
         const session = this.sessionPort.getSession(socketId);
         if (!session || !session.roomId) return;
 
@@ -101,7 +101,7 @@ export class RoomCoordinatorService {
      * Lobby: the player picks the deck they will bring. The deck is read from the database (the only
      * await on the WebSocket path) and snapshotted in the in-memory room, so the game itself stays sync.
      */
-    async selectDeck(socketId: string, deckId: string): Promise<void> {
+    async selectDeck(socketId: SocketId, deckId: DeckId): Promise<void> {
         const session = this.sessionPort.getSession(socketId);
         if (!session) return;
         const roomId = session.roomId;
@@ -110,7 +110,7 @@ export class RoomCoordinatorService {
             return;
         }
         try {
-            const characterIds = await this.decks.getOwnDeckCharacterIds(session.userId, deckId as DeckId);
+            const characterIds = await this.decks.getOwnDeckCharacterIds(session.userId, deckId);
             // The world may have moved during the await: only store if the player is still in that room.
             if (this.sessionPort.getSession(socketId)?.roomId !== roomId) return;
             const selected = this.roomPort.setDeckSelection(roomId, session.sessionId, characterIds);

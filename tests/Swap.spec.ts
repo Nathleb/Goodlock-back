@@ -1,3 +1,4 @@
+import { CharacterId } from '@shared/branded.types';
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "./helpers/gameState";
@@ -28,7 +29,7 @@ const team2 = [makeChar("V"), makeChar("W"), makeChar("X"), makeChar("Y"), makeC
 const player1 = createPlayer(team1, 0);
 const player2 = createPlayer(team2, 1);
 
-function resolve(gs: GameState, actorId: string, faceIndex: number): GameState {
+function resolve(gs: GameState, actorId: CharacterId, faceIndex: number): GameState {
     const actor = gs.players.flatMap(p => p.team).find(c => c.id === actorId)!;
     const state = {
         ...gs,
@@ -37,7 +38,7 @@ function resolve(gs: GameState, actorId: string, faceIndex: number): GameState {
     return unstackPriorityQueueWithLog(state).state;
 }
 
-function resolveSwap(gs: GameState, actorId: string, targets: TargetGroup[]): ReturnType<typeof unstackPriorityQueueWithLog> {
+function resolveSwap(gs: GameState, actorId: CharacterId, targets: TargetGroup[]): ReturnType<typeof unstackPriorityQueueWithLog> {
     const actor = gs.players.flatMap(p => p.team).find(c => c.id === actorId)!;
     const emptyFace = { description: '-', priority: 1, effects: [] };
     const face = generateFullDie([

@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { ConnectResult, SessionPort } from '@application/ports/SessionPort';
 import { Session } from '@application/dtos/Session.dto';
-import { UserId } from '@shared/branded.types';
+import { UserId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 
 @Injectable()
 export class SessionManager implements SessionPort {
     // One active session per userId. A second connect evicts the previous socketId entry
     // (reconnect wins). The caller is responsible for disconnecting the evicted socket
     // (see ConnectResult.evictedSocketId).
-    private readonly bySockId = new Map<string, Session>();
+    private readonly bySockId = new Map<SocketId, Session>();
     private readonly byUserId = new Map<UserId, Session>();
     // sessionId is stable across reconnects; rooms reference players by it, so
     // this index lets coordinators resolve a player's live socket to emit to.
-    private readonly bySessionId = new Map<string, Session>();
+    private readonly bySessionId = new Map<SessionId, Session>();
 
-    createOrReconnectSession(socketId: string, userId: UserId): ConnectResult {
+    createOrReconnectSession(socketId: SocketId, userId: UserId): ConnectResult {
         const existing = this.byUserId.get(userId);
         if (existing) {
             const evictedSocketId = existing.socketId !== socketId && this.bySockId.has(existing.socketId)
@@ -28,7 +28,7 @@ export class SessionManager implements SessionPort {
             return { session: reconnected, evictedSocketId };
         }
         const session: Session = {
-            sessionId: crypto.randomUUID(),
+            sessionId: crypto.randomUUID() as SessionId,
             socketId,
             userId,
         };
@@ -38,15 +38,15 @@ export class SessionManager implements SessionPort {
         return { session, evictedSocketId: null };
     }
 
-    getSession(socketId: string): Session | undefined {
+    getSession(socketId: SocketId): Session | undefined {
         return this.bySockId.get(socketId);
     }
 
-    getSessionById(sessionId: string): Session | undefined {
+    getSessionById(sessionId: SessionId): Session | undefined {
         return this.bySessionId.get(sessionId);
     }
 
-    setSessionRoom(socketId: string, roomId: string | undefined): void {
+    setSessionRoom(socketId: SocketId, roomId: RoomId | undefined): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         const updated: Session = { ...session, roomId };
@@ -55,14 +55,14 @@ export class SessionManager implements SessionPort {
         this.bySessionId.set(session.sessionId, updated);
     }
 
-    disconnectSession(socketId: string): void {
+    disconnectSession(socketId: SocketId): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         this.bySockId.delete(socketId);
         // byUserId / bySessionId entries stay — enables reconnection
     }
 
-    deleteSession(socketId: string): void {
+    deleteSession(socketId: SocketId): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         this.bySockId.delete(socketId);

@@ -6,7 +6,7 @@ import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomMapper } from '@application/mappers/RoomMapper';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import { PresenceChangedDTO, GameStateUpdatePayload } from '@application/dtos/GameState.dto';
-import { UserId } from '@shared/branded.types';
+import { UserId, SocketId } from '@shared/branded.types';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
@@ -21,7 +21,7 @@ export class SessionCoordinatorService {
         @Inject(CLAIM_CONFIG) private readonly claimConfig: ClaimConfig,
     ) {}
 
-    handleConnect(socketId: string, userId: UserId): void {
+    handleConnect(socketId: SocketId, userId: UserId): void {
         const { session, evictedSocketId } = this.sessionPort.createOrReconnectSession(socketId, userId);
         // The client finds its seat (player index) by locating this id in room.players.
         this.wsPort.emitToSocket(socketId, 'sessionStarted', { sessionId: session.sessionId });
@@ -51,7 +51,7 @@ export class SessionCoordinatorService {
         }
     }
 
-    handleDisconnect(socketId: string): void {
+    handleDisconnect(socketId: SocketId): void {
         const session = this.sessionPort.getSession(socketId);
         if (!session) return;
         if (session.roomId) {

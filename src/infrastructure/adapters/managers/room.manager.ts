@@ -3,7 +3,7 @@ import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom, selectDeckInRoom } from '@domain/services/Room.service';
-import { CatalogId } from '@shared/branded.types';
+import { CatalogId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
 import { Result, err } from '@shared/result.type';
 
@@ -13,8 +13,8 @@ const ABANDONED_ROOM_TTL_MS = 10 * 60_000;
 
 @Injectable()
 export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
-    private readonly rooms = new Map<string, Room>();
-    private readonly playerToRoom = new Map<string, string>();
+    private readonly rooms = new Map<RoomId, Room>();
+    private readonly playerToRoom = new Map<SessionId, RoomId>();
     private sweepInterval?: ReturnType<typeof setInterval>;
 
     onModuleInit(): void {
@@ -29,14 +29,14 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         if (this.sweepInterval) clearInterval(this.sweepInterval);
     }
 
-    createRoom(ownerId: string): Room {
+    createRoom(ownerId: SessionId): Room {
         const room = createRoom(ownerId);
         this.rooms.set(room.roomId, room);
         this.playerToRoom.set(ownerId, room.roomId);
         return room;
     }
 
-    joinRoom(playerId: string, roomId: string): Result<Room, DomainError> {
+    joinRoom(playerId: SessionId, roomId: RoomId): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
         if (!room) return err(ROOM_NOT_FOUND);
         return addPlayerToRoom(room, playerId).map(updated => {
@@ -46,7 +46,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         });
     }
 
-    quitRoom(playerId: string): Room | null {
+    quitRoom(playerId: SessionId): Room | null {
         const roomId = this.playerToRoom.get(playerId);
         if (!roomId) return null;
         const room = this.rooms.get(roomId);
@@ -61,7 +61,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         return updated;
     }
 
-    setDeckSelection(roomId: string, playerId: string, characterIds: readonly CatalogId[]): Result<Room, DomainError> {
+    setDeckSelection(roomId: RoomId, playerId: SessionId, characterIds: readonly CatalogId[]): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
         if (!room) return err(ROOM_NOT_FOUND);
         return selectDeckInRoom(room, playerId, characterIds).map(updated => {
@@ -70,11 +70,11 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         });
     }
 
-    getRoom(roomId: string): Room | undefined {
+    getRoom(roomId: RoomId): Room | undefined {
         return this.rooms.get(roomId);
     }
 
-    startGame(roomId: string, gameState: GameState): Result<Room, DomainError> {
+    startGame(roomId: RoomId, gameState: GameState): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
         if (!room) return err(ROOM_NOT_FOUND);
         return startRoom(room, gameState).map(started => {
@@ -84,7 +84,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         });
     }
 
-    updateGameState(roomId: string, gameState: GameState): void {
+    updateGameState(roomId: RoomId, gameState: GameState): void {
         const room = this.rooms.get(roomId);
         if (!room || !room.isStarted) return;
         // A new confirmation sub-round starts on phase change OR on a KEEP reroll (rollsLeft change).
@@ -94,7 +94,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         this.rooms.set(roomId, { ...room, gameState, phaseStartedAt });
     }
 
-    setPresence(roomId: string, playerIndex: number, connected: boolean, now: number): Room | undefined {
+    setPresence(roomId: RoomId, playerIndex: number, connected: boolean, now: number): Room | undefined {
         const room = this.rooms.get(roomId);
         if (!room) return undefined;
         const updated = setPresenceInRoom(room, playerIndex, connected, now);
@@ -104,8 +104,8 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
 
     // A player who quits a started game is marked disconnected by the concession flow
     // (RoomCoordinator), so quit rooms still satisfy the "all players disconnected" rule here.
-    sweepAbandonedRooms(now: number, thresholdMs: number): string[] {
-        const deletedRoomIds: string[] = [];
+    sweepAbandonedRooms(now: number, thresholdMs: number): RoomId[] {
+        const deletedRoomIds: RoomId[] = [];
         for (const room of this.rooms.values()) {
             if (!room.presence) continue;
             const allAbandoned = room.presence.every(
