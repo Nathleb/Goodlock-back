@@ -54,6 +54,8 @@ beforeEach(() => {
     sessions.getSession.mockReturnValue({ sessionId: 's' });
 });
 
+afterEach(() => jest.restoreAllMocks());
+
 describe('SessionGateway — payload validation', () => {
     it('forwards a valid confirmKeep payload to the coordinator', async () => {
         const forwarded = new Promise<void>((resolve) => game.confirmKeep.mockImplementationOnce(() => resolve()));
@@ -113,7 +115,6 @@ describe('SessionGateway — payload validation', () => {
         client.emit('confirmKeep', { lockedCharacterIds: [] });
         expect(await error).toEqual({ code: 'INTERNAL', message: 'Internal error' });
         expect(logError).toHaveBeenCalled();
-        logError.mockRestore();
     });
 
     it('refuses properties the payload does not declare', async () => {

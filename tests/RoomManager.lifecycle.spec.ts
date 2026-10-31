@@ -10,8 +10,8 @@ function gs(phase: GamePhase, rollsLeft: number): GameState {
 
 function startedRoom(manager: RoomManager): string {
     const room = manager.createRoom('p0');
-    manager.joinRoom('p1', room.roomId);
-    manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2));
+    unwrap(manager.joinRoom('p1', room.roomId));
+    unwrap(manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2)));
     return room.roomId;
 }
 
@@ -98,6 +98,38 @@ describe('sweepAbandonedRooms', () => {
         manager.sweepAbandonedRooms(2000 + 600_000, 600_000);
         // quitRoom resolves via playerToRoom; null proves the mapping is gone
         expect(manager.quitRoom('p0')).toBeNull();
+    });
+});
+
+describe('joinRoom', () => {
+    it('returns ROOM_NOT_FOUND for an unknown room', () => {
+        expect(unwrapErr(new RoomManager().joinRoom('p1', 'nope')).code).toBe('ROOM_NOT_FOUND');
+    });
+
+    it('refuses a third player and does not register him in the room', () => {
+        const manager = new RoomManager();
+        const room = manager.createRoom('p0');
+        unwrap(manager.joinRoom('p1', room.roomId));
+
+        expect(unwrapErr(manager.joinRoom('p2', room.roomId)).code).toBe('ROOM_FULL');
+
+        expect(manager.getRoom(room.roomId)!.playersId).toEqual(['p0', 'p1']);
+        expect(manager.quitRoom('p2')).toBeNull(); // p2 was never mapped to the room
+    });
+});
+
+describe('startGame', () => {
+    it('returns ROOM_NOT_FOUND for an unknown room', () => {
+        expect(unwrapErr(new RoomManager().startGame('nope', gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_FOUND');
+    });
+
+    it('refuses to start a room that is not ready and leaves it unstarted', () => {
+        const manager = new RoomManager();
+        const room = manager.createRoom('p0');
+
+        expect(unwrapErr(manager.startGame(room.roomId, gs(GamePhase.PLACEMENT, 2))).code).toBe('ROOM_NOT_READY');
+
+        expect(manager.getRoom(room.roomId)!.isStarted).toBe(false);
     });
 });
 

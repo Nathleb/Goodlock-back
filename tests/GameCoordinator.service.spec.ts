@@ -2,7 +2,8 @@ import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { unwrap } from './helpers/result';
-import { ok } from '@shared/result.type';
+import { ok, err } from '@shared/result.type';
+import { domainError } from '@domain/errors/DomainError';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
@@ -71,6 +72,8 @@ const mockRoom    = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.
 const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
 let coordinator: GameCoordinatorService;
+
+afterEach(() => jest.restoreAllMocks());
 
 beforeEach(async () => {
     jest.clearAllMocks();
@@ -169,6 +172,14 @@ describe('startGame', () => {
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
+    it('reports the error and sends no game state when the room refuses to start', () => {
+        mockRoom.startGame.mockReturnValue(err(domainError('ROOM_NOT_READY', 'Room is not ready to start')));
+        coordinator.startGame(SOCKET_0);
+        expect(mockWs.emitToSocket).toHaveBeenCalledTimes(1);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ROOM_NOT_READY', message: 'Room is not ready to start' });
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+
     it('opens team preview: SELECTION with both chosen decks, no teams yet', () => {
         coordinator.startGame(SOCKET_0);
         const state: GameState = mockRoom.startGame.mock.calls[0][1];
@@ -201,7 +212,6 @@ describe('startGame', () => {
         coordinator.startGame(SOCKET_0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
         expect(logError).toHaveBeenCalled();
-        logError.mockRestore();
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 });
@@ -347,7 +357,6 @@ describe('rearrangeTeam', () => {
         coordinator.rearrangeTeam(SOCKET_0, [d, null, c, b, a]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
         expect(logError).toHaveBeenCalledWith(bug);
-        logError.mockRestore();
     });
 
     it('saves the layout, empty cell included, and echoes masked gameStateUpdated to the acting socket only', () => {
@@ -420,7 +429,7 @@ describe('confirmKeep', () => {
         mockRoom.updateGameState.mockImplementationOnce(() => { throw new TypeError('db down'); });
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
-        logError.mockRestore();
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'db down' }));
     });
 
     it('rerolls and emits gameStateUpdated still in KEEP when both confirm with rollsLeft > 0', () => {

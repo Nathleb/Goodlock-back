@@ -37,13 +37,13 @@ describe('RoomService', () => {
     expect(updated.playersId.length).toBe(2);
   });
 
-  it('should throw when adding a player to a full room', () => {
+  it('should return a ROOM_FULL error when adding a player to a full room', () => {
     const room = createRoom("player1");
     const full = unwrap(addPlayerToRoom(room, "player2"));
     expect(unwrapErr(addPlayerToRoom(full, "player3"))).toEqual({ code: 'ROOM_FULL', message: 'Room is full' });
   });
 
-  it('should throw when adding a player to a started game', () => {
+  it('should return a GAME_ALREADY_STARTED error when adding a player to a started game', () => {
     const room = { ...createRoom("player1"), isStarted: true };
     expect(unwrapErr(addPlayerToRoom(room, "player2"))).toEqual({ code: 'GAME_ALREADY_STARTED', message: 'Game already started' });
   });
@@ -81,7 +81,7 @@ describe('RoomService', () => {
     expect(started.gameState).toBe(gameState);
   });
 
-  it('startRoom throws when room is not ready', () => {
+  it('startRoom returns a ROOM_NOT_READY error when room is not ready', () => {
     expect(unwrapErr(startRoom(createRoom("player1"), gameState))).toEqual({ code: 'ROOM_NOT_READY', message: 'Room is not ready to start' });
   });
 });

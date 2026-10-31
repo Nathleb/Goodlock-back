@@ -87,7 +87,7 @@ describe('performRoll', () => {
         expect(inRoll.phase).toBe(GamePhase.ROLL);
     });
 
-    it('throws when called outside ROLL phase', () => {
+    it('returns a WRONG_PHASE error when called outside ROLL phase', () => {
         expect(unwrapErr(performRoll(gs)).code).toBe('WRONG_PHASE');
     });
 });
@@ -156,7 +156,7 @@ describe('confirmKeep', () => {
         expect(result.phase).toBe(GamePhase.KEEP);
     });
 
-    it('throws when called outside KEEP phase', () => {
+    it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
         expect(unwrapErr(confirmKeep(gs, 0)).code).toBe('WRONG_PHASE');
     });
 });
@@ -180,7 +180,7 @@ describe('performResolve', () => {
         expect(Array.isArray(log)).toBe(true);
     });
 
-    it('throws when called outside RESOLVE phase', () => {
+    it('returns a WRONG_PHASE error when called outside RESOLVE phase', () => {
         expect(unwrapErr(performResolve(gs)).code).toBe('WRONG_PHASE');
     });
 });
@@ -220,7 +220,7 @@ describe('cancelKeep', () => {
         expect(result).toBe(inKeep);
     });
 
-    it('throws when called outside KEEP phase', () => {
+    it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
         expect(unwrapErr(cancelKeep(gs, 0)).code).toBe('WRONG_PHASE');
     });
 });
