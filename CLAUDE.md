@@ -92,14 +92,16 @@ The general workflow (plan, TDD, verify, review, record, git rules, conventional
 
 These are guardrails (rules in `~/.claude/CLAUDE.md`). Each one is a ratchet: it was measured on the existing code and fails when the code gets worse than that level. When a gate blocks, fix the cause. Never silence a finding, exclude a file or raise a threshold. When a cleanup improves a level, tighten it in the same commit.
 
-| Gate | Tool | Level (file) |
+The level of each ratchet is the number in the file named below (not repeated here, so it cannot go stale).
+
+| Gate | Tool | Where the level is set |
 | --- | --- | --- |
 | Tests | jest | all green |
-| Complexity | ESLint `complexity` | 12 per function (`eslint.config.mjs`) |
-| Layers, cycles | dependency-cruiser | the 5 known cycles in `.dependency-cruiser-known-violations.json`, no new one |
-| Duplication | jscpd | 0.8 % (`.jscpd.json`) |
-| Dead code | knip, production mode (code only tests use counts as dead) | 54 issues (`quality-baseline.json`) |
-| Useless tests | Stryker | mutation score 85 % (`stryker.config.json`, `thresholds.break`) |
+| Complexity | ESLint `complexity` | `eslint.config.mjs` |
+| Layers, cycles | dependency-cruiser | the known cycles in `.dependency-cruiser-known-violations.json`, no new one |
+| Duplication | jscpd | `threshold` in `.jscpd.json` |
+| Dead code | knip, production mode (code only tests use counts as dead) | `knipIssues` in `quality-baseline.json` |
+| Useless tests | Stryker | `thresholds.break` in `stryker.config.json` |
 
 The block below is read by the tooling in `~/.claude/` (the `blockers-report` skill and the no-bypass hook). Keep it in sync with the table. A `failure` is a regex on the output of the command.
 
@@ -107,7 +109,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
 {
   "gates": [
     { "name": "jest", "command": "npm run test", "failure": "\\b[1-9]\\d* failed\\b|^FAIL\\s+\\S+" },
-    { "name": "eslint", "command": "npm run lint:check", "failure": "✖ \\d+ problems?" },
+    { "name": "eslint", "command": "npm run lint:check", "failure": "✖ \\d+ problems? \\([1-9]\\d* errors?" },
     { "name": "tsc", "command": "npx tsc --noEmit", "failure": "error TS\\d+" },
     { "name": "dependency-cruiser", "command": "npm run check:arch", "failure": "(?<!\\d)[1-9]\\d* dependency violations?" },
     { "name": "jscpd", "command": "npm run check:dup", "failure": "found too many duplicates" },
@@ -116,12 +118,13 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
   ],
   "suppressions": [
     "eslint-disable", "@ts-ignore", "@ts-expect-error", "@ts-nocheck", "istanbul ignore",
-    "Stryker disable", "jscpd:ignore", "@public", "@internal", "depcruise-ignore"
+    "Stryker disable", "jscpd:ignore", "@public", "@internal", "/* eslint "
   ],
   "guardFiles": [
     "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
     ".dependency-cruiser.cjs", ".dependency-cruiser-known-violations.json",
-    "quality-baseline.json", "jest.config.ts", "tsconfig.json", ".github/workflows/"
+    "quality-baseline.json", "scripts/quality-ratchet.mjs", "package.json", ".gitignore",
+    "jest.config.ts", "tsconfig.json", ".github/workflows/"
   ]
 }
 ```

@@ -37,7 +37,7 @@ module.exports = {
     },
     {
       name: 'no-orphans',
-      comment: 'A source file nothing imports is dead code.',
+      comment: 'A file with no imports in or out. Unused code that still imports things is caught by knip (check:dead).',
       severity: 'error',
       from: { orphan: true, pathNot: ['^src/main\\.ts$', '\\.d\\.ts$'] },
       to: {},
