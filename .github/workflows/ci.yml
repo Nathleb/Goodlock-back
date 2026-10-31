@@ -4,14 +4,20 @@ on:
   push:
     branches: [main]
   pull_request:
+  # A full mutation run every night, ignoring the incremental results (see the mutation job).
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
 
-# A new push to the same branch makes the previous run (up to two hours for the mutation job) pointless.
+# A new push to a pull request makes its previous run pointless. A run on main or the nightly one is
+# never cancelled by another push: it is the one that saves the cache the pull requests start from.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +37,7 @@ jobs:
   # worse than the recorded level (see the quality-gates block in CLAUDE.md). `npm run quality`
   # runs all three even when one fails, so a run shows every problem at once.
   quality:
+    if: github.event_name != 'schedule'
     # Node 22: Stryker and dependency-cruiser do not run on Node 20 (the version `verify` uses, as the Dockerfile does).
     runs-on: ubuntu-latest
     steps:
@@ -55,6 +62,32 @@ jobs:
             cat reports/jscpd/jscpd-report.md
           } >> "$GITHUB_STEP_SUMMARY" || true
 
+  # Does a pull request change anything the mutation score can depend on? Only then is the
+  # (long) mutation job worth running on it. On main and on the nightly run it always runs.
+  changes:
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      mutate: ${{ steps.diff.outputs.mutate }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "mutate=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "origin/$BASE_REF...HEAD" | grep -qE '^(src/(domain|application)/|tests/|stryker\.config\.json$|jest\.config\.ts$|package-lock\.json$)'; then
+            echo "mutate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mutate=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # Mutation testing, incremental. The cache keeps the results of the code that did not change, so
   # only the mutants of changed files are re-tested. Stryker only notices changes to the mutated
   # files and to the test files, so the cache key also covers everything else the tests read (test
@@ -62,6 +95,9 @@ jobs:
   # dependency config): when one of those changes, the cache is not reused and the run is full.
   # The cache is saved even when the run fails or times out, so the next run does not start over.
   mutation:
+    needs: changes
+    # A skipped job counts as passing for branch protection: a pull request that cannot change the score does not wait for it.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.mutate == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -83,7 +119,8 @@ jobs:
           restore-keys: stryker-${{ steps.inputs.outputs.hash }}-
       - name: Mutation testing
         shell: bash
-        run: npm run test:mutation 2>&1 | tee mutation.log
+        # The nightly run ignores the incremental results, so a stale cache cannot hide a regression for more than a day.
+        run: npm run test:mutation ${{ github.event_name == 'schedule' && '-- --force' || '' }} 2>&1 | tee mutation.log
       - name: Save the incremental results
         if: always()
         uses: actions/cache/save@v4
