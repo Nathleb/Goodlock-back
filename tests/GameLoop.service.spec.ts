@@ -13,6 +13,7 @@ import {
     cancelPlacement, cancelKeep, createSelectionState,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
+import { unwrap, unwrapErr } from "./helpers/result";
 import GameState from "@domain/types/GameState.type";
 
 const factory = buildEffectFactory();
@@ -41,35 +42,40 @@ function lockAllPlayers(state: GameState): GameState {
 
 describe('confirmPlacement', () => {
     it('marks player 0 ready but stays in PLACEMENT', () => {
-        const result = confirmPlacement(gs, 0);
+        const result = unwrap(confirmPlacement(gs, 0));
         expect(result.phase).toBe(GamePhase.PLACEMENT);
         expect(result.playersReady[0]).toBe(true);
         expect(result.playersReady[1]).toBe(false);
     });
 
     it('marks player 1 ready but stays in PLACEMENT', () => {
-        const result = confirmPlacement(gs, 1);
+        const result = unwrap(confirmPlacement(gs, 1));
         expect(result.phase).toBe(GamePhase.PLACEMENT);
         expect(result.playersReady[1]).toBe(true);
         expect(result.playersReady[0]).toBe(false);
     });
 
     it('transitions to ROLL and resets playersReady when both confirm', () => {
-        const after0 = confirmPlacement(gs, 0);
-        const result = confirmPlacement(after0, 1);
+        const after0 = unwrap(confirmPlacement(gs, 0));
+        const result = unwrap(confirmPlacement(after0, 1));
         expect(result.phase).toBe(GamePhase.ROLL);
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('throws when called outside PLACEMENT phase', () => {
-        expect(() => confirmPlacement(beginRollPhase(gs), 0)).toThrow();
+    it('returns a WRONG_PHASE error when called outside PLACEMENT phase', () => {
+        expect(unwrapErr(confirmPlacement(beginRollPhase(gs), 0)).code).toBe('WRONG_PHASE');
+    });
+
+    it('returns an ALREADY_CONFIRMED error when the player already confirmed', () => {
+        const after0 = unwrap(confirmPlacement(gs, 0));
+        expect(unwrapErr(confirmPlacement(after0, 0)).code).toBe('ALREADY_CONFIRMED');
     });
 });
 
 describe('performRoll', () => {
     it('transitions to KEEP and resets playersReady', () => {
         const inRoll = beginRollPhase(gs);
-        const result = performRoll(inRoll);
+        const result = unwrap(performRoll(inRoll));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.playersReady).toEqual([false, false]);
     });
@@ -81,15 +87,15 @@ describe('performRoll', () => {
         expect(inRoll.phase).toBe(GamePhase.ROLL);
     });
 
-    it('throws when called outside ROLL phase', () => {
-        expect(() => performRoll(gs)).toThrow();
+    it('returns a WRONG_PHASE error when called outside ROLL phase', () => {
+        expect(unwrapErr(performRoll(gs)).code).toBe('WRONG_PHASE');
     });
 });
 
 describe('confirmKeep', () => {
     it('marks player ready but stays in KEEP', () => {
         const inKeep = beginKeepPhase(gs);
-        const result = confirmKeep(inKeep, 0);
+        const result = unwrap(confirmKeep(inKeep, 0));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.playersReady[0]).toBe(true);
         expect(result.playersReady[1]).toBe(false);
@@ -97,8 +103,8 @@ describe('confirmKeep', () => {
 
     it('rerolls and decrements rollsLeft when both confirm with rollsLeft > 0', () => {
         const inKeep = beginKeepPhase(gs); // rollsLeft: 2
-        const after0 = confirmKeep(inKeep, 0);
-        const result = confirmKeep(after0, 1);
+        const after0 = unwrap(confirmKeep(inKeep, 0));
+        const result = unwrap(confirmKeep(after0, 1));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.rollsLeft).toBe(1);
         expect(result.playersReady).toEqual([false, false]);
@@ -106,16 +112,16 @@ describe('confirmKeep', () => {
 
     it('transitions to RESOLVE when rollsLeft is 0 and both confirm', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 0 };
-        const after0 = confirmKeep(inKeep, 0);
-        const result = confirmKeep(after0, 1);
+        const after0 = unwrap(confirmKeep(inKeep, 0));
+        const result = unwrap(confirmKeep(after0, 1));
         expect(result.phase).toBe(GamePhase.RESOLVE);
         expect(result.playersReady).toEqual([false, false]);
     });
 
     it('transitions straight to RESOLVE when the final reroll exhausts rollsLeft (no dead keep round)', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
-        const after0 = confirmKeep(inKeep, 0);
-        const result = confirmKeep(after0, 1);
+        const after0 = unwrap(confirmKeep(inKeep, 0));
+        const result = unwrap(confirmKeep(after0, 1));
         expect(result.phase).toBe(GamePhase.RESOLVE);
         expect(result.rollsLeft).toBe(0);
         expect(result.playersReady).toEqual([false, false]);
@@ -123,8 +129,8 @@ describe('confirmKeep', () => {
 
     it('skips rerolls and transitions to RESOLVE when all dice are locked', () => {
         const inKeep = lockAllPlayers(beginKeepPhase(gs)); // rollsLeft: 2 but all locked
-        const after0 = confirmKeep(inKeep, 0);
-        const result = confirmKeep(after0, 1);
+        const after0 = unwrap(confirmKeep(inKeep, 0));
+        const result = unwrap(confirmKeep(after0, 1));
         expect(result.phase).toBe(GamePhase.RESOLVE);
     });
 
@@ -139,83 +145,83 @@ describe('confirmKeep', () => {
             ] as [Player, Player],
         };
         const lockedFace = withOneLock.players[0].team[0].face;
-        const after0 = confirmKeep(withOneLock, 0);
-        const result = confirmKeep(after0, 1);
+        const after0 = unwrap(confirmKeep(withOneLock, 0));
+        const result = unwrap(confirmKeep(after0, 1));
         expect(result.players[0].team[0].face).toBe(lockedFace);
     });
 
     it('does not transition on first confirm alone', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 0 };
-        const result = confirmKeep(inKeep, 0);
+        const result = unwrap(confirmKeep(inKeep, 0));
         expect(result.phase).toBe(GamePhase.KEEP);
     });
 
-    it('throws when called outside KEEP phase', () => {
-        expect(() => confirmKeep(gs, 0)).toThrow();
+    it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
+        expect(unwrapErr(confirmKeep(gs, 0)).code).toBe('WRONG_PHASE');
     });
 });
 
 describe('performResolve', () => {
     it('transitions to RESULT phase', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const { state } = performResolve(inResolve);
+        const { state } = unwrap(performResolve(inResolve));
         expect(state.phase).toBe(GamePhase.RESULT);
     });
 
     it('resets the priority queue after resolving', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const { state } = performResolve(inResolve);
+        const { state } = unwrap(performResolve(inResolve));
         expect(state.priorityQueue.length).toBe(0);
     });
 
     it('returns a log array', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const { log } = performResolve(inResolve);
+        const { log } = unwrap(performResolve(inResolve));
         expect(Array.isArray(log)).toBe(true);
     });
 
-    it('throws when called outside RESOLVE phase', () => {
-        expect(() => performResolve(gs)).toThrow();
+    it('returns a WRONG_PHASE error when called outside RESOLVE phase', () => {
+        expect(unwrapErr(performResolve(gs)).code).toBe('WRONG_PHASE');
     });
 });
 
 describe('cancelPlacement', () => {
     it('sets playersReady[i] to false when player was confirmed', () => {
-        const confirmed = confirmPlacement(gs, 0);
+        const confirmed = unwrap(confirmPlacement(gs, 0));
         expect(confirmed.playersReady[0]).toBe(true);
-        const result = cancelPlacement(confirmed, 0);
+        const result = unwrap(cancelPlacement(confirmed, 0));
         expect(result.playersReady[0]).toBe(false);
         expect(result.phase).toBe(GamePhase.PLACEMENT);
     });
 
     it('returns the same reference when player was not confirmed', () => {
-        const result = cancelPlacement(gs, 0);
+        const result = unwrap(cancelPlacement(gs, 0));
         expect(result).toBe(gs);
     });
 
-    it('throws when called outside PLACEMENT phase', () => {
-        expect(() => cancelPlacement(beginRollPhase(gs), 0)).toThrow();
+    it('returns a WRONG_PHASE error when called outside PLACEMENT phase', () => {
+        expect(unwrapErr(cancelPlacement(beginRollPhase(gs), 0)).code).toBe('WRONG_PHASE');
     });
 });
 
 describe('cancelKeep', () => {
     it('sets playersReady[i] to false when player was confirmed', () => {
         const inKeep = beginKeepPhase(gs);
-        const confirmed = confirmKeep(inKeep, 0);
+        const confirmed = unwrap(confirmKeep(inKeep, 0));
         expect(confirmed.playersReady[0]).toBe(true);
-        const result = cancelKeep(confirmed, 0);
+        const result = unwrap(cancelKeep(confirmed, 0));
         expect(result.playersReady[0]).toBe(false);
         expect(result.phase).toBe(GamePhase.KEEP);
     });
 
     it('returns the same reference when player was not confirmed', () => {
         const inKeep = beginKeepPhase(gs);
-        const result = cancelKeep(inKeep, 0);
+        const result = unwrap(cancelKeep(inKeep, 0));
         expect(result).toBe(inKeep);
     });
 
-    it('throws when called outside KEEP phase', () => {
-        expect(() => cancelKeep(gs, 0)).toThrow();
+    it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
+        expect(unwrapErr(cancelKeep(gs, 0)).code).toBe('WRONG_PHASE');
     });
 });
 
