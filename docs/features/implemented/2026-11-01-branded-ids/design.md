@@ -10,15 +10,16 @@ The services take their identifiers as raw `string`s. Nothing stops a call from 
 
 | Type | Carried by |
 |---|---|
-| `SocketId` | `Session.socketId`, `SessionPort`, `WebSocketPort`, the coordinators' public methods, the managers, `WebSocketService` |
+| `SocketId` | `Session.socketId`, `SessionPort`, `WebSocketPort`, the coordinators' public methods, the managers and their map keys, `WebSocketService` |
 | `SessionId` | `Session.sessionId`, `Room.playersId`, `Room.ownerId`, `Room.service`, `RoomPort` |
-| `RoomId` | `Room.roomId`, `Session.roomId`, `RoomPort`, `SessionPort.setSessionRoom`, `WebSocketPort` |
+| `RoomId` | `Room.roomId`, `Session.roomId`, `RoomPort`, `SessionPort.setSessionRoom`, `WebSocketPort`, `RoomManager`'s maps |
+| `DeckId` (already branded) | `RoomCoordinator.selectDeck`, branded in the gateway |
 | `CharacterId` | `Character.id`, `PriorityQueue.type` (`QueueEntry`, `characterId`, `changes`), `PriorityQueue.service`, `Effect.solve` (`actorId`, `affected`) and the strategies, `applyAtPositions` |
 
 ## Decisions
 
 - **Decision:** the brand is applied at the edges, with an `as` cast, rather than through mint functions, because the codebase already brands that way (`randomUUID() as UserId`) and a mint function would only wrap the same cast. The edges are:
-  - the gateway, for `client.id` and for the IDs a payload brings;
+  - the gateway, for `client.id` and for the IDs a payload brings (`roomId`, `deckId`); the HTTP controllers and the repositories already cast the same way for `UserId`, `DeckId` and `CatalogId`;
   - the generators: `Room.service` (`roomId`), `session.manager` (`sessionId`) and `CharacterGeneration.service` (`Character.id`);
 - **Decision:** character IDs sent by the client (`confirmKeep`, `rearrangeTeam`) stay `string`, rather than being cast, because they are untrusted until matched against the real team; after the match the code uses the team's own `CharacterId`s.
 - **Decision:** `Room.deckSelections` stays keyed by `string`, rather than `Record<SessionId, ...>`, because a branded key makes every object literal in tests and code fail to type while the lookups already go through a `SessionId`.
