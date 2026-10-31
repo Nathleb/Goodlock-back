@@ -2,6 +2,8 @@ import Character from "../types/Character.type";
 import { isDead, rollForTurn, rollDie } from "./Character.service";
 import { Player } from "../types/Player.type";
 import Position, { BOARD_SIZE, SlotIndex, PlayerIndex } from "../types/Position.type";
+import { DomainError, domainError } from "../errors/DomainError";
+import { Result, ok, err } from "@shared/result.type";
 
 export function rollDiceForTurn(player: Player): Player {
     const newTeam = player.team.map(char => rollForTurn(char));
@@ -35,24 +37,26 @@ export function rollDieFromPlayer(player: Player, position: Position): Player {
  * cells), each team character exactly once, `null` for the empty cells.
  * The returned team is ordered by slot.
  */
-export function placeTeam(player: Player, slots: readonly (string | null)[]): Player {
+export function placeTeam(player: Player, slots: readonly (string | null)[]): Result<Player, DomainError> {
+    const invalid = (message: string) => err(domainError('INVALID_PLACEMENT', message));
     if (!Array.isArray(slots) || slots.length !== BOARD_SIZE) {
-        throw new Error(`Placement must list exactly ${BOARD_SIZE} cells`);
+        return invalid(`Placement must list exactly ${BOARD_SIZE} cells`);
     }
     const ids = slots.filter(s => s !== null);
-    if (ids.some(id => typeof id !== 'string')) throw new Error('Placement cells must be character IDs or null');
+    if (ids.some(id => typeof id !== 'string')) return invalid('Placement cells must be character IDs or null');
     if (ids.length !== player.team.length) {
-        throw new Error(`Placement must leave exactly ${BOARD_SIZE - player.team.length} empty cell(s)`);
+        return invalid(`Placement must leave exactly ${BOARD_SIZE - player.team.length} empty cell(s)`);
     }
-    if (new Set(ids).size !== ids.length) throw new Error('Duplicate character IDs in placement');
+    if (new Set(ids).size !== ids.length) return invalid('Duplicate character IDs in placement');
 
-    const team = slots.flatMap((id, slot) => {
-        if (id === null) return [];
+    const team: Character[] = [];
+    for (const [slot, id] of slots.entries()) {
+        if (id === null) continue;
         const char = player.team.find(c => c.id === id);
-        if (!char) throw new Error('Unknown character ID in placement');
-        return [{ ...char, position: { ...char.position, slot: slot as SlotIndex } }];
-    });
-    return { ...player, team };
+        if (!char) return invalid('Unknown character ID in placement');
+        team.push({ ...char, position: { ...char.position, slot: slot as SlotIndex } });
+    }
+    return ok({ ...player, team });
 }
 
 export function createPlayer(team: Character[], playerIndex: PlayerIndex): Player {

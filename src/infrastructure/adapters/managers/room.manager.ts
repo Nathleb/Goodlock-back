@@ -4,7 +4,10 @@ import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom, selectDeckInRoom } from '@domain/services/Room.service';
 import { CatalogId } from '@shared/branded.types';
+import { DomainError, domainError } from '@domain/errors/DomainError';
+import { Result, err } from '@shared/result.type';
 
+const ROOM_NOT_FOUND = domainError('ROOM_NOT_FOUND', 'Room not found');
 const SWEEP_INTERVAL_MS = 60_000;
 const ABANDONED_ROOM_TTL_MS = 10 * 60_000;
 
@@ -33,13 +36,14 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         return room;
     }
 
-    joinRoom(playerId: string, roomId: string): Room {
+    joinRoom(playerId: string, roomId: string): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
-        if (!room) throw new Error('Room not found');
-        const updated = addPlayerToRoom(room, playerId);
-        this.rooms.set(roomId, updated);
-        this.playerToRoom.set(playerId, roomId);
-        return updated;
+        if (!room) return err(ROOM_NOT_FOUND);
+        return addPlayerToRoom(room, playerId).map(updated => {
+            this.rooms.set(roomId, updated);
+            this.playerToRoom.set(playerId, roomId);
+            return updated;
+        });
     }
 
     quitRoom(playerId: string): Room | null {
@@ -57,24 +61,27 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         return updated;
     }
 
-    setDeckSelection(roomId: string, playerId: string, characterIds: readonly CatalogId[]): Room {
+    setDeckSelection(roomId: string, playerId: string, characterIds: readonly CatalogId[]): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
-        if (!room) throw new Error('Room not found');
-        const updated = selectDeckInRoom(room, playerId, characterIds);
-        this.rooms.set(roomId, updated);
-        return updated;
+        if (!room) return err(ROOM_NOT_FOUND);
+        return selectDeckInRoom(room, playerId, characterIds).map(updated => {
+            this.rooms.set(roomId, updated);
+            return updated;
+        });
     }
 
     getRoom(roomId: string): Room | undefined {
         return this.rooms.get(roomId);
     }
 
-    startGame(roomId: string, gameState: GameState): Room {
+    startGame(roomId: string, gameState: GameState): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
-        if (!room) throw new Error('Room not found');
-        const started = { ...startRoom(room, gameState), phaseStartedAt: Date.now() };
-        this.rooms.set(roomId, started);
-        return started;
+        if (!room) return err(ROOM_NOT_FOUND);
+        return startRoom(room, gameState).map(started => {
+            const withTimer = { ...started, phaseStartedAt: Date.now() };
+            this.rooms.set(roomId, withTimer);
+            return withTimer;
+        });
     }
 
     updateGameState(roomId: string, gameState: GameState): void {

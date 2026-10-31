@@ -138,8 +138,9 @@ resolution, balancing by simulation, and **triggers** ("flee when hit", riposte)
 1. **DB-backed results entity** — Phase 3; requires the explicit discussion CLAUDE.md mandates
    before adding any new persistence (collection and decks were agreed in Oct 2026).
 2. **Items** — will attach to deck slots (`DeckSlot`), design not started.
-3. **`Result<T, E>`** — the convention exists in CLAUDE.md but the type is not implemented; adopt it in
-   a dedicated change or drop the convention.
+3. **`Result<T, E>` on the HTTP side** — the WebSocket path now returns `Result<T, DomainError>`
+   (see CLAUDE.md, "Errors"); the HTTP coordinators (auth, collection, decks) still throw Nest exceptions
+   from `application/`. Move them to the same scheme, or keep them as the HTTP edge's own convention.
 4. **Scaling** — proposed in [`docs/SCALING.md`](SCALING.md): single instance + graceful drain for
    v1.0; one-match-per-instance with Redis for cross-instance traffic when needed. Awaiting sign-off.
 

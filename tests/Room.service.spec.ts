@@ -2,7 +2,8 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, assertDecksSelected } from "@domain/services/Room.service";
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks } from "@domain/services/Room.service";
+import { unwrap, unwrapErr } from "./helpers/result";
 import { CatalogId } from "@shared/branded.types";
 import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
@@ -31,20 +32,20 @@ describe('RoomService', () => {
 
   it('should add a second player to a room', () => {
     const room = createRoom("player1");
-    const updated = addPlayerToRoom(room, "player2");
+    const updated = unwrap(addPlayerToRoom(room, "player2"));
     expect(updated.playersId).toContain("player2");
     expect(updated.playersId.length).toBe(2);
   });
 
-  it('should throw when adding a player to a full room', () => {
+  it('should return a ROOM_FULL error when adding a player to a full room', () => {
     const room = createRoom("player1");
-    const full = addPlayerToRoom(room, "player2");
-    expect(() => addPlayerToRoom(full, "player3")).toThrow("Room is full");
+    const full = unwrap(addPlayerToRoom(room, "player2"));
+    expect(unwrapErr(addPlayerToRoom(full, "player3"))).toEqual({ code: 'ROOM_FULL', message: 'Room is full' });
   });
 
-  it('should throw when adding a player to a started game', () => {
+  it('should return a GAME_ALREADY_STARTED error when adding a player to a started game', () => {
     const room = { ...createRoom("player1"), isStarted: true };
-    expect(() => addPlayerToRoom(room, "player2")).toThrow("Game already started");
+    expect(unwrapErr(addPlayerToRoom(room, "player2"))).toEqual({ code: 'GAME_ALREADY_STARTED', message: 'Game already started' });
   });
 
   it('should return null when the last player leaves', () => {
@@ -54,13 +55,13 @@ describe('RoomService', () => {
 
   it('should transfer ownership when the owner leaves', () => {
     const room = createRoom("player1");
-    const withTwo = addPlayerToRoom(room, "player2");
+    const withTwo = unwrap(addPlayerToRoom(room, "player2"));
     const updated = removePlayerFromRoom(withTwo, "player1");
     expect(updated?.ownerId).toBe("player2");
   });
 
   it('isRoomReady returns true with 2 players and not started', () => {
-    const room = addPlayerToRoom(createRoom("player1"), "player2");
+    const room = unwrap(addPlayerToRoom(createRoom("player1"), "player2"));
     expect(isRoomReady(room)).toBe(true);
   });
 
@@ -69,55 +70,55 @@ describe('RoomService', () => {
   });
 
   it('isRoomReady returns false when already started', () => {
-    const room = startRoom(addPlayerToRoom(createRoom("player1"), "player2"), gameState);
+    const room = unwrap(startRoom(unwrap(addPlayerToRoom(createRoom("player1"), "player2")), gameState));
     expect(isRoomReady(room)).toBe(false);
   });
 
   it('startRoom sets isStarted and attaches gameState', () => {
-    const room = addPlayerToRoom(createRoom("player1"), "player2");
-    const started = startRoom(room, gameState);
+    const room = unwrap(addPlayerToRoom(createRoom("player1"), "player2"));
+    const started = unwrap(startRoom(room, gameState));
     expect(started.isStarted).toBe(true);
     expect(started.gameState).toBe(gameState);
   });
 
-  it('startRoom throws when room is not ready', () => {
-    expect(() => startRoom(createRoom("player1"), gameState)).toThrow('Room is not ready to start');
+  it('startRoom returns a ROOM_NOT_READY error when room is not ready', () => {
+    expect(unwrapErr(startRoom(createRoom("player1"), gameState))).toEqual({ code: 'ROOM_NOT_READY', message: 'Room is not ready to start' });
   });
 });
 
 describe('deck selection in the lobby', () => {
     const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
     const OTHER = ['h', 'i', 'j', 'k', 'l', 'm', 'n'] as CatalogId[];
-    const lobby = () => addPlayerToRoom(createRoom('p0'), 'p1');
+    const lobby = () => unwrap(addPlayerToRoom(createRoom('p0'), 'p1'));
 
     it('stores a snapshot of the chosen deck per player', () => {
-        const room = selectDeckInRoom(lobby(), 'p0', SEVEN);
+        const room = unwrap(selectDeckInRoom(lobby(), 'p0', SEVEN));
         expect(room.deckSelections).toEqual({ p0: SEVEN });
     });
 
     it('replaces a previous choice', () => {
-        const room = selectDeckInRoom(selectDeckInRoom(lobby(), 'p0', SEVEN), 'p0', OTHER);
+        const room = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby(), 'p0', SEVEN)), 'p0', OTHER));
         expect(room.deckSelections).toEqual({ p0: OTHER });
     });
 
     it('refuses a player who is not in the room', () => {
-        expect(() => selectDeckInRoom(lobby(), 'stranger', SEVEN)).toThrow();
+        expect(unwrapErr(selectDeckInRoom(lobby(), 'stranger', SEVEN)).code).toBe('NOT_IN_ROOM');
     });
 
     it('refuses once the game has started', () => {
         const started = { ...lobby(), isStarted: true };
-        expect(() => selectDeckInRoom(started, 'p0', SEVEN)).toThrow();
+        expect(unwrapErr(selectDeckInRoom(started, 'p0', SEVEN)).code).toBe('GAME_ALREADY_STARTED');
     });
 
     it("drops a leaving player's choice", () => {
-        const room = selectDeckInRoom(selectDeckInRoom(lobby(), 'p0', SEVEN), 'p1', OTHER);
+        const room = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby(), 'p0', SEVEN)), 'p1', OTHER));
         expect(removePlayerFromRoom(room, 'p1')?.deckSelections).toEqual({ p0: SEVEN });
     });
 
-    it('assertDecksSelected returns both snapshots in player order, or throws', () => {
-        const one = selectDeckInRoom(lobby(), 'p0', SEVEN);
-        expect(() => assertDecksSelected(one)).toThrow(/deck/i);
-        const both = selectDeckInRoom(one, 'p1', OTHER);
-        expect(assertDecksSelected(both)).toEqual([SEVEN, OTHER]);
+    it('selectedDecks returns both snapshots in player order, or a DECKS_NOT_CHOSEN error', () => {
+        const one = unwrap(selectDeckInRoom(lobby(), 'p0', SEVEN));
+        expect(unwrapErr(selectedDecks(one)).code).toBe('DECKS_NOT_CHOSEN');
+        const both = unwrap(selectDeckInRoom(one, 'p1', OTHER));
+        expect(unwrap(selectedDecks(both))).toEqual([SEVEN, OTHER]);
     });
 });

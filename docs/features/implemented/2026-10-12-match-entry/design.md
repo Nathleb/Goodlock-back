@@ -35,7 +35,7 @@ both confirmed       -> ROLL: first room-wide state, both teams revealed
 - `createSelectionState(decks)` -> SELECTION, empty teams, `rollsLeft: 2`, round 0.
 - `confirmSelection(gs, playerIndex, picks, build)`: phase SELECTION, not already ready, exactly `TEAM_SIZE` distinct ids from the player's own revealed deck. Stores the pick and marks ready; when both are ready, builds both teams with `build(template)` in pick order (`createPlayer` puts them on slots 0..3), goes to PLACEMENT, clears `selection`, resets ready.
 - `cancelSelection(gs, playerIndex)`: un-ready and clear the pick.
-- Room: `deckSelections` (session id -> catalog ids) set by `selectDeckInRoom` (member only, game not started) and dropped when the player leaves; `assertDecksSelected(room)` is used at start.
+- Room: `deckSelections` (session id -> catalog ids) set by `selectDeckInRoom` (member only, game not started) and dropped when the player leaves; `selectedDecks(room)` (a `Result`, `DECKS_NOT_CHOSEN` until both players chose) is used at start.
 - Claim: SELECTION is one of the AFK confirm phases (see the reconnect-lifecycle spec).
 
 ## Application

@@ -1,4 +1,5 @@
 import { evaluateClaim, computeAfkClaimInMs, computeForfeitClaimInMs } from '@domain/services/Claim.service';
+import { unwrap, unwrapErr } from './helpers/result';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { PlayerPresence } from '@domain/types/Presence.type';
 import GameState from '@domain/types/GameState.type';
@@ -18,50 +19,54 @@ describe('evaluateClaim — forfeit ground', () => {
     const offline: PlayerPresence = { connected: false, disconnectedAt: NOW - 60_000 };
 
     it('valid when opponent disconnected for exactly the grace period', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, offline, NOW - 10, NOW, CONFIG))
-            .toEqual({ valid: true, reason: 'forfeit' });
+        expect(unwrap(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, offline, NOW - 10, NOW, CONFIG))).toBe('forfeit');
     });
 
     it('invalid when disconnected for less than the grace period', () => {
         const recent: PlayerPresence = { connected: false, disconnectedAt: NOW - 59_999 };
-        expect(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, recent, NOW - 10, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, recent, NOW - 10, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
     });
 
     it('invalid when opponent is connected', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 10, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 10, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
+    });
+
+    it('names the reason when the game is already over, and when there is simply nothing to claim', () => {
+        const longGone = { connected: false, disconnectedAt: NOW - 999_999 };
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.RESULT, [false, false]), 0, longGone, NOW - 10, NOW, CONFIG)).message).toBe('Game is already over');
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 10, NOW, CONFIG)).message)
+            .toBe('No valid claim: opponent is neither forfeited nor AFK');
     });
 
     it('invalid on a finished game even when the opponent is long gone', () => {
         const longGone: PlayerPresence = { connected: false, disconnectedAt: NOW - 999_999 };
-        expect(evaluateClaim(gs(GamePhase.RESULT, [false, false]), 0, longGone, NOW - 10, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.RESULT, [false, false]), 0, longGone, NOW - 10, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
     });
 });
 
 describe('evaluateClaim — AFK ground', () => {
     it('valid when claimant ready, opponent not, past the AFK limit in a confirm phase', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))
-            .toEqual({ valid: true, reason: 'afk' });
+        expect(unwrap(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))).toBe('afk');
     });
 
     it('invalid when the claimant has not confirmed', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [false, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
     });
 
     it('invalid in non-confirm phases', () => {
-        expect(evaluateClaim(gs(GamePhase.RESULT, [true, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.RESULT, [true, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
     });
 
     it('invalid when phaseStartedAt is unknown', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, undefined, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, undefined, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
     });
 
     it('valid from player 1 seat when roles are mirrored', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [false, true]), 1, ONLINE, NOW - 120_000, NOW, CONFIG))
-            .toEqual({ valid: true, reason: 'afk' });
+        expect(unwrap(evaluateClaim(gs(GamePhase.KEEP, [false, true]), 1, ONLINE, NOW - 120_000, NOW, CONFIG))).toBe('afk');
     });
 
     it('invalid for player 1 when only player 0 is ready', () => {
-        expect(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 1, ONLINE, NOW - 999_999, NOW, CONFIG).valid).toBe(false);
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 1, ONLINE, NOW - 999_999, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
     });
 });
 
@@ -85,8 +90,7 @@ describe('countdown helpers', () => {
 
 describe('team selection counts as a confirm phase', () => {
     it('AFK claim is valid in SELECTION when the opponent has not picked', () => {
-        expect(evaluateClaim(gs(GamePhase.SELECTION, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))
-            .toEqual({ valid: true, reason: 'afk' });
+        expect(unwrap(evaluateClaim(gs(GamePhase.SELECTION, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))).toBe('afk');
     });
 
     it('the AFK countdown runs during SELECTION', () => {
