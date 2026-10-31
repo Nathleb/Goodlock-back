@@ -3,7 +3,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { gainShield, loseHp } from "@domain/services/Character.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { endOfRound, checkWinner } from "@domain/services/Round.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";

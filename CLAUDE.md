@@ -65,7 +65,7 @@ Facts that the code does not make obvious:
 ### Key design rules
 
 1. **Coordinator pattern**: Application-layer coordinators (`*CoordinatorService`) call domain services then dispatch WebSocket events. The gateway calls coordinators, never domain services directly.
-2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) + `deviceIdentifier` are persistent. `SessionService.createOrReconnectSession` handles the re-binding.
+2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) is persistent and bound to the authenticated `userId`. `SessionManager.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
 4. **Priority resolution**: the rules (bracket, then speed, tiebreak) are in `docs/GAME-DESIGN.md` section 3. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
 5. **Match entry and secrecy**: each player picks a deck in the room (`selectDeck`, loaded from the DB and snapshotted in the in-memory room — the only `await` on the WebSocket path). `startGame` opens SELECTION: both 6-decks are revealed, each player secretly keeps 4. The opponent's picks and team stay hidden (sent as `[]`) through SELECTION and PLACEMENT; the first room-wide state is the ROLL. Any emission before ROLL must go through the per-viewer mappers (`GameStateMapper.toDTOForViewer`). On connect the server sends `sessionStarted { sessionId }`; clients locate their seat (player index) in `room.players` with it.

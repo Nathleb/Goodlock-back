@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { createCharacterFromJsonTemplate } from "@domain/services/CharacterGeneration.service";
+import { createCharacterFromTemplate } from "@domain/services/CharacterGeneration.service";
 import { validateCatalog } from "@domain/services/CharacterCatalog.service";
 
 const tmpltDir = path.join(__dirname, "..", "tmplt");
@@ -13,7 +13,7 @@ describe("character templates", () => {
 
   it.each(files)("%s parses into a valid character", (file) => {
     const content = fs.readFileSync(path.join(tmpltDir, file), "utf-8");
-    expect(() => createCharacterFromJsonTemplate(content)).not.toThrow();
+    expect(() => createCharacterFromTemplate(JSON.parse(content))).not.toThrow();
   });
 
   it("forms a valid catalog (every template has a unique, well-formed id)", () => {

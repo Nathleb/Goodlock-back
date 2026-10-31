@@ -1,4 +1,4 @@
-import { evaluateClaim, computeAfkClaimInMs, computeForfeitClaimInMs } from '@domain/services/Claim.service';
+import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
 import { unwrap, unwrapErr } from './helpers/result';
 import { ClaimConfig } from '@domain/types/Claim.type';
 import { PlayerPresence } from '@domain/types/Presence.type';
@@ -80,11 +80,6 @@ describe('countdown helpers', () => {
         expect(computeAfkClaimInMs(gs(GamePhase.KEEP, [true, true]), NOW - 1, NOW, 120_000)).toBeNull();
         expect(computeAfkClaimInMs(gs(GamePhase.RESOLVE, [false, false]), NOW - 1, NOW, 120_000)).toBeNull();
         expect(computeAfkClaimInMs(gs(GamePhase.KEEP, [false, false]), undefined, NOW, 120_000)).toBeNull();
-    });
-
-    it('computeForfeitClaimInMs returns remaining grace for a disconnected player, null when connected', () => {
-        expect(computeForfeitClaimInMs({ connected: false, disconnectedAt: NOW - 15_000 }, NOW, 60_000)).toBe(45_000);
-        expect(computeForfeitClaimInMs(ONLINE, NOW, 60_000)).toBeNull();
     });
 });
 

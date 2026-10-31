@@ -9,16 +9,6 @@ import Position from "../types/Position.type";
 import { validateEffectTargets, validateStatParams, validateStateParams } from "./TargetResolution.service";
 import { CatalogId, CharacterId } from "@shared/branded.types";
 
-export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): Character {
-    let template: CharacterTemplate;
-    try {
-        template = JSON.parse(jsonCharacterTemplate);
-    } catch {
-        throw new Error("Invalid JSON template");
-    }
-    return createCharacterFromTemplate(template);
-}
-
 export function createCharacterFromTemplate(template: CharacterTemplate): Character {
     const die = generateFullDie(template.baseDieInstructions);
     return createCharacter({

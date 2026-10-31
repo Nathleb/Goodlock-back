@@ -52,10 +52,6 @@ export function isDead(character: Character): boolean {
     return character.hp === 0;
 }
 
-export function toggleIsFaceLocked(character: Character): Character {
-    return updateCharacter(character, { isFaceLocked: !character.isFaceLocked });
-}
-
 /** The net value of a stat never goes beyond +/- this. To revisit after the balancing simulations. */
 const MAX_STAT_NET = 9;
 

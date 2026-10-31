@@ -4,7 +4,7 @@ import { enemyRel, allyRel } from "./helpers/targets";
 import { describe } from "node:test";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead, toggleIsFaceLocked } from "@domain/services/Character.service";
+import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead } from "@domain/services/Character.service";
 
 describe('CharacterService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -57,10 +57,5 @@ describe('CharacterService', () => {
 
   it('should check if character is dead', () => {
     expect(isDead(character)).toBe(false);
-  });
-
-  it('should toggle face lock status', () => {
-    const updatedCharacter = toggleIsFaceLocked(character);
-    expect(updatedCharacter.isFaceLocked).toBe(true);
   });
 });
