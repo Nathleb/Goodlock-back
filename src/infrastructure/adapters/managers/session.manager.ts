@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConnectResult, SessionPort } from '@application/ports/SessionPort';
 import { Session } from '@application/dtos/Session.dto';
-import { UserId, SocketId, SessionId } from '@shared/branded.types';
+import { UserId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 
 @Injectable()
 export class SessionManager implements SessionPort {
@@ -46,7 +46,7 @@ export class SessionManager implements SessionPort {
         return this.bySessionId.get(sessionId);
     }
 
-    setSessionRoom(socketId: SocketId, roomId: string | undefined): void {
+    setSessionRoom(socketId: SocketId, roomId: RoomId | undefined): void {
         const session = this.bySockId.get(socketId);
         if (!session) return;
         const updated: Session = { ...session, roomId };

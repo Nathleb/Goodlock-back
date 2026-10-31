@@ -1,7 +1,7 @@
 import { Room } from '../types/Room.type';
 import GameState from '../types/GameState.type';
 import { PlayerPresence } from '../types/Presence.type';
-import { CatalogId, SessionId } from '@shared/branded.types';
+import { CatalogId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '../errors/DomainError';
 import { Result, ok, err } from '@shared/result.type';
 
@@ -9,7 +9,7 @@ const CONNECTED: PlayerPresence = { connected: true, disconnectedAt: null };
 
 export function createRoom(ownerId: SessionId): Room {
     return {
-        roomId: crypto.randomUUID(),
+        roomId: crypto.randomUUID() as RoomId,
         playersId: [ownerId],
         ownerId,
         isStarted: false,

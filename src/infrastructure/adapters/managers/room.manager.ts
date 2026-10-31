@@ -3,7 +3,7 @@ import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom, selectDeckInRoom } from '@domain/services/Room.service';
-import { CatalogId, SessionId } from '@shared/branded.types';
+import { CatalogId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
 import { Result, err } from '@shared/result.type';
 
@@ -36,7 +36,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         return room;
     }
 
-    joinRoom(playerId: SessionId, roomId: string): Result<Room, DomainError> {
+    joinRoom(playerId: SessionId, roomId: RoomId): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
         if (!room) return err(ROOM_NOT_FOUND);
         return addPlayerToRoom(room, playerId).map(updated => {
@@ -61,7 +61,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         return updated;
     }
 
-    setDeckSelection(roomId: string, playerId: SessionId, characterIds: readonly CatalogId[]): Result<Room, DomainError> {
+    setDeckSelection(roomId: RoomId, playerId: SessionId, characterIds: readonly CatalogId[]): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
         if (!room) return err(ROOM_NOT_FOUND);
         return selectDeckInRoom(room, playerId, characterIds).map(updated => {
@@ -70,11 +70,11 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         });
     }
 
-    getRoom(roomId: string): Room | undefined {
+    getRoom(roomId: RoomId): Room | undefined {
         return this.rooms.get(roomId);
     }
 
-    startGame(roomId: string, gameState: GameState): Result<Room, DomainError> {
+    startGame(roomId: RoomId, gameState: GameState): Result<Room, DomainError> {
         const room = this.rooms.get(roomId);
         if (!room) return err(ROOM_NOT_FOUND);
         return startRoom(room, gameState).map(started => {
@@ -84,7 +84,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         });
     }
 
-    updateGameState(roomId: string, gameState: GameState): void {
+    updateGameState(roomId: RoomId, gameState: GameState): void {
         const room = this.rooms.get(roomId);
         if (!room || !room.isStarted) return;
         // A new confirmation sub-round starts on phase change OR on a KEEP reroll (rollsLeft change).
@@ -94,7 +94,7 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         this.rooms.set(roomId, { ...room, gameState, phaseStartedAt });
     }
 
-    setPresence(roomId: string, playerIndex: number, connected: boolean, now: number): Room | undefined {
+    setPresence(roomId: RoomId, playerIndex: number, connected: boolean, now: number): Room | undefined {
         const room = this.rooms.get(roomId);
         if (!room) return undefined;
         const updated = setPresenceInRoom(room, playerIndex, connected, now);

@@ -9,7 +9,7 @@ import { beginResultPhase } from '@domain/services/Phase.service';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
 import { GameOverDTO } from '@application/dtos/GameState.dto';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
-import { DeckId, SocketId, SessionId } from '@shared/branded.types';
+import { DeckId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
 import { Room } from '@domain/types/Room.type';
 import { Result, ok } from '@shared/result.type';
@@ -31,7 +31,7 @@ export class RoomCoordinatorService {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
-    private leaveCurrentRoom(socketId: SocketId, sessionId: SessionId, roomId: string): void {
+    private leaveCurrentRoom(socketId: SocketId, sessionId: SessionId, roomId: RoomId): void {
         const room = this.roomPort.getRoom(roomId);
         if (room?.isStarted && room.gameState && room.gameState.phase !== GamePhase.RESULT) {
             const quitterIndex = resolvePlayerIndex(room, sessionId);
@@ -57,7 +57,7 @@ export class RoomCoordinatorService {
             room => this.wsPort.emitToSocket(socketId, 'roomCreated', RoomMapper.toDTO(room)));
     }
 
-    joinRoom(socketId: SocketId, roomId: string): void {
+    joinRoom(socketId: SocketId, roomId: RoomId): void {
         this.enterRoom(socketId, sessionId => this.roomPort.joinRoom(sessionId, roomId),
             room => this.wsPort.emitToRoom(room.roomId, 'roomUpdated', RoomMapper.toDTO(room)));
     }

@@ -1,4 +1,4 @@
-import { asSession } from './helpers/ids';
+import { asSession, asRoom } from './helpers/ids';
 import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
 import { UserId, SocketId } from '@shared/branded.types';
 
@@ -33,7 +33,7 @@ describe('createOrReconnectSession eviction reporting', () => {
     it('preserves sessionId and roomId across reconnects', () => {
         const manager = new SessionManager();
         const first = manager.createOrReconnectSession(SOCK_A, USER).session;
-        manager.setSessionRoom(SOCK_A, 'room-1');
+        manager.setSessionRoom(SOCK_A, asRoom('room-1'));
         manager.disconnectSession(SOCK_A);
         const second = manager.createOrReconnectSession(SOCK_B, USER).session;
         expect(second.sessionId).toBe(first.sessionId);

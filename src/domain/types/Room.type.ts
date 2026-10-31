@@ -1,9 +1,9 @@
 import GameState from "./GameState.type";
 import { PlayerPresence } from "./Presence.type";
-import { CatalogId, SessionId } from "@shared/branded.types";
+import { CatalogId, SessionId, RoomId } from "@shared/branded.types";
 
 export type Room = {
-    readonly roomId: string;
+    readonly roomId: RoomId;
     readonly playersId: readonly SessionId[];
     readonly ownerId: SessionId;
     readonly isStarted: boolean;

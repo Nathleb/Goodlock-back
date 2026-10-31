@@ -35,7 +35,7 @@ import {
 } from '@domain/services/GameLoop.service';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
-import { CatalogId, SocketId, SessionId } from '@shared/branded.types';
+import { CatalogId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 
 type GameContext = { session: Session; room: Room; playerIndex: PlayerIndex };
 
@@ -81,7 +81,7 @@ export class GameCoordinatorService {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
-    private withTimers(roomId: string, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
+    private withTimers(roomId: RoomId, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
         const room = this.roomPort.getRoom(roomId);
         return {
             ...dto,
@@ -89,7 +89,7 @@ export class GameCoordinatorService {
         };
     }
 
-    private resolveRound(roomId: string, gs: GameState): void {
+    private resolveRound(roomId: RoomId, gs: GameState): void {
         const { state: resolved, log } = invariant(performResolve(gs));
         let next = resolved;
         const winner = checkWinner(next);
@@ -167,7 +167,7 @@ export class GameCoordinatorService {
      * Team preview and placement are secret: each player gets their own view (opponent's pick and
      * team hidden). A room-wide broadcast can't differ per viewer, so emit to each socket.
      */
-    private emitPerViewer(roomId: string, players: readonly SessionId[], gs: GameState): void {
+    private emitPerViewer(roomId: RoomId, players: readonly SessionId[], gs: GameState): void {
         players.forEach((playerSessionId, idx) => {
             const playerSession = this.sessionPort.getSessionById(playerSessionId);
             if (!playerSession) return;
@@ -175,7 +175,7 @@ export class GameCoordinatorService {
         });
     }
 
-    private emitToViewer(socketId: SocketId, roomId: string, gs: GameState, viewerIndex: PlayerIndex): void {
+    private emitToViewer(socketId: SocketId, roomId: RoomId, gs: GameState, viewerIndex: PlayerIndex): void {
         const view = GameStateMapper.toDTOForViewer(gs, viewerIndex);
         this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(roomId, view, gs));
     }

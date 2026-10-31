@@ -1,4 +1,4 @@
-import { P0, P1, asSession } from './helpers/ids';
+import { P0, P1, asSession, asRoom } from './helpers/ids';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
@@ -15,9 +15,9 @@ import { testTemplate } from './helpers/catalog';
 const SOCKET = 'socket-0' as SocketId;
 const USER_ID = 'user-uuid-1' as UserId;
 const SESSION: Session = { sessionId: P0, socketId: SOCKET, userId: USER_ID };
-const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: 'room-1' };
+const SESSION_WITH_ROOM: Session = { ...SESSION, roomId: asRoom('room-1') };
 
-const ROOM: Room = { roomId: 'room-1', ownerId: P0, playersId: [P0, P1], isStarted: false };
+const ROOM: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: false };
 
 const GS: GameState = {
     phase: GamePhase.KEEP,
@@ -30,7 +30,7 @@ const GS: GameState = {
 };
 
 const STARTED_ROOM: Room = {
-    roomId: 'room-1',
+    roomId: asRoom('room-1'),
     ownerId: P0,
     playersId: [P0, P1],
     isStarted: true,

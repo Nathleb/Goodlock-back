@@ -1,4 +1,4 @@
-import { P0, P1 } from './helpers/ids';
+import { P0, P1, asRoom } from './helpers/ids';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
@@ -13,10 +13,10 @@ import { ok, err } from '@shared/result.type';
 const SOCKET = 'socket-0' as SocketId;
 const USER_ID = 'user-uuid-0' as UserId;
 const SESSION: Session = { sessionId: P0, socketId: SOCKET, userId: USER_ID };
-const SESSION_IN_ROOM: Session = { ...SESSION, roomId: 'old-room' };
+const SESSION_IN_ROOM: Session = { ...SESSION, roomId: asRoom('old-room') };
 
-const ROOM: Room = { roomId: 'room-1', ownerId: P0, playersId: [P0, P1], isStarted: false };
-const OLD_ROOM: Room = { roomId: 'old-room', ownerId: P0, playersId: [P0], isStarted: false };
+const ROOM: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: false };
+const OLD_ROOM: Room = { roomId: asRoom('old-room'), ownerId: P0, playersId: [P0], isStarted: false };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setDeckSelection: jest.fn() };
@@ -78,14 +78,14 @@ describe('createRoom', () => {
 describe('joinRoom', () => {
     it('does nothing when session is not found', () => {
         mockSession.getSession.mockReturnValue(undefined);
-        coordinator.joinRoom(SOCKET, 'room-1');
+        coordinator.joinRoom(SOCKET, asRoom('room-1'));
         expect(mockRoom.joinRoom).not.toHaveBeenCalled();
     });
 
     it('joins room and emits roomUpdated to the whole room', () => {
         mockSession.getSession.mockReturnValue(SESSION);
         mockRoom.joinRoom.mockReturnValue(ok(ROOM));
-        coordinator.joinRoom(SOCKET, 'room-1');
+        coordinator.joinRoom(SOCKET, asRoom('room-1'));
         expect(mockRoom.joinRoom).toHaveBeenCalledWith(P0, 'room-1');
         expect(mockSession.setSessionRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
         expect(mockWs.joinRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
@@ -96,7 +96,7 @@ describe('joinRoom', () => {
         mockSession.getSession.mockReturnValue(SESSION_IN_ROOM);
         mockRoom.quitRoom.mockReturnValue(null);
         mockRoom.joinRoom.mockReturnValue(ok(ROOM));
-        coordinator.joinRoom(SOCKET, 'room-1');
+        coordinator.joinRoom(SOCKET, asRoom('room-1'));
         expect(mockRoom.quitRoom).toHaveBeenCalledWith(P0);
         expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'old-room');
         expect(mockRoom.joinRoom).toHaveBeenCalled();
@@ -105,14 +105,14 @@ describe('joinRoom', () => {
     it('reports the rule that refused the join, with its code', () => {
         mockSession.getSession.mockReturnValue(SESSION);
         mockRoom.joinRoom.mockReturnValue(err(domainError('ROOM_NOT_FOUND', 'Room not found')));
-        coordinator.joinRoom(SOCKET, 'bad-room');
+        coordinator.joinRoom(SOCKET, asRoom('bad-room'));
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
     });
 
     it('a refused join sends one error only and binds the session to no room', () => {
         mockSession.getSession.mockReturnValue(SESSION);
         mockRoom.joinRoom.mockReturnValue(err(domainError('ROOM_FULL', 'Room is full')));
-        coordinator.joinRoom(SOCKET, 'room-1');
+        coordinator.joinRoom(SOCKET, asRoom('room-1'));
         expect(mockWs.emitToSocket).toHaveBeenCalledTimes(1);
         expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
         expect(mockWs.joinRoom).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ describe('quitRoom', () => {
 
 describe('selectDeck', () => {
     const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
-    const IN_ROOM: Session = { ...SESSION, roomId: 'room-1' };
+    const IN_ROOM: Session = { ...SESSION, roomId: asRoom('room-1') };
 
     beforeEach(() => {
         mockSession.getSession.mockReturnValue(IN_ROOM);

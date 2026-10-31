@@ -1,4 +1,4 @@
-import { P0, P1 } from './helpers/ids';
+import { P0, P1, asRoom } from './helpers/ids';
 import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
@@ -28,8 +28,8 @@ const SOCKET_0 = 'socket-0' as SocketId;
 const SOCKET_1 = 'socket-1' as SocketId;
 const USER_ID_0 = 'user-uuid-0' as UserId;
 const USER_ID_1 = 'user-uuid-1' as UserId;
-const SESSION_0: Session = { sessionId: P0, socketId: SOCKET_0, userId: USER_ID_0, roomId: 'room-1' };
-const SESSION_1: Session = { sessionId: P1, socketId: SOCKET_1, userId: USER_ID_1, roomId: 'room-1' };
+const SESSION_0: Session = { sessionId: P0, socketId: SOCKET_0, userId: USER_ID_0, roomId: asRoom('room-1') };
+const SESSION_1: Session = { sessionId: P1, socketId: SOCKET_1, userId: USER_ID_1, roomId: asRoom('room-1') };
 
 const catalog = makeTestCatalog(10);
 
@@ -57,12 +57,12 @@ const withDeadEnemies = (gs: typeof baseGs) => ({
 });
 
 const makeRoom = (gameState: typeof baseGs): Room => ({
-    roomId: 'room-1', ownerId: P0, playersId: [P0, P1], isStarted: true, gameState,
+    roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: true, gameState,
 });
 
 const DECK_P0 = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'] as CatalogId[];
 const DECK_P1 = ['c4', 'c5', 'c6', 'c7', 'c8', 'c9'] as CatalogId[];
-const lobbyRoom: Room = { roomId: 'room-1', ownerId: P0, playersId: [P0, P1], isStarted: false, deckSelections: { p0: DECK_P0, p1: DECK_P1 } };
+const lobbyRoom: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: false, deckSelections: { p0: DECK_P0, p1: DECK_P1 } };
 const singlePlayerRoom: Room = { ...lobbyRoom, playersId: [P0] };
 
 // ── Mocks ───────────────────────────────────────────────────────────────────

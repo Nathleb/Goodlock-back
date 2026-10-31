@@ -24,7 +24,7 @@ import { ConfirmSelectionPayload } from './payloads/ConfirmSelection.payload';
 import { SessionGuard } from './guards/Session.guard';
 import { socketIdOf } from './socketIdOf';
 import { WsErrorFilter } from './filters/WsError.filter';
-import { UserId } from '@shared/branded.types';
+import { RoomId, UserId } from '@shared/branded.types';
 
 // Global pipes do not reach gateways: payloads are validated here, and a rejected one is
 // answered with an 'error' { code: 'INVALID_REQUEST', message } event by the WsErrorFilter.
@@ -82,7 +82,7 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         @ConnectedSocket() client: Socket,
         @MessageBody() data: JoinRoomPayload,
     ): void {
-        this.roomCoordinator.joinRoom(socketIdOf(client), data.roomId);
+        this.roomCoordinator.joinRoom(socketIdOf(client), data.roomId as RoomId);
     }
 
     @SubscribeMessage('quitRoom')

@@ -1,4 +1,4 @@
-import { UserId, SocketId, SessionId } from '@shared/branded.types';
+import { UserId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 import { Session } from '@application/dtos/Session.dto';
 
 export type ConnectResult = {
@@ -12,7 +12,7 @@ export interface SessionPort {
     getSession(socketId: SocketId): Session | undefined;
     /** Resolve a session by its stable sessionId (survives reconnects, unlike socketId). */
     getSessionById(sessionId: SessionId): Session | undefined;
-    setSessionRoom(socketId: SocketId, roomId: string | undefined): void;
+    setSessionRoom(socketId: SocketId, roomId: RoomId | undefined): void;
     disconnectSession(socketId: SocketId): void;
     deleteSession(socketId: SocketId): void;
 }
