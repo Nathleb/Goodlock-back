@@ -9,7 +9,6 @@ import { UserId, CatalogId } from '@shared/branded.types';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
 import { unwrap } from './helpers/result';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
-import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { testTemplate } from './helpers/catalog';
 
 const SOCKET = 'socket-0';
@@ -113,8 +112,7 @@ describe('handleConnect — started game reconnect', () => {
 });
 
 describe('handleConnect — reconnect before combat keeps secrets', () => {
-    const factory = buildEffectFactory();
-    const build = (t: ReturnType<typeof testTemplate>) => createCharacterFromTemplate(t, factory);
+    const build = (t: ReturnType<typeof testTemplate>) => createCharacterFromTemplate(t);
     const deck = (p: string) => Array.from({ length: 6 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_P0 = ['a0', 'a1', 'a2', 'a3'] as CatalogId[];
     const PICK_P1 = ['b5', 'b4', 'b3', 'b2'] as CatalogId[];

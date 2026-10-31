@@ -1,13 +1,12 @@
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { createCharacter, createCharacterFromJsonTemplate, createCharacterFromTemplate, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { CatalogId } from "@shared/branded.types";
-import { buildEffectFactory, createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import { effectFor } from "@domain/strategies/effectFor";
 
 describe('CharacterGenerationService', () => {
-  const factory = buildEffectFactory();
 
   const jsonTemplate = JSON.stringify({
     name: "TestCharacter",
@@ -24,14 +23,14 @@ describe('CharacterGenerationService', () => {
   });
 
   it('should create a character from JSON template', () => {
-    const character = createCharacterFromJsonTemplate(jsonTemplate, factory);
+    const character = createCharacterFromJsonTemplate(jsonTemplate);
     expect(character.name).toBe("TestCharacter");
     expect(character.maxHp).toBe(100);
     expect(character.baseSpeed).toBe(5);
   });
 
   it('should create a character with specified attributes', () => {
-    const die = generateFullDie(JSON.parse(jsonTemplate).baseDieInstructions, factory);
+    const die = generateFullDie(JSON.parse(jsonTemplate).baseDieInstructions);
     const character = createCharacter({ catalogId: 'test-char' as CatalogId, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
     expect(character.catalogId).toBe('test-char');
     expect(character.name).toBe("TestCharacter");
@@ -41,15 +40,15 @@ describe('CharacterGenerationService', () => {
 
   it('copies the template id into catalogId', () => {
     const template = { ...JSON.parse(jsonTemplate), id: 'test-char' };
-    const character = createCharacterFromTemplate(template, factory);
+    const character = createCharacterFromTemplate(template);
     expect(character.catalogId).toBe('test-char');
     expect(character.name).toBe("TestCharacter");
   });
 
   it('gives each built character its own instance id', () => {
     const template = { ...JSON.parse(jsonTemplate), id: 'test-char' };
-    const a = createCharacterFromTemplate(template, factory);
-    const b = createCharacterFromTemplate(template, factory);
+    const a = createCharacterFromTemplate(template);
+    const b = createCharacterFromTemplate(template);
     expect(a.id).not.toBe(b.id);
     expect(a.catalogId).toBe(b.catalogId);
   });
@@ -57,7 +56,7 @@ describe('CharacterGenerationService', () => {
   it('carries label, magnitude and targets on each face effect', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'Damage', magnitude: 4, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }] }] }) });
-    const c = createCharacterFromJsonTemplate(json, factory);
+    const c = createCharacterFromJsonTemplate(json);
     expect(c.baseDie[0].effects[0]).toMatchObject({
       label: 'Damage', magnitude: 4, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }],
     });
@@ -66,7 +65,7 @@ describe('CharacterGenerationService', () => {
   it('builds a face from a FixedDamage entry using the FixedDamage strategy', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'FixedDamage', magnitude: 3, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
-    const c = createCharacterFromJsonTemplate(json, factory);
+    const c = createCharacterFromJsonTemplate(json);
     expect(c.baseDie[0].effects[0]).toMatchObject({ label: 'FixedDamage', magnitude: 3 });
     expect(effectFor(c.baseDie[0].effects[0])).toBeInstanceOf(FixedDamage);
   });
@@ -74,7 +73,7 @@ describe('CharacterGenerationService', () => {
   it('the built FixedDamage lowers hp by the template magnitude, shield untouched', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'FixedDamage', magnitude: 3, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
-    const built = createCharacterFromJsonTemplate(json, factory);
+    const built = createCharacterFromJsonTemplate(json);
     const victim = { ...createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 0, slot: 0 } }), shield: 4 };
     const state = createGameState(createPlayer([victim], 0), createPlayer([], 1));
 
@@ -87,7 +86,7 @@ describe('CharacterGenerationService', () => {
   it('builds an ApplyStat face whose effect adds the template stat, value and duration', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', stat: 'POWER', magnitude: -3, duration: 2, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
-    const built = createCharacterFromJsonTemplate(json, factory);
+    const built = createCharacterFromJsonTemplate(json);
     const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 0, slot: 0 } });
     const state = { ...createGameState(createPlayer([target], 0), createPlayer([], 1)), currentRound: 4 };
 
@@ -100,7 +99,7 @@ describe('CharacterGenerationService', () => {
   it('builds an ApplyStat face for ARMOR whose effect adds that instance', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', stat: 'ARMOR', magnitude: -3, duration: 2, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
-    const built = createCharacterFromJsonTemplate(json, factory);
+    const built = createCharacterFromJsonTemplate(json);
     const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 1, slot: 0 } });
     const state = { ...createGameState(createPlayer([], 0), createPlayer([target], 1)), currentRound: 2 };
 
@@ -113,7 +112,7 @@ describe('CharacterGenerationService', () => {
   it('builds an ApplyState face whose effect puts the template state and duration on the axis', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', state: 'SLOW', duration: 2, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
-    const built = createCharacterFromJsonTemplate(json, factory);
+    const built = createCharacterFromJsonTemplate(json);
     const target = createCharacter({ catalogId: built.catalogId, name: 'V', maxHp: 10, baseSpeed: 1, baseDie: built.baseDie, position: { playerIndex: 1, slot: 0 } });
     const state = { ...createGameState(createPlayer([], 0), createPlayer([target], 1)), currentRound: 4 };
 
@@ -135,7 +134,7 @@ describe('CharacterGenerationService', () => {
   ])('throws on invalid ApplyStat parameters (%s)', (_label, params) => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyStat', ...params, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
-    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid stat parameters/);
+    expect(() => createCharacterFromJsonTemplate(json)).toThrow(/Invalid stat parameters/);
   });
 
   it.each([
@@ -151,13 +150,13 @@ describe('CharacterGenerationService', () => {
   ])('throws on invalid ApplyState parameters (%s)', (_label, params) => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', ...params, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
-    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid state parameters/);
+    expect(() => createCharacterFromJsonTemplate(json)).toThrow(/Invalid state parameters/);
   });
 
   it.each(['HASTE', 'SLOW', 'REGEN', 'POISON', 'STUN', 'ROOT', 'DIVINE_SHIELD'])('accepts the state %s', (state) => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'ApplyState', state, duration: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
-    expect(() => createCharacterFromJsonTemplate(json, factory)).not.toThrow();
+    expect(() => createCharacterFromJsonTemplate(json)).not.toThrow();
   });
 
   it.each([
@@ -167,18 +166,18 @@ describe('CharacterGenerationService', () => {
   ])('throws on invalid targets (%s)', (_label, targets) => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'Damage', magnitude: 4, targets }] }) });
-    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid targets/);
+    expect(() => createCharacterFromJsonTemplate(json)).toThrow(/Invalid targets/);
   });
 
   it('throws on a Swap with 3 cells', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'Swap', magnitude: 0, targets: [{ side: 'ALLY', mode: 'ABSOLUTE', n: [0, 1, 2] }] }] }) });
-    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow(/Invalid targets/);
+    expect(() => createCharacterFromJsonTemplate(json)).toThrow(/Invalid targets/);
   });
 
   it('throws on an unknown effect label', () => {
     const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
       { description: 'd', priority: 0, effects: [{ effect: 'SingleTargetDamage', magnitude: 4, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
-    expect(() => createCharacterFromJsonTemplate(json, factory)).toThrow();
+    expect(() => createCharacterFromJsonTemplate(json)).toThrow();
   });
 });

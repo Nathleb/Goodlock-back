@@ -64,7 +64,7 @@ Authored rather than derived from the filename or the display name, because the 
 
 **Validation** is a pure domain function, `validateCatalog(templates): string[]` in `src/domain/services/CharacterCatalog.service.ts`. It reports a missing id, a malformed id and duplicate ids. Per-template effect and target validation happens when the die is built (`validateEffectTargets`, see the auto-targeting spec).
 
-**Loading.** `FileCharacterCatalog` (`src/infrastructure/adapters/catalog/`) implements `CatalogPort`. On `OnModuleInit` it reads `tmplt/*.json` (directory injected as `CATALOG_DIR`), parses, runs `validateCatalog`, and builds every character once through `createCharacterFromTemplate` with the injected `EFFECT_FACTORY`, which surfaces effect and target errors at startup. It **throws on any error**: a bad catalog fails at boot, not mid-match. The built characters are discarded; only the validated templates are cached. `CatalogModule` owns `EFFECT_FACTORY`, `CATALOG_DIR` and `CATALOG_PORT`.
+**Loading.** `FileCharacterCatalog` (`src/infrastructure/adapters/catalog/`) implements `CatalogPort`. On `OnModuleInit` it reads `tmplt/*.json` (directory injected as `CATALOG_DIR`), parses, runs `validateCatalog`, and builds every character once through `createCharacterFromTemplate`, which surfaces effect and target errors at startup. It **throws on any error**: a bad catalog fails at boot, not mid-match. The built characters are discarded; only the validated templates are cached. `CatalogModule` owns `CATALOG_DIR` and `CATALOG_PORT`.
 
 ```ts
 interface CatalogPort {

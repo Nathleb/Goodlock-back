@@ -1,9 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { CATALOG_DIR, EFFECT_FACTORY } from '@application/ports/tokens';
+import { CATALOG_DIR } from '@application/ports/tokens';
 import { CatalogPort } from '@application/ports/CatalogPort';
-import EffectFactory from '@domain/factories/EffectFactory.class';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
 import { validateCatalog } from '@domain/services/CharacterCatalog.service';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
@@ -13,7 +12,7 @@ import { CatalogId } from '@shared/branded.types';
  * Reads, validates and test-builds every template in `dir`.
  * Throws on any problem: a bad catalog must stop the app at boot, not break a match.
  */
-export function loadCatalogFromDir(dir: string, factory: EffectFactory): CharacterTemplate[] {
+export function loadCatalogFromDir(dir: string): CharacterTemplate[] {
     const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
     if (files.length === 0) throw new Error(`Catalog: no character templates found in ${dir}`);
 
@@ -31,7 +30,7 @@ export function loadCatalogFromDir(dir: string, factory: EffectFactory): Charact
     // Building each character once surfaces effect and target errors at boot.
     templates.forEach((template, i) => {
         try {
-            createCharacterFromTemplate(template, factory);
+            createCharacterFromTemplate(template);
         } catch (e: unknown) {
             throw new Error(`Catalog: ${files[i]} cannot be built (${(e as Error).message})`);
         }
@@ -45,13 +44,10 @@ export function loadCatalogFromDir(dir: string, factory: EffectFactory): Charact
 export class FileCharacterCatalog implements CatalogPort, OnModuleInit {
     private templates = new Map<CatalogId, CharacterTemplate>();
 
-    constructor(
-        @Inject(EFFECT_FACTORY) private readonly factory: EffectFactory,
-        @Inject(CATALOG_DIR) private readonly dir: string,
-    ) {}
+    constructor(@Inject(CATALOG_DIR) private readonly dir: string) {}
 
     onModuleInit(): void {
-        const loaded = loadCatalogFromDir(this.dir, this.factory);
+        const loaded = loadCatalogFromDir(this.dir);
         this.templates = new Map(loaded.map(t => [t.id, t]));
     }
 

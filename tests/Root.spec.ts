@@ -4,7 +4,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { buildEffectFactory, createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import Die from "@domain/types/Die.type";
 import GameState from "@domain/types/GameState.type";
@@ -120,11 +120,10 @@ describe('ROOT', () => {
     });
 
     describe('applied inside the resolution', () => {
-        const factory = buildEffectFactory();
         const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
             createCharacter({
                 catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, position: { playerIndex, slot },
-                baseDie: generateFullDie(Array(6).fill({ description: 'f', priority: 0, effects }) as unknown as BaseDieInstructions, factory),
+                baseDie: generateFullDie(Array(6).fill({ description: 'f', priority: 0, effects }) as unknown as BaseDieInstructions),
             });
         const rootEnemy: EffectEntry = { effect: EffectLabel.ApplyState, state: 'ROOT', duration: 1, targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }] };
         const moveRight: EffectEntry = { effect: EffectLabel.Swap, magnitude: 0, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }, { side: 'ALLY', mode: 'ABSOLUTE', n: [1] }] };

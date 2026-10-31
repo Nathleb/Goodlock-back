@@ -2,10 +2,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { FileCharacterCatalog, loadCatalogFromDir } from '@infrastructure/adapters/catalog/FileCharacterCatalog';
-import { buildEffectFactory } from '@domain/services/GameInit.service';
 import { CatalogId } from '@shared/branded.types';
 
-const factory = buildEffectFactory();
 
 const face = { description: 'hit', priority: 0, effects: [{ effect: 'Damage', magnitude: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] };
 const template = (fields: Record<string, unknown>) => ({ name: 'N', maxHp: 10, baseSpeed: 5, baseDieInstructions: Array(6).fill(face), ...fields });
@@ -28,40 +26,40 @@ describe('loadCatalogFromDir', () => {
             'B.json': template({ id: 'bob', name: 'Bob' }),
             'notes.txt': 'not a template',
         });
-        const templates = loadCatalogFromDir(dir, factory);
+        const templates = loadCatalogFromDir(dir);
         expect(templates.map(t => t.id).sort()).toEqual(['alicent', 'bob']);
     });
 
     it('throws on duplicate ids', () => {
         writeTemplates({ 'A.json': template({ id: 'same' }), 'B.json': template({ id: 'same' }) });
-        expect(() => loadCatalogFromDir(dir, factory)).toThrow(/Duplicate catalog id "same"/);
+        expect(() => loadCatalogFromDir(dir)).toThrow(/Duplicate catalog id "same"/);
     });
 
     it('throws on a template without an id', () => {
         writeTemplates({ 'A.json': template({ name: 'Nameless' }) });
-        expect(() => loadCatalogFromDir(dir, factory)).toThrow(/Nameless/);
+        expect(() => loadCatalogFromDir(dir)).toThrow(/Nameless/);
     });
 
     it('throws on invalid JSON, naming the file', () => {
         writeTemplates({ 'Broken.json': '{ nope' });
-        expect(() => loadCatalogFromDir(dir, factory)).toThrow(/Broken\.json/);
+        expect(() => loadCatalogFromDir(dir)).toThrow(/Broken\.json/);
     });
 
     it('throws on an effect that fails target validation, naming the file', () => {
         const badFace = { ...face, effects: [{ effect: 'Swap', magnitude: 0, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0, 1, 2] }] }] };
         writeTemplates({ 'Bad.json': template({ id: 'bad', baseDieInstructions: Array(6).fill(badFace) }) });
-        expect(() => loadCatalogFromDir(dir, factory)).toThrow(/Bad\.json/);
+        expect(() => loadCatalogFromDir(dir)).toThrow(/Bad\.json/);
     });
 
     it('throws on an empty catalog', () => {
-        expect(() => loadCatalogFromDir(dir, factory)).toThrow(/no character templates/i);
+        expect(() => loadCatalogFromDir(dir)).toThrow(/no character templates/i);
     });
 });
 
 describe('FileCharacterCatalog', () => {
     it('serves the loaded templates after init', () => {
         writeTemplates({ 'A.json': template({ id: 'alicent', name: 'Alicent' }), 'B.json': template({ id: 'bob', name: 'Bob' }) });
-        const catalog = new FileCharacterCatalog(factory, dir);
+        const catalog = new FileCharacterCatalog(dir);
         catalog.onModuleInit();
 
         expect(catalog.list()).toHaveLength(2);
@@ -74,6 +72,6 @@ describe('FileCharacterCatalog', () => {
 
     it('fails init on a bad catalog', () => {
         writeTemplates({ 'A.json': template({ id: 'same' }), 'B.json': template({ id: 'same' }) });
-        expect(() => new FileCharacterCatalog(factory, dir).onModuleInit()).toThrow();
+        expect(() => new FileCharacterCatalog(dir).onModuleInit()).toThrow();
     });
 });

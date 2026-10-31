@@ -1,6 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
@@ -20,8 +20,7 @@ const baseDieInstructions: BaseDieInstructions = [
     { description: "Push left 2",  priority: 2, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, -2)] }] },
 ];
 
-const factory = buildEffectFactory();
-const die = generateFullDie(baseDieInstructions, factory);
+const die = generateFullDie(baseDieInstructions);
 const makeChar = (name: string) => createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
 
 const team1 = [makeChar("A"), makeChar("B"), makeChar("C"), makeChar("D"), makeChar("E")];
@@ -44,7 +43,7 @@ function resolveSwap(gs: GameState, actorId: string, targets: TargetGroup[]): Re
     const face = generateFullDie([
         { description: 'test', priority: 1, effects: [{ effect: EffectLabel.Swap, magnitude: 0, targets }] },
         emptyFace, emptyFace, emptyFace, emptyFace, emptyFace,
-    ], factory)[0];
+    ])[0];
     const state = {
         ...gs,
         priorityQueue: addEffectsToPriorityQueue(createPriorityQueue(), face, actorId, actor.baseSpeed),

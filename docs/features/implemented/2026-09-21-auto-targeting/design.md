@@ -32,7 +32,7 @@ type TargetGroup = {
 };
 ```
 
-`EffectLabel` is `Damage | FixedDamage | Heal | Shield | Swap | ApplyStat | ApplyState`. A `DieFace` is `{ priority, description, effects: FaceEffect[] }`, and each `FaceEffect` is `{ label, magnitude, targets: TargetGroup[], impl }` where `impl` is the strategy registered for the label in `EffectFactory` (`magnitude` is ignored by `Swap` and is 0 for `ApplyState`; `ApplyStat` also carries `stat` and `duration`, `ApplyState` carries `state` and `duration`). The strategy interface is `solve(gs, targets: readonly Position[], actorId) -> { state, affected }`.
+`EffectLabel` is `Damage | FixedDamage | Heal | Shield | Swap | ApplyStat | ApplyState`. A `DieFace` is `{ priority, description, effects: FaceEffect[] }`, and each `FaceEffect` is `{ label, magnitude, targets: TargetGroup[] }`, pure data: resolution gets the strategy from `effectFor(faceEffect)`, an exhaustive switch on the label (`magnitude` is ignored by `Swap` and is 0 for `ApplyState`; `ApplyStat` also carries `stat` and `duration`, `ApplyState` carries `state` and `duration`). The strategy interface is `solve(gs, targets: readonly Position[], actorId) -> { state, affected }`.
 
 Board convention: `ENEMY` relative offset `0` is the enemy in the same slot index as the actor ("the one facing me"). `BOARD_SIZE` is 5 cells per side; the team has fewer characters than cells, so some cells are empty (see below).
 

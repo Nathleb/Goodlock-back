@@ -3,7 +3,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { PlayerIndex, SlotIndex } from "@domain/types/Position.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { loseHp } from "@domain/services/Character.service";
-import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createPriorityQueue, addEffectsToPriorityQueue, addAllEffectsToPriorityQueue, resetPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { endOfRound } from "@domain/services/Round.service";
@@ -24,8 +24,7 @@ describe('PriorityQueueService', () => {
     { description: "Grants 6 shield",priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 6, targets: [enemyAbs(0)] }] },
   ];
 
-  const factory = buildEffectFactory();
-  const die = generateFullDie(baseDieInstructions, factory);
+  const die = generateFullDie(baseDieInstructions);
   // baseSpeed: 0 so finalPriority = face.priority + 0 = face.priority
   const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
   const player1: Player = { playerIndex: 0, team: [character] };
@@ -102,7 +101,7 @@ describe('PriorityQueueService', () => {
         { description: "D", priority: 1, effects: [] },
         { description: "E", priority: 1, effects: [] },
         { description: "F", priority: 1, effects: [] },
-      ], factory), position: { playerIndex: 0, slot: 0 } });
+      ]), position: { playerIndex: 0, slot: 0 } });
     const victim = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Victim", maxHp: 50, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
       ...createGameState(
@@ -134,7 +133,7 @@ describe('PriorityQueueService', () => {
       { description: "D", priority: 1, effects: [] },
       { description: "E", priority: 1, effects: [] },
       { description: "F", priority: 1, effects: [] },
-    ], factory);
+    ]);
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: noOpDie, position: { playerIndex: 0, slot: 0 } });
     const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
@@ -163,7 +162,7 @@ describe('PriorityQueueService', () => {
       { description: "push-left", priority: 1, effects: [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyRel(0, -1)] }] },
       { description: "E",        priority: 1, effects: [] },
       { description: "F",        priority: 1, effects: [] },
-    ], factory);
+    ]);
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Swapper", maxHp: 100, baseSpeed: 0, baseDie: swapDie, position: { playerIndex: 0, slot: 0 } });
     const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
@@ -273,7 +272,7 @@ describe('PriorityQueueService', () => {
   it('a self-targeted face resolves without throwing during unstacking', () => {
     const selfFace = generateFullDie(Array(6).fill(
         { description: 'self-only', priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 2, targets: [allyRel(0)] }] },
-    ) as unknown as BaseDieInstructions, factory)[0];
+    ) as unknown as BaseDieInstructions)[0];
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'SelfActor', maxHp: 100, baseSpeed: 0, baseDie: [selfFace, selfFace, selfFace, selfFace, selfFace, selfFace], position: { playerIndex: 0, slot: 0 as SlotIndex } });
     const enemy = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Enemy', maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 as SlotIndex } });
     const stateWithQueue: GameState = {
@@ -302,7 +301,7 @@ describe('PriorityQueueService', () => {
       { description: "D", priority: 1, effects: [] },
       { description: "E", priority: 1, effects: [] },
       { description: "F", priority: 1, effects: [] },
-    ], factory);
+    ]);
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: multiDie, position: { playerIndex: 0, slot: 0 } });
     const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const stateWithQueue: GameState = {
@@ -508,7 +507,7 @@ describe('PriorityQueueService', () => {
 
   describe('stat changes inside the round', () => {
     const dieOfFace = (effects: EffectEntry[], priority = 0) =>
-      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
       createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
     const buffAlly = (value: number): EffectEntry => ({ effect: EffectLabel.ApplyStat, stat: 'POWER', magnitude: value, duration: 2, targets: [allyAbs(1)] });
@@ -574,7 +573,7 @@ describe('PriorityQueueService', () => {
 
   describe('STUN', () => {
     const dieOfFace = (effects: EffectEntry[], priority = 0) =>
-      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
       createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
     const hit = (amount: number): EffectEntry => ({ effect: EffectLabel.Damage, magnitude: amount, targets: [enemyAbs(0)] });
@@ -642,7 +641,7 @@ describe('PriorityQueueService', () => {
 
   describe('SPEED states in the sort key', () => {
     const dieOfFace = (effects: EffectEntry[], priority: number) =>
-      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, speedState = 0, priority = 0) => ({
       ...createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace([], priority), position: { playerIndex, slot } }),
       states: speedState === 0 ? {} : { SPEED: { value: speedState, touchedRound: 0 } },
@@ -687,7 +686,7 @@ describe('PriorityQueueService', () => {
 
   describe('SPEED changing during the round', () => {
     const dieOfFace = (effects: EffectEntry[], priority: number) =>
-      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory);
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[] = [], priority = 0) =>
       createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects, priority), position: { playerIndex, slot } });
     const apply = (state: 'HASTE' | 'SLOW', side: 'ALLY' | 'ENEMY', slot: number, duration = 1): EffectEntry =>
@@ -784,9 +783,8 @@ describe('PriorityQueueService', () => {
   });
 
   describe('auto-targeting at resolution time', () => {
-    const factory = buildEffectFactory();
     const face = (priority: number, effects: EffectEntry[]) =>
-      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions, factory)[0];
+      generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions)[0];
     const idle = face(0, []);
     const mk = (name: string, speed: number, f: DieFace, pi: PlayerIndex, slot: number) =>
       ({ ...createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 20, baseSpeed: speed, baseDie: [f, f, f, f, f, f], position: { playerIndex: pi, slot: slot as SlotIndex } }), face: f });

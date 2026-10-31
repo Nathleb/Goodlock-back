@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import { loadCatalogFromDir } from "@infrastructure/adapters/catalog/FileCharacterCatalog";
-import { buildEffectFactory } from "@domain/services/GameInit.service";
 
 const tmpltDir = path.join(__dirname, "..", "tmplt");
 const roster = fs.readdirSync(tmpltDir).filter(f => f.endsWith(".json"))
@@ -35,7 +34,7 @@ describe('the roster', () => {
     });
 
     it('boots as the shipped catalog: validated, and every character can be built', () => {
-        const templates = loadCatalogFromDir(tmpltDir, buildEffectFactory());
+        const templates = loadCatalogFromDir(tmpltDir);
         expect(templates).toHaveLength(6);
     });
 });

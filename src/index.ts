@@ -1,4 +1,3 @@
-export * from "./domain/factories/EffectFactory.class";
 
 export * from "./domain/services/Character.service";
 export * from "./domain/services/CharacterGeneration.service";

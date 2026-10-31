@@ -5,7 +5,6 @@ import { describe } from "node:test";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead, toggleIsFaceLocked } from "@domain/services/Character.service";
-import { buildEffectFactory } from "@domain/services/GameInit.service";
 
 describe('CharacterService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -17,8 +16,7 @@ describe('CharacterService', () => {
     { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 6, targets: [allyRel(0)] }] },
   ];
 
-  const factory = buildEffectFactory();
-  const die = generateFullDie(baseDieInstructions, factory);
+  const die = generateFullDie(baseDieInstructions);
   const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
 
   it('should roll a die for the character', () => {

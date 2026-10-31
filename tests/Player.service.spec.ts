@@ -6,7 +6,6 @@ import { hasLost, rollDiceForTurn } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
-import { buildEffectFactory } from "@domain/services/GameInit.service";
 
 describe('PlayerService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -18,8 +17,7 @@ describe('PlayerService', () => {
     { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 6, targets: [allyRel(0)] }] },
   ];
 
-  const factory = buildEffectFactory();
-  const die = generateFullDie(baseDieInstructions, factory);
+  const die = generateFullDie(baseDieInstructions);
   const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
   const character = makeChar();
   const player: Player = { playerIndex: 0, team: [character] };

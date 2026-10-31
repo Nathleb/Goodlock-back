@@ -3,7 +3,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { gainShield, loseHp } from "@domain/services/Character.service";
-import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { endOfRound, checkWinner } from "@domain/services/Round.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
@@ -17,8 +17,7 @@ const baseDieInstructions: BaseDieInstructions = [
     { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }] },
 ];
 
-const factory = buildEffectFactory();
-const die = generateFullDie(baseDieInstructions, factory);
+const die = generateFullDie(baseDieInstructions);
 
 describe('Round.service', () => {
     it.each([[0, 1], [1, 0]] as const)('flips the initiative from %i to %i at end of round', (before, after) => {
