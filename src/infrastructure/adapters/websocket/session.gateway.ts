@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards, UsePipes, ValidationError, ValidationPipe } from '@nestjs/common';
 import {
     WebSocketGateway,
     OnGatewayInit,
@@ -7,6 +7,7 @@ import {
     SubscribeMessage,
     MessageBody,
     ConnectedSocket,
+    WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -21,9 +22,21 @@ import { SelectDeckPayload } from './payloads/SelectDeck.payload';
 import { ConfirmSelectionPayload } from './payloads/ConfirmSelection.payload';
 
 import { SessionGuard } from './guards/Session.guard';
+import { WsErrorFilter } from './filters/WsError.filter';
 import { UserId } from '@shared/branded.types';
 
+// Global pipes do not reach gateways: payloads are validated here, and a rejected one is
+// answered with the usual 'error' { message } event.
+const payloadPipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    exceptionFactory: (errors: ValidationError[]) =>
+        new WsException(errors.flatMap(e => Object.values(e.constraints ?? {})).join('; ') || 'Invalid payload'),
+});
+
 @UseGuards(SessionGuard)
+@UsePipes(payloadPipe)
+@UseFilters(WsErrorFilter)
 @WebSocketGateway({ cors: { origin: process.env.CORS_ORIGIN ?? '*' } })
 export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     constructor(

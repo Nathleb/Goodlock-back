@@ -260,6 +260,7 @@ export class GameCoordinatorService {
     confirmKeep(socketId: string, lockedCharacterIds: string[]): void {
         const ctx = this.getContext(socketId);
         if (!ctx) { this.emitError(socketId, 'Action not available'); return; }
+        if (!Array.isArray(lockedCharacterIds)) { this.emitError(socketId, 'lockedCharacterIds must be an array'); return; }
         const { room, playerIndex } = ctx;
         const player = room.gameState.players[playerIndex];
         const teamIds = new Set(player.team.map(c => c.id));

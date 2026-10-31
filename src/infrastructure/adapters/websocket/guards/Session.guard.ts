@@ -1,5 +1,6 @@
 import { Injectable, Inject, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Socket } from 'socket.io';
+import { WsException } from '@nestjs/websockets';
 import { SESSION_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 
@@ -10,10 +11,8 @@ export class SessionGuard implements CanActivate {
     canActivate(context: ExecutionContext): boolean {
         const client: Socket = context.switchToWs().getClient();
         const session = this.sessionPort.getSession(client.id);
-        if (!session) {
-            client.emit('error', { message: 'Not connected' });
-            return false;
-        }
+        // The gateway's WsErrorFilter is the only emitter of 'error'.
+        if (!session) throw new WsException('Not connected');
         return true;
     }
 }

@@ -1,5 +1,6 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { WsException } from '@nestjs/websockets';
 import { SessionGuard } from '../src/infrastructure/adapters/websocket/guards/Session.guard';
 import { SESSION_PORT } from '../src/application/ports/tokens';
 
@@ -40,10 +41,10 @@ describe('SessionGuard', () => {
         expect(emit).not.toHaveBeenCalled();
     });
 
-    it('returns false and emits error when session does not exist', () => {
+    it('throws a WsException and does not emit when session does not exist, so the filter is the only emitter', () => {
         mockSessionPort.getSession.mockReturnValue(undefined);
         const { ctx, emit } = makeContext('socket-0');
-        expect(guard.canActivate(ctx)).toBe(false);
-        expect(emit).toHaveBeenCalledWith('error', { message: 'Not connected' });
+        expect(() => guard.canActivate(ctx)).toThrow(new WsException('Not connected'));
+        expect(emit).not.toHaveBeenCalled();
     });
 });

@@ -351,6 +351,20 @@ describe('confirmKeep', () => {
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
+    it('emits an error instead of throwing when the locked ids are not an array', () => {
+        const confirm = () => coordinator.confirmKeep(SOCKET_0, undefined as unknown as string[]);
+        expect(confirm).not.toThrow();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: expect.any(String) });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('refuses to lock a character of the opponent\'s team', () => {
+        const opponentId = keepGs.players[1].team[0].id;
+        coordinator.confirmKeep(SOCKET_0, [opponentId]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { message: `Unknown character id: ${opponentId}` });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
     it('rerolls and emits gameStateUpdated still in KEEP when both confirm with rollsLeft > 0', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(keepGs)));
         coordinator.confirmKeep(SOCKET_0, []);
