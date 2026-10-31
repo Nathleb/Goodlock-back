@@ -52,8 +52,3 @@ export function computeAfkClaimInMs(
     if (gs.playersReady[0] && gs.playersReady[1]) return null;
     return Math.max(0, afkLimitMs - (now - phaseStartedAt));
 }
-
-export function computeForfeitClaimInMs(presence: PlayerPresence, now: number, graceMs: number): number | null {
-    if (presence.connected || presence.disconnectedAt === null) return null;
-    return Math.max(0, graceMs - (now - presence.disconnectedAt));
-}

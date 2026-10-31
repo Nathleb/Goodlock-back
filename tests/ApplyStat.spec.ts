@@ -1,7 +1,7 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import ApplyStat from "@domain/strategies/ApplyStat.class";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import Die from "@domain/types/Die.type";
 import GameState from "@domain/types/GameState.type";

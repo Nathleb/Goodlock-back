@@ -4,7 +4,7 @@ import EffectLabel from "@domain/types/EffectLabels.type";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import Die from "@domain/types/Die.type";
 import GameState from "@domain/types/GameState.type";

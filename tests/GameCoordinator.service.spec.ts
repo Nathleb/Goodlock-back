@@ -13,7 +13,7 @@ import { SlotIndex } from '@domain/types/Position.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import { createCharacter, generateFullDie, createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
-import { createGameState } from '@domain/services/GameInit.service';
+import { createGameState } from './helpers/gameState';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';

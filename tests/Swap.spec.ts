@@ -1,6 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState } from "@domain/services/GameInit.service";
+import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
