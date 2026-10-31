@@ -9,7 +9,7 @@ import { beginResultPhase } from '@domain/services/Phase.service';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
 import { GameOverDTO } from '@application/dtos/GameState.dto';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
-import { DeckId, SocketId } from '@shared/branded.types';
+import { DeckId, SocketId, SessionId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
 import { Room } from '@domain/types/Room.type';
 import { Result, ok } from '@shared/result.type';
@@ -31,7 +31,7 @@ export class RoomCoordinatorService {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
-    private leaveCurrentRoom(socketId: SocketId, sessionId: string, roomId: string): void {
+    private leaveCurrentRoom(socketId: SocketId, sessionId: SessionId, roomId: string): void {
         const room = this.roomPort.getRoom(roomId);
         if (room?.isStarted && room.gameState && room.gameState.phase !== GamePhase.RESULT) {
             const quitterIndex = resolvePlayerIndex(room, sessionId);
@@ -65,7 +65,7 @@ export class RoomCoordinatorService {
     /** Leaves the current room if any, enters the one `enter` gives, then lets `announce` tell the clients. */
     private enterRoom(
         socketId: SocketId,
-        enter: (sessionId: string) => Result<Room, DomainError>,
+        enter: (sessionId: SessionId) => Result<Room, DomainError>,
         announce: (room: Room) => void,
     ): void {
         const session = this.sessionPort.getSession(socketId);

@@ -35,7 +35,7 @@ import {
 } from '@domain/services/GameLoop.service';
 import { createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
-import { CatalogId, SocketId } from '@shared/branded.types';
+import { CatalogId, SocketId, SessionId } from '@shared/branded.types';
 
 type GameContext = { session: Session; room: Room; playerIndex: PlayerIndex };
 
@@ -167,7 +167,7 @@ export class GameCoordinatorService {
      * Team preview and placement are secret: each player gets their own view (opponent's pick and
      * team hidden). A room-wide broadcast can't differ per viewer, so emit to each socket.
      */
-    private emitPerViewer(roomId: string, players: readonly string[], gs: GameState): void {
+    private emitPerViewer(roomId: string, players: readonly SessionId[], gs: GameState): void {
         players.forEach((playerSessionId, idx) => {
             const playerSession = this.sessionPort.getSessionById(playerSessionId);
             if (!playerSession) return;

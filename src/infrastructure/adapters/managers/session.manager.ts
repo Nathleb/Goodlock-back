@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConnectResult, SessionPort } from '@application/ports/SessionPort';
 import { Session } from '@application/dtos/Session.dto';
-import { UserId, SocketId } from '@shared/branded.types';
+import { UserId, SocketId, SessionId } from '@shared/branded.types';
 
 @Injectable()
 export class SessionManager implements SessionPort {
@@ -28,7 +28,7 @@ export class SessionManager implements SessionPort {
             return { session: reconnected, evictedSocketId };
         }
         const session: Session = {
-            sessionId: crypto.randomUUID(),
+            sessionId: crypto.randomUUID() as SessionId,
             socketId,
             userId,
         };
@@ -42,7 +42,7 @@ export class SessionManager implements SessionPort {
         return this.bySockId.get(socketId);
     }
 
-    getSessionById(sessionId: string): Session | undefined {
+    getSessionById(sessionId: SessionId): Session | undefined {
         return this.bySessionId.get(sessionId);
     }
 

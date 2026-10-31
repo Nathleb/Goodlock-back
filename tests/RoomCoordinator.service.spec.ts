@@ -1,3 +1,4 @@
+import { P0, P1 } from './helpers/ids';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
@@ -11,11 +12,11 @@ import { ok, err } from '@shared/result.type';
 
 const SOCKET = 'socket-0' as SocketId;
 const USER_ID = 'user-uuid-0' as UserId;
-const SESSION: Session = { sessionId: 'p0', socketId: SOCKET, userId: USER_ID };
+const SESSION: Session = { sessionId: P0, socketId: SOCKET, userId: USER_ID };
 const SESSION_IN_ROOM: Session = { ...SESSION, roomId: 'old-room' };
 
-const ROOM: Room = { roomId: 'room-1', ownerId: 'p0', playersId: ['p0', 'p1'], isStarted: false };
-const OLD_ROOM: Room = { roomId: 'old-room', ownerId: 'p0', playersId: ['p0'], isStarted: false };
+const ROOM: Room = { roomId: 'room-1', ownerId: P0, playersId: [P0, P1], isStarted: false };
+const OLD_ROOM: Room = { roomId: 'old-room', ownerId: P0, playersId: [P0], isStarted: false };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setDeckSelection: jest.fn() };
@@ -49,7 +50,7 @@ describe('createRoom', () => {
         mockSession.getSession.mockReturnValue(SESSION);
         mockRoom.createRoom.mockReturnValue(ROOM);
         coordinator.createRoom(SOCKET);
-        expect(mockRoom.createRoom).toHaveBeenCalledWith('p0');
+        expect(mockRoom.createRoom).toHaveBeenCalledWith(P0);
         expect(mockSession.setSessionRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
         expect(mockWs.joinRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'roomCreated', expect.anything());
@@ -60,7 +61,7 @@ describe('createRoom', () => {
         mockRoom.quitRoom.mockReturnValue(null);
         mockRoom.createRoom.mockReturnValue(ROOM);
         coordinator.createRoom(SOCKET);
-        expect(mockRoom.quitRoom).toHaveBeenCalledWith('p0');
+        expect(mockRoom.quitRoom).toHaveBeenCalledWith(P0);
         expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'old-room');
         expect(mockRoom.createRoom).toHaveBeenCalled();
     });
@@ -85,7 +86,7 @@ describe('joinRoom', () => {
         mockSession.getSession.mockReturnValue(SESSION);
         mockRoom.joinRoom.mockReturnValue(ok(ROOM));
         coordinator.joinRoom(SOCKET, 'room-1');
-        expect(mockRoom.joinRoom).toHaveBeenCalledWith('p0', 'room-1');
+        expect(mockRoom.joinRoom).toHaveBeenCalledWith(P0, 'room-1');
         expect(mockSession.setSessionRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
         expect(mockWs.joinRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated', expect.anything());
@@ -96,7 +97,7 @@ describe('joinRoom', () => {
         mockRoom.quitRoom.mockReturnValue(null);
         mockRoom.joinRoom.mockReturnValue(ok(ROOM));
         coordinator.joinRoom(SOCKET, 'room-1');
-        expect(mockRoom.quitRoom).toHaveBeenCalledWith('p0');
+        expect(mockRoom.quitRoom).toHaveBeenCalledWith(P0);
         expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'old-room');
         expect(mockRoom.joinRoom).toHaveBeenCalled();
     });
@@ -149,7 +150,7 @@ describe('quitRoom', () => {
         mockSession.getSession.mockReturnValue(SESSION_IN_ROOM);
         mockRoom.quitRoom.mockReturnValue(ROOM);
         coordinator.quitRoom(SOCKET);
-        expect(mockRoom.quitRoom).toHaveBeenCalledWith('p0');
+        expect(mockRoom.quitRoom).toHaveBeenCalledWith(P0);
         expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'old-room');
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated', expect.anything());
     });
@@ -176,9 +177,9 @@ describe('selectDeck', () => {
     it("snapshots the player's deck in the room and tells the room who is ready", async () => {
         await coordinator.selectDeck(SOCKET, 'deck-1');
         expect(mockDecks.getOwnDeckCharacterIds).toHaveBeenCalledWith(USER_ID, 'deck-1');
-        expect(mockRoom.setDeckSelection).toHaveBeenCalledWith('room-1', 'p0', SEVEN);
+        expect(mockRoom.setDeckSelection).toHaveBeenCalledWith('room-1', P0, SEVEN);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated',
-            expect.objectContaining({ players: expect.arrayContaining([expect.objectContaining({ playerId: 'p0', hasDeck: true })]) }));
+            expect.objectContaining({ players: expect.arrayContaining([expect.objectContaining({ playerId: P0, hasDeck: true })]) }));
     });
 
     it('errors when the player is not in a room', async () => {

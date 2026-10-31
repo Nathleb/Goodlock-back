@@ -1,3 +1,4 @@
+import { P0, P1, asSession } from './helpers/ids';
 import { createRoom, addPlayerToRoom, startRoom, resolvePlayerIndex, setPresenceInRoom } from '@domain/services/Room.service';
 import { unwrap } from './helpers/result';
 import GameState from '@domain/types/GameState.type';
@@ -5,12 +6,12 @@ import GameState from '@domain/types/GameState.type';
 const GS = {} as GameState; // startRoom stores it opaquely
 
 function startedRoom() {
-    return unwrap(startRoom(unwrap(addPlayerToRoom(createRoom('p0'), 'p1')), GS));
+    return unwrap(startRoom(unwrap(addPlayerToRoom(createRoom(P0), P1)), GS));
 }
 
 describe('startRoom presence & playerOrder', () => {
     it('snapshots playerOrder from playersId', () => {
-        expect(startedRoom().playerOrder).toEqual(['p0', 'p1']);
+        expect(startedRoom().playerOrder).toEqual([P0, P1]);
     });
 
     it('initializes both players as connected', () => {
@@ -23,18 +24,18 @@ describe('startRoom presence & playerOrder', () => {
 
 describe('resolvePlayerIndex', () => {
     it('uses playerOrder for started rooms even after playersId changes', () => {
-        const room = { ...startedRoom(), playersId: ['p1'] };
-        expect(resolvePlayerIndex(room, 'p1')).toBe(1);
-        expect(resolvePlayerIndex(room, 'p0')).toBe(0);
+        const room = { ...startedRoom(), playersId: [P1] };
+        expect(resolvePlayerIndex(room, P1)).toBe(1);
+        expect(resolvePlayerIndex(room, P0)).toBe(0);
     });
 
     it('falls back to playersId for lobby rooms', () => {
-        const room = unwrap(addPlayerToRoom(createRoom('p0'), 'p1'));
-        expect(resolvePlayerIndex(room, 'p1')).toBe(1);
+        const room = unwrap(addPlayerToRoom(createRoom(P0), P1));
+        expect(resolvePlayerIndex(room, P1)).toBe(1);
     });
 
     it('returns -1 for unknown ids', () => {
-        expect(resolvePlayerIndex(startedRoom(), 'stranger')).toBe(-1);
+        expect(resolvePlayerIndex(startedRoom(), asSession('stranger'))).toBe(-1);
     });
 });
 
@@ -51,7 +52,7 @@ describe('setPresenceInRoom', () => {
     });
 
     it('is a no-op on rooms without presence (lobby)', () => {
-        const lobby = createRoom('p0');
+        const lobby = createRoom(P0);
         expect(setPresenceInRoom(lobby, 0, false, 5000)).toBe(lobby);
     });
 

@@ -8,7 +8,7 @@ Each step is a type-only refactor: no behavior changes, and tests are green befo
 - Test fixtures cast their ID literals (`'socket-0' as SocketId`). No assertion changes (approved in the plan).
 
 - [x] **1 `SocketId`**: ports, managers, `WebSocketService`, coordinators, gateway and session guard.
-- [ ] **2 `SessionId`**: `Session.dto`, `Room.type` (`playersId`, `ownerId`), `Room.service`, `RoomPort`, `room.manager`, coordinators.
+- [x] **2 `SessionId`**: `Session.dto`, `Room.type` (`playersId`, `ownerId`), `Room.service`, `RoomPort`, `room.manager`, coordinators.
 - [ ] **3 `RoomId`**: `Room.type.roomId`, `Session.dto.roomId`, `RoomPort`, `SessionPort.setSessionRoom`, `WebSocketPort`, managers, coordinators, gateway.
 - [ ] **4 `CharacterId`**: `Character.id`, `PriorityQueue.type`, `PriorityQueue.service`, `GameCoordinator`.
 - [ ] **5** Delete `PlayerId` and `DeviceId`. Knip baseline down to the measured count.

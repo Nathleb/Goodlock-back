@@ -1,3 +1,4 @@
+import { asSession } from './helpers/ids';
 import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
 import { UserId, SocketId } from '@shared/branded.types';
 
@@ -65,7 +66,7 @@ describe('getSessionById', () => {
 
     it('returns undefined for an unknown sessionId', () => {
         const manager = new SessionManager();
-        expect(manager.getSessionById('nope')).toBeUndefined();
+        expect(manager.getSessionById(asSession('nope'))).toBeUndefined();
     });
 
     it('returns undefined after the session is deleted', () => {
