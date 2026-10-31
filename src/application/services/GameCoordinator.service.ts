@@ -64,6 +64,20 @@ export class GameCoordinatorService {
         return ok({ session, room, playerIndex: idx as PlayerIndex });
     }
 
+    /**
+     * Runs a game action for the acting player. Without a game context for the socket it reports
+     * why the action is not available; anything the action throws (a bug) is reported as INTERNAL.
+     */
+    private act(socketId: string, action: (ctx: GameContext) => void): void {
+        const context = this.getContext(socketId);
+        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
+        try {
+            action(context.value);
+        } catch (e: unknown) {
+            this.emitFailure(socketId, e);
+        }
+    }
+
     /** A Result error or a thrown value, as the `error { code, message }` event. */
     private emitFailure(socketId: string, error: unknown): void {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
@@ -198,11 +212,7 @@ export class GameCoordinatorService {
     }
 
     confirmSelection(socketId: string, characterIds: string[]): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             if (!Array.isArray(characterIds) || characterIds.some(id => typeof id !== 'string')) {
                 this.emitFailure(socketId, domainError('INVALID_SELECTION', 'characterIds must be an array of catalog ids'));
                 return;
@@ -218,35 +228,21 @@ export class GameCoordinatorService {
                 // First to pick: only the picker learns about it, the pick stays secret.
                 this.emitToViewer(socketId, room.roomId, gs, playerIndex);
             }
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+        });
     }
 
     cancelSelection(socketId: string): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             const cancelled = domainCancelSelection(room.gameState, playerIndex);
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
-            const gs = cancelled.value;
-            if (gs !== room.gameState) {
-                this.roomPort.updateGameState(room.roomId, gs);
-                this.emitToViewer(socketId, room.roomId, gs, playerIndex);
-            }
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+            if (cancelled.value === room.gameState) return;
+            this.roomPort.updateGameState(room.roomId, cancelled.value);
+            this.emitToViewer(socketId, room.roomId, cancelled.value, playerIndex);
+        });
     }
 
     rearrangeTeam(socketId: string, slots: (string | null)[]): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             const placed = checkPhase(room.gameState, GamePhase.PLACEMENT)
                 .andThen(gs => checkNotReady(gs, playerIndex))
                 .andThen(gs => placeTeam(gs.players[playerIndex], slots).map(player => ({ gs, player })));
@@ -260,17 +256,11 @@ export class GameCoordinatorService {
             // prop-controlled and would otherwise snap the drag back. The
             // opponent is not notified, so the arrangement stays secret.
             this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(updatedGs, playerIndex), updatedGs));
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+        });
     }
 
     confirmPlacement(socketId: string): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             const otherIndex = (1 - playerIndex) as PlayerIndex;
             const wasOtherReady = room.gameState.playersReady[otherIndex];
             const confirmed = confirmPlacement(room.gameState, playerIndex);
@@ -284,72 +274,50 @@ export class GameCoordinatorService {
                 this.roomPort.updateGameState(room.roomId, gs);
                 this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
             }
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+        });
     }
 
     confirmKeep(socketId: string, lockedCharacterIds: string[]): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        if (!Array.isArray(lockedCharacterIds)) { this.emitFailure(socketId, domainError('INVALID_LOCK', 'lockedCharacterIds must be an array')); return; }
-        const { room, playerIndex } = ctx;
-        const player = room.gameState.players[playerIndex];
-        const teamIds = new Set(player.team.map(c => c.id));
-        for (const id of lockedCharacterIds) {
-            if (!teamIds.has(id)) { this.emitFailure(socketId, domainError('INVALID_LOCK', `Unknown character id: ${id}`)); return; }
-        }
-        const lockedSet = new Set(lockedCharacterIds);
-        const updatedPlayer: Player = {
-            ...player,
-            team: player.team.map(c => ({ ...c, isFaceLocked: lockedSet.has(c.id) })),
-        };
-        const players = [...room.gameState.players] as [Player, Player];
-        players[playerIndex] = updatedPlayer;
-        const gsWithLocks: GameState = { ...room.gameState, players };
-        this.doConfirm(socketId, ctx, gsWithLocks, confirmKeep);
+        this.act(socketId, ctx => {
+            const { room, playerIndex } = ctx;
+            if (!Array.isArray(lockedCharacterIds)) { this.emitFailure(socketId, domainError('INVALID_LOCK', 'lockedCharacterIds must be an array')); return; }
+            const player = room.gameState.players[playerIndex];
+            const teamIds = new Set(player.team.map(c => c.id));
+            for (const id of lockedCharacterIds) {
+                if (!teamIds.has(id)) { this.emitFailure(socketId, domainError('INVALID_LOCK', `Unknown character id: ${id}`)); return; }
+            }
+            const lockedSet = new Set(lockedCharacterIds);
+            const updatedPlayer: Player = {
+                ...player,
+                team: player.team.map(c => ({ ...c, isFaceLocked: lockedSet.has(c.id) })),
+            };
+            const players = [...room.gameState.players] as [Player, Player];
+            players[playerIndex] = updatedPlayer;
+            const gsWithLocks: GameState = { ...room.gameState, players };
+            this.doConfirm(socketId, ctx, gsWithLocks, confirmKeep);
+        });
     }
 
     cancelPlacement(socketId: string): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             const cancelled = domainCancelPlacement(room.gameState, playerIndex);
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
-            const gs = cancelled.value;
-            if (gs !== room.gameState) {
-                this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
-            }
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+            if (cancelled.value === room.gameState) return;
+            this.roomPort.updateGameState(room.roomId, cancelled.value);
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(cancelled.value, playerIndex), cancelled.value));
+        });
     }
 
     cancelKeep(socketId: string): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             const cancelled = domainCancelKeep(room.gameState, playerIndex);
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
-            const gs = cancelled.value;
-            if (gs !== room.gameState) this.roomPort.updateGameState(room.roomId, gs);
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+            if (cancelled.value !== room.gameState) this.roomPort.updateGameState(room.roomId, cancelled.value);
+        });
     }
 
     claimVictory(socketId: string): void {
-        const context = this.getContext(socketId);
-        if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
-        const ctx = context.value;
-        const { room, playerIndex } = ctx;
-        try {
+        this.act(socketId, ({ room, playerIndex }) => {
             const opponentIndex = (1 - playerIndex) as PlayerIndex;
             const opponentPresence = room.presence?.[opponentIndex];
             if (!opponentPresence) { this.emitFailure(socketId, domainError('ACTION_NOT_AVAILABLE', 'Action not available')); return; }
@@ -362,8 +330,6 @@ export class GameCoordinatorService {
             this.roomPort.updateGameState(room.roomId, beginResultPhase(room.gameState));
             const payload: GameOverDTO = { winner: playerIndex, reason: verdict.value };
             this.wsPort.emitToRoom(room.roomId, 'gameOver', payload);
-        } catch (e: unknown) {
-            this.emitFailure(socketId, e);
-        }
+        });
     }
 }
