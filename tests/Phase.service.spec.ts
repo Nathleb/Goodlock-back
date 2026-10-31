@@ -6,8 +6,6 @@ import { createPlayer, placeTeam } from "@domain/services/Player.service";
 import { Player } from "@domain/types/Player.type";
 import { unwrap, unwrapErr } from './helpers/result';
 import {
-    assertPhase,
-    assertNotReady,
     checkPhase,
     checkNotReady,
     beginPlacementPhase, beginRollPhase, beginKeepPhase,
@@ -53,16 +51,6 @@ describe('Phase transitions', () => {
     });
 });
 
-describe('assertPhase', () => {
-    it('does not throw when phase matches', () => {
-        expect(() => assertPhase(gs, GamePhase.PLACEMENT)).not.toThrow();
-    });
-
-    it('throws when phase does not match', () => {
-        expect(() => assertPhase(gs, GamePhase.ROLL)).toThrow();
-    });
-});
-
 describe('placeTeam', () => {
     // A team of 4 after team preview: slots 0..3, slot 4 empty.
     const player = createPlayer(team1.slice(0, 4), 0);
@@ -97,30 +85,6 @@ describe('placeTeam', () => {
     ])('rejects %s', (_label, slots) => {
         const error = unwrapErr(placeTeam(player, slots as unknown as (string | null)[]));
         expect(error.code).toBe('INVALID_PLACEMENT');
-    });
-});
-
-describe('assertNotReady', () => {
-    it('does not throw when player has not confirmed', () => {
-        expect(() => assertNotReady(gs, 0 as PlayerIndex)).not.toThrow();
-        expect(() => assertNotReady(gs, 1 as PlayerIndex)).not.toThrow();
-    });
-
-    it('throws when player 0 has already confirmed', () => {
-        const ready = { ...gs, playersReady: [true, false] as [boolean, boolean] };
-        expect(() => assertNotReady(ready, 0 as PlayerIndex))
-            .toThrow('Player has already confirmed');
-    });
-
-    it('throws when player 1 has already confirmed', () => {
-        const ready = { ...gs, playersReady: [false, true] as [boolean, boolean] };
-        expect(() => assertNotReady(ready, 1 as PlayerIndex))
-            .toThrow('Player has already confirmed');
-    });
-
-    it('does not throw for the other player when one has confirmed', () => {
-        const ready = { ...gs, playersReady: [true, false] as [boolean, boolean] };
-        expect(() => assertNotReady(ready, 1 as PlayerIndex)).not.toThrow();
     });
 });
 

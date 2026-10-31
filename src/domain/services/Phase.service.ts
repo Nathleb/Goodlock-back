@@ -16,17 +16,6 @@ export function checkNotReady(gs: GameState, playerIndex: PlayerIndex): Result<G
         : ok(gs);
 }
 
-// Throwing forms of the checks above, kept for the paths that are not migrated to Result yet.
-export function assertPhase(gameState: GameState, expected: GamePhase): void {
-    const checked = checkPhase(gameState, expected);
-    if (checked.isErr()) throw new Error(checked.error.message);
-}
-
-export function assertNotReady(gs: GameState, playerIndex: PlayerIndex): void {
-    const checked = checkNotReady(gs, playerIndex);
-    if (checked.isErr()) throw new Error(checked.error.message);
-}
-
 export const beginPlacementPhase = (gs: GameState): GameState => ({ ...gs, phase: GamePhase.PLACEMENT });
 export const beginRollPhase      = (gs: GameState): GameState => ({ ...gs, phase: GamePhase.ROLL });
 export const beginKeepPhase      = (gs: GameState): GameState => ({ ...gs, phase: GamePhase.KEEP });
