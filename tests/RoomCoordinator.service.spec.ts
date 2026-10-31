@@ -4,7 +4,7 @@ import { RoomCoordinatorService } from '@application/services/RoomCoordinator.se
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
 import { UserId, CatalogId } from '@shared/branded.types';
-import { NotFoundException } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { domainError } from '@domain/errors/DomainError';
 import { ok, err } from '@shared/result.type';
@@ -106,6 +106,29 @@ describe('joinRoom', () => {
         mockRoom.joinRoom.mockReturnValue(err(domainError('ROOM_NOT_FOUND', 'Room not found')));
         coordinator.joinRoom(SOCKET, 'bad-room');
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
+    });
+
+    it('a refused join sends one error only and binds the session to no room', () => {
+        mockSession.getSession.mockReturnValue(SESSION);
+        mockRoom.joinRoom.mockReturnValue(err(domainError('ROOM_FULL', 'Room is full')));
+        coordinator.joinRoom(SOCKET, 'room-1');
+        expect(mockWs.emitToSocket).toHaveBeenCalledTimes(1);
+        expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
+        expect(mockWs.joinRoom).not.toHaveBeenCalled();
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+});
+
+describe('createRoom and joinRoom, unexpected failure', () => {
+    it('reports a thrown error to the client as INTERNAL, without binding the session', () => {
+        mockSession.getSession.mockReturnValue(SESSION);
+        mockRoom.createRoom.mockImplementation(() => { throw new Error('boom'); });
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        coordinator.createRoom(SOCKET);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', expect.objectContaining({ code: 'INTERNAL' }));
+        expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
+        expect(logError).toHaveBeenCalled();
+        jest.restoreAllMocks();
     });
 });
 
