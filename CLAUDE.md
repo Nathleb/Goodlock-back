@@ -30,6 +30,14 @@ npm run lint            # eslint --fix (rewrites files)
 npm run lint:check      # eslint without --fix
 npx tsc --noEmit        # typecheck src and tests
 npm run format
+
+# Quality gates (see "Quality gates" below)
+npm run quality         # check:arch + check:dup + check:dead
+npm run check:arch      # dependency-cruiser: layers and cycles
+npm run check:dup       # jscpd: duplicated code
+npm run check:dead      # knip in production mode, compared to quality-baseline.json
+npm run test:mutation   # Stryker, slow (about 30 min the first time, incremental after)
+npm run test:scripts    # tests of scripts/quality-ratchet.mjs
 ```
 
 ## Architecture
@@ -75,10 +83,53 @@ The general workflow (plan, TDD, verify, review, record, git rules, conventional
 - **Memory roles**: the auto-memory (`MEMORY.md` and its `project_*` files) holds the state of features (what shipped, what is pending). Claude-Mem holds the history of decisions and observations. To recover context, read `MEMORY.md` for the state, then run `mem-search` for the why when the task touches past work (an effect, a refactor in progress, a known bug, a pending spec). Record state in the auto-memory only; decisions go in "Decision:" phrasing for Claude-Mem to capture.
 - **Plan**: also state new ports/adapters, new branded IDs and new effects/templates. Order steps bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
 - **Step size**: a step never spans more than one layer.
-- **Verify**: `npm run test`, `npm run lint:check`, `npx tsc --noEmit` (typechecks src and tests together), and `npm run build` before a Docker build. Never use `npm run lint` (`--fix`) as a check: it rewrites files. GitHub Actions (`.github/workflows/ci.yml`) runs the same four commands on every push to `main` and every pull request.
+- **Verify**: `npm run test`, `npm run lint:check`, `npx tsc --noEmit` (typechecks src and tests together), and `npm run build` before a Docker build. Never use `npm run lint` (`--fix`) as a check: it rewrites files. Then every quality gate below (`npm run quality`, and `npm run test:mutation` on the code of the feature). GitHub Actions (`.github/workflows/ci.yml`) runs all of them on every push to `main` and every pull request.
 - **Review**: the `reviewer` agent is defined globally in `~/.claude/agents/reviewer.md`. `/code-review` is the lighter alternative.
 - **Record**: mark the feature's `project_*` auto-memory entry as done (absolute date, what shipped, what is pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync; create the entry if none exists.
 - **Subagents**: besides search and the review, a protocol change can be mirrored in Goodlock-app by a subagent (no shared state).
+
+## Quality gates
+
+These are guardrails (rules in `~/.claude/CLAUDE.md`). Each one is a ratchet: it was measured on the existing code and fails when the code gets worse than that level. When a gate blocks, fix the cause. Never silence a finding, exclude a file or raise a threshold. When a cleanup improves a level, tighten it in the same commit.
+
+Stryker and dependency-cruiser need Node 22 or later (the app itself and the `verify` CI job use Node 20, like the Dockerfile), so the `quality` and `mutation` CI jobs run on Node 22.
+
+The level of each ratchet is the number in the file named below (not repeated here, so it cannot go stale).
+
+| Gate | Tool | Where the level is set |
+| --- | --- | --- |
+| Tests | jest | all green |
+| Complexity | ESLint `complexity` | `eslint.config.mjs` |
+| Layers, cycles | dependency-cruiser | the known cycles in `.dependency-cruiser-known-violations.json`, no new one |
+| Duplication | jscpd | `threshold` in `.jscpd.json` |
+| Dead code | knip, production mode (code only tests use counts as dead) | `knipIssues` in `quality-baseline.json` |
+| Useless tests | Stryker | `thresholds.break` in `stryker.config.json` |
+
+The block below is read by the tooling in `~/.claude/` (the `blockers-report` skill and the no-bypass hook). Keep it in sync with the table. A `failure` is a regex on the output of the command.
+
+```quality-gates
+{
+  "gates": [
+    { "name": "jest", "command": "npm run test", "failure": "\\b[1-9]\\d* failed\\b|^FAIL\\s+\\S+" },
+    { "name": "eslint", "command": "npm run lint:check", "failure": "✖ \\d+ problems? \\([1-9]\\d* errors?" },
+    { "name": "tsc", "command": "npx tsc --noEmit", "failure": "error TS\\d+" },
+    { "name": "dependency-cruiser", "command": "npm run check:arch", "failure": "(?<!\\d)[1-9]\\d* dependency violations?" },
+    { "name": "jscpd", "command": "npm run check:dup", "failure": "found too many duplicates" },
+    { "name": "knip", "command": "npm run check:dead", "failure": "more dead-code issues" },
+    { "name": "stryker", "command": "npm run test:mutation", "failure": "Final mutation score [\\d.]+ under breaking threshold" }
+  ],
+  "suppressions": [
+    "eslint-disable", "@ts-ignore", "@ts-expect-error", "@ts-nocheck", "istanbul ignore",
+    "Stryker disable", "jscpd:ignore", "@public", "@internal", "/* eslint "
+  ],
+  "guardFiles": [
+    "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
+    ".dependency-cruiser.cjs", ".dependency-cruiser-known-violations.json",
+    "quality-baseline.json", "scripts/quality-ratchet.mjs", "package.json", ".gitignore",
+    "jest.config.ts", "tsconfig.json", ".github/workflows/"
+  ]
+}
+```
 
 ## Recurring tasks
 

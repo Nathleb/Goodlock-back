@@ -47,3 +47,7 @@ web-bundles/
 goodlock-handoff
 # MCP servers (local)
 .mcp.json
+
+# Mutation testing
+/reports
+/.stryker-tmp
