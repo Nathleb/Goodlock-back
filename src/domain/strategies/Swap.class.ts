@@ -3,6 +3,7 @@ import GameState from "../types/GameState.type";
 import Position, { SlotIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
 import { isDead, stateValue } from "../services/Character.service";
+import { CharacterId } from "@shared/branded.types";
 
 /**
  * Exchanges the occupants of two cells of one team, looked up by slot. When one
@@ -14,7 +15,7 @@ function swapSlotsOnSameTeam(
     playerIndex: number,
     slotA: SlotIndex,
     slotB: SlotIndex,
-): { state: GameState; affected: string[] } {
+): { state: GameState; affected: CharacterId[] } {
     if (slotA === slotB) return { state: gameState, affected: [] };
 
     const player = gameState.players[playerIndex];
@@ -43,7 +44,7 @@ function swapSlotsOnSameTeam(
 
 /** Exchanges the occupants of exactly 2 cells on the same team; anything else fizzles. */
 export default class Swap implements Effect {
-    solve(gameState: GameState, targets: readonly Position[], _actorId: string): { state: GameState; affected: string[] } {
+    solve(gameState: GameState, targets: readonly Position[], _actorId: CharacterId): { state: GameState; affected: CharacterId[] } {
         if (targets.length !== 2) return { state: gameState, affected: [] };
         const [a, b] = targets;
         if (a.playerIndex !== b.playerIndex) return { state: gameState, affected: [] };

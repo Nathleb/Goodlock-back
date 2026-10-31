@@ -1,3 +1,4 @@
+import { asCharacter } from './helpers/ids';
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { PlayerIndex, SlotIndex } from "@domain/types/Position.type";
@@ -228,13 +229,13 @@ describe('PriorityQueueService', () => {
 
     // Inject entry with non-existent character ID
     let queue = createPriorityQueue();
-    queue = addEffectsToPriorityQueue(queue, face, 'NON_EXISTENT_ID', 1);
+    queue = addEffectsToPriorityQueue(queue, face, asCharacter('NON_EXISTENT_ID'), 1);
     gs = { ...gs, priorityQueue: queue };
 
     const { log } = unstackPriorityQueueWithLog(gs);
 
     expect(log).toHaveLength(1);
-    expect(log[0].characterId).toBe('NON_EXISTENT_ID');
+    expect(log[0].characterId).toBe(asCharacter('NON_EXISTENT_ID'));
     expect(log[0].skipped).toBe(true);
   });
 
@@ -336,11 +337,11 @@ describe('PriorityQueueService', () => {
     ): GameState => {
       const a = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'A', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 0, slot: 0 } });
       const b = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'B', maxHp: 100, baseSpeed: 0, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 0 } });
-      const charA = { ...a, id: entries[0].id };
-      const charB = { ...b, id: entries[1].id };
+      const charA = { ...a, id: asCharacter(entries[0].id) };
+      const charB = { ...b, id: asCharacter(entries[1].id) };
       let q = createPriorityQueue();
       for (const e of entries) {
-        q = addEffectsToPriorityQueue(q, e.face, e.id, e.speed);
+        q = addEffectsToPriorityQueue(q, e.face, asCharacter(e.id), e.speed);
       }
       return {
         ...createGameState({ playerIndex: 0, team: [charA] }, { playerIndex: 1, team: [charB] }),
@@ -429,7 +430,7 @@ describe('PriorityQueueService', () => {
       it('inside one team, equal bracket and speed go by slot ascending whatever the array order', () => {
         const at = (slot: SlotIndex, id: string) => ({
           ...createCharacter({ catalogId: TEST_CATALOG_ID, name: id, maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 0, slot } }),
-          id,
+          id: asCharacter(id),
         });
         const high = at(3, 'slot-3');
         const low = at(1, 'slot-1');
@@ -446,7 +447,7 @@ describe('PriorityQueueService', () => {
       it('beats the slot: a holder in slot 4 still resolves before a rival in slot 0', () => {
         const at = (playerIndex: PlayerIndex, slot: SlotIndex, id: string) => ({
           ...createCharacter({ catalogId: TEST_CATALOG_ID, name: id, maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex, slot } }),
-          id,
+          id: asCharacter(id),
         });
         const rival = at(0, 0, 'rival-slot-0');
         const holder = at(1, 4, 'holder-slot-4');
@@ -463,13 +464,13 @@ describe('PriorityQueueService', () => {
       it('an actor missing from the state sorts as a non-holder in slot 0, and is skipped', () => {
         const present = {
           ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'present', maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 1, slot: 2 } }),
-          id: 'present-slot-2',
+          id: asCharacter('present-slot-2'),
         };
         const state: GameState = {
           ...createGameState({ playerIndex: 0, team: [] }, { playerIndex: 1, team: [present] }, 0),
           priorityQueue: [
             [noop(0), present.id, 5] as const,
-            [noop(0), 'missing', 5] as const,
+            [noop(0), asCharacter('missing'), 5] as const,
           ],
         };
         const { log } = unstackPriorityQueueWithLog(state);

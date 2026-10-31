@@ -5,6 +5,7 @@ import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
 import { stateValue } from "./Character.service";
 import { effectFor } from "../strategies/effectFor";
+import { CharacterId } from "@shared/branded.types";
 
 export function createPriorityQueue(): PriorityQueue {
     return [];
@@ -13,7 +14,7 @@ export function createPriorityQueue(): PriorityQueue {
 export function addEffectsToPriorityQueue(
     priorityQueue: PriorityQueue,
     dieFace: DieFace,
-    characterId: string,
+    characterId: CharacterId,
     baseSpeed: number
 ): PriorityQueue {
     const newEntry: QueueEntry = [dieFace, characterId, baseSpeed];
@@ -32,13 +33,13 @@ export function resetPriorityQueue(gameState: GameState): GameState {
     return { ...gameState, priorityQueue: createPriorityQueue() };
 }
 
-function isAlive(gameState: GameState, characterId: string): boolean {
+function isAlive(gameState: GameState, characterId: CharacterId): boolean {
     return gameState.players.some(player =>
         player.team.some(char => char.id === characterId && char.hp > 0)
     );
 }
 
-function findCharacter(gameState: GameState, characterId: string): Character | undefined {
+function findCharacter(gameState: GameState, characterId: CharacterId): Character | undefined {
     for (const player of gameState.players) {
         const char = player.team.find(c => c.id === characterId);
         if (char) return char;
@@ -65,7 +66,7 @@ function captureTieKeys(state: GameState): TieKeys {
 // sort: no randomness. The SPEED state is read live, so a HASTE or SLOW landing during the round
 // reorders the entries that have not played yet; the bracket is never crossed.
 function compareEntries(state: GameState, tieKeys: TieKeys) {
-    const speedRank = (characterId: string): number => {
+    const speedRank = (characterId: CharacterId): number => {
         const self = findCharacter(state, characterId);
         const speed = self ? stateValue(self, 'SPEED') : 0;
         return speed > 0 ? 0 : speed < 0 ? 2 : 1;
@@ -96,7 +97,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             continue;
         }
 
-        const affectedIds = new Set<string>();
+        const affectedIds = new Set<CharacterId>();
         const effects: ResolvedEffect[] = [];
         for (const faceEffect of face.effects) {
             // Cells are resolved just before each effect, from the actor's *current*

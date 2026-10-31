@@ -280,7 +280,8 @@ export class GameCoordinatorService {
             const { room, playerIndex } = ctx;
             if (!Array.isArray(lockedCharacterIds)) { this.emitFailure(socketId, domainError('INVALID_LOCK', 'lockedCharacterIds must be an array')); return; }
             const player = room.gameState.players[playerIndex];
-            const teamIds = new Set(player.team.map(c => c.id));
+            // The ids come from the client: plain strings until matched against the real team.
+            const teamIds = new Set<string>(player.team.map(c => c.id));
             for (const id of lockedCharacterIds) {
                 if (!teamIds.has(id)) { this.emitFailure(socketId, domainError('INVALID_LOCK', `Unknown character id: ${id}`)); return; }
             }
