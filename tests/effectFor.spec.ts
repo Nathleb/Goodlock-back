@@ -30,6 +30,10 @@ describe('effectFor', () => {
             .toStrictEqual(new ApplyState('STUN', 1));
     });
 
+    it('refuses an unknown label, naming it, so a bad template fails at catalog load', () => {
+        expect(() => effectFor({ label: 'Teleport' as EffectLabel, magnitude: 1 })).toThrow(/No strategy for effect: Teleport/);
+    });
+
     it('refuses ApplyStat without its stat and duration, with a clear message', () => {
         expect(() => effectFor({ label: EffectLabel.ApplyStat, magnitude: 3 })).toThrow(/ApplyStat needs a stat and a duration/);
         expect(() => effectFor({ label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' })).toThrow(/ApplyStat needs a stat and a duration/);

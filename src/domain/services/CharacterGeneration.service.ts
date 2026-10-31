@@ -94,7 +94,8 @@ function addEffectToFace(dieFace: DieFace, entry: EffectEntry): DieFace {
         : undefined;
     // A state has no magnitude: the face effect carries 0.
     const magnitude = entry.effect === EffectLabel.ApplyState ? 0 : entry.magnitude;
-    // Fails here, at catalog load, on parameters the strategy cannot be built from.
+    // The validators above already reject missing parameters; this call is what rejects an
+    // unknown effect label at catalog load instead of mid-match. Do not remove it.
     effectFor({ label: entry.effect, magnitude, ...params });
     return {
         ...dieFace,
