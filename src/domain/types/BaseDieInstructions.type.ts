@@ -3,14 +3,14 @@ import { StatName } from "./Modifier.type";
 import { StateName } from "./State.type";
 import TargetGroup from "./TargetGroup.type";
 
-export type BasicEffectEntry = {
+type BasicEffectEntry = {
     readonly effect: Exclude<EffectLabel, EffectLabel.ApplyStat | EffectLabel.ApplyState>;
     readonly magnitude: number;
     readonly targets: readonly TargetGroup[];
 };
 
 /** Adds a stat instance: `magnitude` is the stat value (negative = debuff), `duration` is in rounds. */
-export type ApplyStatEntry = {
+type ApplyStatEntry = {
     readonly effect: EffectLabel.ApplyStat;
     readonly stat: StatName;
     readonly magnitude: number;
@@ -19,7 +19,7 @@ export type ApplyStatEntry = {
 };
 
 /** Puts a state on its axis: no magnitude, `duration` is in rounds. */
-export type ApplyStateEntry = {
+type ApplyStateEntry = {
     readonly effect: EffectLabel.ApplyState;
     readonly state: StateName;
     readonly duration: number;
@@ -28,7 +28,7 @@ export type ApplyStateEntry = {
 
 export type EffectEntry = BasicEffectEntry | ApplyStatEntry | ApplyStateEntry;
 
-export type FaceTemplate = {
+type FaceTemplate = {
     readonly description: string;
     readonly priority: number;
     readonly effects: readonly EffectEntry[];

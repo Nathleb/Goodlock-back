@@ -1,4 +1,4 @@
-import { DieFaceDTO } from './GameState.dto';
+import { DieFaceDTO } from './DieFace.dto';
 
 /** A catalog character as the client sees it: identity, stats and the full die with targeting. */
 export type CatalogCharacterDTO = {

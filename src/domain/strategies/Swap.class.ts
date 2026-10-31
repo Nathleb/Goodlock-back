@@ -9,7 +9,7 @@ import { isDead, stateValue } from "../services/Character.service";
  * cell is empty its occupant simply moves there; two empty cells fizzle. The
  * team stays ordered by slot.
  */
-export function swapSlotsOnSameTeam(
+function swapSlotsOnSameTeam(
     gameState: GameState,
     playerIndex: number,
     slotA: SlotIndex,

@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, EFFECT_FACTORY, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
@@ -18,7 +18,6 @@ import { toErrorPayload } from '@application/errors/toErrorPayload';
 import { domainError, DomainError } from '@domain/errors/DomainError';
 import { invariant } from '@application/errors/invariant';
 import { Result, ok, err } from '@shared/result.type';
-import EffectFactory from '@domain/factories/EffectFactory.class';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, selectedDecks } from '@domain/services/Room.service';
 import { checkWinner, endOfRound } from '@domain/services/Round.service';
@@ -48,7 +47,6 @@ export class GameCoordinatorService {
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
-        @Inject(EFFECT_FACTORY) private readonly effectFactory: EffectFactory,
         @Inject(CLAIM_CONFIG) private readonly claimConfig: ClaimConfig,
         @Inject(CATALOG_PORT) private readonly catalogPort: CatalogPort,
     ) {}
@@ -218,7 +216,7 @@ export class GameCoordinatorService {
                 return;
             }
             const confirmed = domainConfirmSelection(room.gameState, playerIndex, characterIds as CatalogId[],
-                template => createCharacterFromTemplate(template, this.effectFactory));
+                createCharacterFromTemplate);
             if (confirmed.isErr()) { this.emitFailure(socketId, confirmed.error); return; }
             const gs = confirmed.value;
             this.roomPort.updateGameState(room.roomId, gs);

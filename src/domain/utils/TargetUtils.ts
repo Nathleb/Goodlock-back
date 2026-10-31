@@ -10,7 +10,7 @@ import Position from "../types/Position.type";
  * @param effectCallback - The callback function to apply the effect.
  * @returns The updated players.
  */
-export function applyEffectToTargets(players: readonly [Player, Player], targetedCharacters: Character[], effectCallback: (character: Character) => Character): readonly [Player, Player] {
+function applyEffectToTargets(players: readonly [Player, Player], targetedCharacters: Character[], effectCallback: (character: Character) => Character): readonly [Player, Player] {
     const targetedCharacterIds = new Set(targetedCharacters.map(character => character.id));
 
     return players.map((player) => {

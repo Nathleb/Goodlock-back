@@ -5,7 +5,7 @@ import { SlotIndex } from "@domain/types/Position.type";
 import GameState from "@domain/types/GameState.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
 import { beginPlacementPhase } from "@domain/services/Phase.service";
@@ -16,7 +16,6 @@ import {
 import { enemyAbs, allyAbs, enemyRel, allyRel } from "./helpers/targets";
 import { unwrap } from "./helpers/result";
 
-const factory = buildEffectFactory();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +28,7 @@ function uniformDie(
     effects: BaseDieInstructions[0]['effects'],
 ): DieFn {
     const face = { description, priority, effects };
-    return generateFullDie([face, face, face, face, face, face], factory);
+    return generateFullDie([face, face, face, face, face, face]);
 }
 
 /** Team of 5 characters sharing one die. */

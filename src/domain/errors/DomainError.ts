@@ -2,7 +2,7 @@
  * Rules a player action can break. Anything else that goes wrong (a bug, a broken invariant, a
  * bad template at boot) is not a DomainError: it is thrown, logged, and reported as INTERNAL.
  */
-export const DOMAIN_ERROR_CODES = [
+const DOMAIN_ERROR_CODES = [
     'ROOM_NOT_FOUND',
     'DECK_NOT_FOUND',
     'ROOM_FULL',

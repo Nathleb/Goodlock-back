@@ -5,12 +5,11 @@ import { SlotIndex } from "@domain/types/Position.type";
 import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks } from "@domain/services/Room.service";
 import { unwrap, unwrapErr } from "./helpers/result";
 import { CatalogId } from "@shared/branded.types";
-import { createGameState, buildEffectFactory } from "@domain/services/GameInit.service";
+import { createGameState } from "@domain/services/GameInit.service";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createPlayer } from "@domain/services/Player.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
-const factory = buildEffectFactory();
 const die = generateFullDie([
     { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
     { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
@@ -18,7 +17,7 @@ const die = generateFullDie([
     { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
     { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
     { description: "D", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
-] as BaseDieInstructions, factory);
+] as BaseDieInstructions);
 const makeTeam = (pi: 0 | 1) => createPlayer([0,1,2,3,4].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
 const gameState = createGameState(makeTeam(0), makeTeam(1));
 

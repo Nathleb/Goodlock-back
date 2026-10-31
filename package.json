@@ -22,7 +22,7 @@
     "test:failed": "jest --onlyFailures",
     "test:mutation": "stryker run",
     "check:dup": "jscpd",
-    "check:arch": "depcruise src --config .dependency-cruiser.cjs --ignore-known",
+    "check:arch": "depcruise src --config .dependency-cruiser.cjs",
     "check:dead": "node scripts/quality-ratchet.mjs",
     "test:scripts": "node --test scripts/quality-ratchet.test.mjs",
     "quality": "npm run check:arch; a=$?; npm run check:dup; b=$?; npm run check:dead; c=$?; [ $a -eq 0 ] && [ $b -eq 0 ] && [ $c -eq 0 ]"

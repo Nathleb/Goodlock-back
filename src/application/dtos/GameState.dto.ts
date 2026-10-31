@@ -1,17 +1,8 @@
 import { CatalogCharacterDTO } from './Catalog.dto';
+import { DieFaceDTO } from './DieFace.dto';
 import { PlayerIndex } from '@domain/types/Position.type';
 
-export type TargetGroupDTO = { side: string; mode: string; n: number[] };
-
-export type FaceEffectDTO = { effect: string; magnitude: number; targets: TargetGroupDTO[]; stat?: string; state?: string; duration?: number };
-
-export type StatInstanceDTO = { stat: string; value: number; roundsLeft: number };
-
-export type DieFaceDTO = {
-    description: string;
-    priority: number;
-    effects: FaceEffectDTO[];
-};
+type StatInstanceDTO = { stat: string; value: number; roundsLeft: number };
 
 export type CharacterDTO = {
     id: string;
@@ -38,12 +29,12 @@ export type PlayerGameStateDTO = {
     team: CharacterDTO[];
 };
 
-export type ResolveChangeDTO = {
+type ResolveChangeDTO = {
     characterId: string;
     after: CharacterDTO;
 };
 
-export type ResolvedEffectDTO = {
+type ResolvedEffectDTO = {
     effect: string;
     targets: { playerIndex: number; slot: number }[];  // [] = fizzled
 };
@@ -67,7 +58,7 @@ export type GameStateDTO = {
     selection?: SelectionViewDTO;
 };
 
-export type SelectionViewDTO = {
+type SelectionViewDTO = {
     decks: [CatalogCharacterDTO[], CatalogCharacterDTO[]];
     myPicks: string[] | null;
 };

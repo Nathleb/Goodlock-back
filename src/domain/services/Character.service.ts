@@ -12,7 +12,7 @@ export function rollDie(character: Character): Character {
     return updateCharacter(character, { face: character.baseDie[roll1D6()] });
 }
 
-export function canRollDie(character: Character): boolean {
+function canRollDie(character: Character): boolean {
     return !character.isFaceLocked;
 }
 
@@ -57,7 +57,7 @@ export function toggleIsFaceLocked(character: Character): Character {
 }
 
 /** The net value of a stat never goes beyond +/- this. To revisit after the balancing simulations. */
-export const MAX_STAT_NET = 9;
+const MAX_STAT_NET = 9;
 
 /** Net value of a stat: the sum of its active instances, capped when read (instances stay uncapped, so opposites still cancel). */
 export function netStat(character: Character, stat: StatName): number {

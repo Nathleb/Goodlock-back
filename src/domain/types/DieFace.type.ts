@@ -1,4 +1,3 @@
-import Effect from "./Effect.type";
 import EffectLabel from "./EffectLabels.type";
 import { StatName } from "./Modifier.type";
 import { StateName } from "./State.type";
@@ -13,7 +12,6 @@ export type FaceEffect = {
     readonly state?: StateName;
     readonly duration?: number;
     readonly targets: readonly TargetGroup[];
-    readonly impl: Effect;
 };
 
 type DieFace = {

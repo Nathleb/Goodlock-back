@@ -1,6 +1,6 @@
 import CharacterTemplate from "../types/CharacterTemplate.type";
 import EffectLabel from "../types/EffectLabels.type";
-import EffectFactory from "../factories/EffectFactory.class";
+import { effectFor } from "../strategies/effectFor";
 import Die from "../types/Die.type";
 import DieFace from "../types/DieFace.type";
 import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
@@ -9,18 +9,18 @@ import Position from "../types/Position.type";
 import { validateEffectTargets, validateStatParams, validateStateParams } from "./TargetResolution.service";
 import { CatalogId } from "@shared/branded.types";
 
-export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string, factory: EffectFactory): Character {
+export function createCharacterFromJsonTemplate(jsonCharacterTemplate: string): Character {
     let template: CharacterTemplate;
     try {
         template = JSON.parse(jsonCharacterTemplate);
     } catch {
         throw new Error("Invalid JSON template");
     }
-    return createCharacterFromTemplate(template, factory);
+    return createCharacterFromTemplate(template);
 }
 
-export function createCharacterFromTemplate(template: CharacterTemplate, factory: EffectFactory): Character {
-    const die = generateFullDie(template.baseDieInstructions, factory);
+export function createCharacterFromTemplate(template: CharacterTemplate): Character {
+    const die = generateFullDie(template.baseDieInstructions);
     return createCharacter({
         catalogId: template.id,
         name: template.name,
@@ -31,7 +31,7 @@ export function createCharacterFromTemplate(template: CharacterTemplate, factory
     });
 }
 
-export type CharacterParams = {
+type CharacterParams = {
     readonly catalogId: CatalogId;
     readonly name: string;
     readonly maxHp: number;
@@ -58,27 +58,20 @@ export function createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, po
     };
 }
 
-export function setDieFace(character: Character, faceIndex: number, dieFace: DieFace): Character {
-    const newBaseDie = [...character.baseDie];
-    newBaseDie[faceIndex] = dieFace;
-    return { ...character, baseDie: newBaseDie };
-}
-
-export function generateFullDie(baseDieInstructions: BaseDieInstructions, factory: EffectFactory): Die {
+export function generateFullDie(baseDieInstructions: BaseDieInstructions): Die {
     return baseDieInstructions.map(faceData =>
         generateFaceFromEffectEntries(
             { description: faceData.description, priority: faceData.priority, effects: [] },
             faceData.effects,
-            factory,
         )
     ) as Die;
 }
 
-export function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly EffectEntry[], factory: EffectFactory): DieFace {
-    return effectEntries.reduce((acc, entry) => addEffectToFace(acc, entry, factory), face);
+function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly EffectEntry[]): DieFace {
+    return effectEntries.reduce((acc, entry) => addEffectToFace(acc, entry), face);
 }
 
-export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: EffectFactory): DieFace {
+function addEffectToFace(dieFace: DieFace, entry: EffectEntry): DieFace {
     // Template load is a startup boundary: a bad template is a non-recoverable config error.
     const errors = validateEffectTargets(entry.effect, entry.targets ?? []);
     if (errors.length > 0) {
@@ -101,9 +94,11 @@ export function addEffectToFace(dieFace: DieFace, entry: EffectEntry, factory: E
         : undefined;
     // A state has no magnitude: the face effect carries 0.
     const magnitude = entry.effect === EffectLabel.ApplyState ? 0 : entry.magnitude;
-    const impl = factory.createEffect(entry.effect, magnitude, params);
+    // The validators above already reject missing parameters; this call is what rejects an
+    // unknown effect label at catalog load instead of mid-match. Do not remove it.
+    effectFor({ label: entry.effect, magnitude, ...params });
     return {
         ...dieFace,
-        effects: [...dieFace.effects, { label: entry.effect, magnitude, ...params, targets: entry.targets, impl }],
+        effects: [...dieFace.effects, { label: entry.effect, magnitude, ...params, targets: entry.targets }],
     };
 }

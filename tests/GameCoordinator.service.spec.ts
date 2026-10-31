@@ -13,12 +13,12 @@ import { SlotIndex } from '@domain/types/Position.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import { createCharacter, generateFullDie, createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
-import { createGameState, buildEffectFactory } from '@domain/services/GameInit.service';
+import { createGameState } from '@domain/services/GameInit.service';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
 import { Player } from '@domain/types/Player.type';
 import { UserId, CatalogId } from '@shared/branded.types';
-import { EFFECT_FACTORY, CATALOG_PORT } from '@application/ports/tokens';
+import { CATALOG_PORT } from '@application/ports/tokens';
 import GameState from '@domain/types/GameState.type';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
@@ -30,7 +30,6 @@ const USER_ID_1 = 'user-uuid-1' as UserId;
 const SESSION_0: Session = { sessionId: 'p0', socketId: SOCKET_0, userId: USER_ID_0, roomId: 'room-1' };
 const SESSION_1: Session = { sessionId: 'p1', socketId: SOCKET_1, userId: USER_ID_1, roomId: 'room-1' };
 
-const factory = buildEffectFactory();
 const catalog = makeTestCatalog(10);
 
 const die = generateFullDie([
@@ -40,7 +39,7 @@ const die = generateFullDie([
     { description: 'D', priority: 1, effects: [] },
     { description: 'E', priority: 1, effects: [] },
     { description: 'F', priority: 1, effects: [] },
-] satisfies BaseDieInstructions, factory);
+] satisfies BaseDieInstructions);
 
 const makeTeam = (pi: 0 | 1): Player =>
     createPlayer([0, 1, 2, 3].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
@@ -83,7 +82,6 @@ beforeEach(async () => {
             { provide: SESSION_PORT, useValue: mockSession },
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
-            { provide: EFFECT_FACTORY, useValue: factory },
             { provide: CATALOG_PORT, useValue: catalog },
             { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
         ],
@@ -243,7 +241,7 @@ describe('team selection', () => {
     });
 
     it('second confirm starts PLACEMENT with a per-viewer view that hides the opponent', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 1, PICK_P1 as CatalogId[], t => createCharacterFromTemplate(t)))));
         coordinator.confirmSelection(SOCKET_0, PICK_P0);
 
         expect(lastState().phase).toBe(GamePhase.PLACEMENT);
@@ -256,7 +254,7 @@ describe('team selection', () => {
     });
 
     it("never sends a player the opponent's pick during SELECTION", () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t)))));
         coordinator.cancelSelection(SOCKET_1); // no-op for p1, must not leak anything either
         coordinator.confirmSelection(SOCKET_1, ['c4', 'c5', 'c6', 'c7']);
         for (const payload of sentTo(SOCKET_1)) {
@@ -286,7 +284,7 @@ describe('team selection', () => {
     });
 
     it('reports a second confirm with its code', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t)))));
         coordinator.confirmSelection(SOCKET_0, PICK_P0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
     });
@@ -305,7 +303,7 @@ describe('team selection', () => {
     });
 
     it('cancelSelection un-readies the player and echoes to them only', () => {
-        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t, factory)))));
+        mockRoom.getRoom.mockReturnValue(selectingRoom(unwrap(confirmSelection(fresh(), 0, PICK_P0 as CatalogId[], t => createCharacterFromTemplate(t)))));
         coordinator.cancelSelection(SOCKET_0);
         expect(lastState().playersReady).toEqual([false, false]);
         expect(sentTo(SOCKET_0)[0].selection.myPicks).toBeNull();
