@@ -4,7 +4,7 @@ import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/toke
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
-import { UserId, CatalogId, SocketId } from '@shared/branded.types';
+import { UserId, CatalogId, SocketId, DeckId } from '@shared/branded.types';
 import { Logger, NotFoundException } from '@nestjs/common';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { domainError } from '@domain/errors/DomainError';
@@ -175,7 +175,7 @@ describe('selectDeck', () => {
     });
 
     it("snapshots the player's deck in the room and tells the room who is ready", async () => {
-        await coordinator.selectDeck(SOCKET, 'deck-1');
+        await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
         expect(mockDecks.getOwnDeckCharacterIds).toHaveBeenCalledWith(USER_ID, 'deck-1');
         expect(mockRoom.setDeckSelection).toHaveBeenCalledWith('room-1', P0, SEVEN);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated',
@@ -184,28 +184,28 @@ describe('selectDeck', () => {
 
     it('errors when the player is not in a room', async () => {
         mockSession.getSession.mockReturnValue(SESSION);
-        await coordinator.selectDeck(SOCKET, 'deck-1');
+        await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'NOT_IN_ROOM', message: 'Join a room before choosing a deck' });
         expect(mockDecks.getOwnDeckCharacterIds).not.toHaveBeenCalled();
     });
 
     it("errors on a deck the player doesn't own, storing nothing", async () => {
         mockDecks.getOwnDeckCharacterIds.mockRejectedValue(new NotFoundException('Deck not found'));
-        await coordinator.selectDeck(SOCKET, 'deck-x');
+        await coordinator.selectDeck(SOCKET, 'deck-x' as DeckId);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'DECK_NOT_FOUND', message: 'Deck not found' });
         expect(mockRoom.setDeckSelection).not.toHaveBeenCalled();
     });
 
     it('stores nothing when the player left the room during the deck lookup', async () => {
         mockSession.getSession.mockReturnValueOnce(IN_ROOM).mockReturnValue(SESSION);
-        await coordinator.selectDeck(SOCKET, 'deck-1');
+        await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
         expect(mockRoom.setDeckSelection).not.toHaveBeenCalled();
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
     it('reports an error when the game started during the deck lookup', async () => {
         mockRoom.setDeckSelection.mockReturnValue(err(domainError('GAME_ALREADY_STARTED', 'Game already started')));
-        await coordinator.selectDeck(SOCKET, 'deck-1');
+        await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'GAME_ALREADY_STARTED', message: 'Game already started' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });

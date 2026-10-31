@@ -101,7 +101,7 @@ export class RoomCoordinatorService {
      * Lobby: the player picks the deck they will bring. The deck is read from the database (the only
      * await on the WebSocket path) and snapshotted in the in-memory room, so the game itself stays sync.
      */
-    async selectDeck(socketId: SocketId, deckId: string): Promise<void> {
+    async selectDeck(socketId: SocketId, deckId: DeckId): Promise<void> {
         const session = this.sessionPort.getSession(socketId);
         if (!session) return;
         const roomId = session.roomId;
@@ -110,7 +110,7 @@ export class RoomCoordinatorService {
             return;
         }
         try {
-            const characterIds = await this.decks.getOwnDeckCharacterIds(session.userId, deckId as DeckId);
+            const characterIds = await this.decks.getOwnDeckCharacterIds(session.userId, deckId);
             // The world may have moved during the await: only store if the player is still in that room.
             if (this.sessionPort.getSession(socketId)?.roomId !== roomId) return;
             const selected = this.roomPort.setDeckSelection(roomId, session.sessionId, characterIds);
