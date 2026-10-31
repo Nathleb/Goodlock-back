@@ -63,8 +63,6 @@ jobs:
   mutation:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    env:
-      INPUTS_HASH: ${{ hashFiles('tests/helpers/**', 'tests/fixtures/**', 'tmplt/**', 'src/shared/**', 'src/infrastructure/**', 'jest.config.ts', 'tsconfig.json', 'stryker.config.json', 'package-lock.json') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -73,11 +71,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      # hashFiles is only available inside a step, so the hash goes through a step output.
+      - name: Hash the inputs the tests read
+        id: inputs
+        run: echo "hash=${{ hashFiles('tests/helpers/**', 'tests/fixtures/**', 'tmplt/**', 'src/shared/**', 'src/infrastructure/**', 'jest.config.ts', 'tsconfig.json', 'stryker.config.json', 'package-lock.json') }}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@v4
         with:
           path: reports/stryker-incremental.json
-          key: stryker-${{ env.INPUTS_HASH }}-${{ github.sha }}
-          restore-keys: stryker-${{ env.INPUTS_HASH }}-
+          key: stryker-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
+          restore-keys: stryker-${{ steps.inputs.outputs.hash }}-
       - name: Mutation testing
         shell: bash
         run: npm run test:mutation 2>&1 | tee mutation.log
@@ -86,7 +88,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: reports/stryker-incremental.json
-          key: stryker-${{ env.INPUTS_HASH }}-${{ github.sha }}
+          key: stryker-${{ steps.inputs.outputs.hash }}-${{ github.sha }}
       - name: Summary
         if: always()
         run: |
