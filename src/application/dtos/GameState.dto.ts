@@ -1,17 +1,8 @@
 import { CatalogCharacterDTO } from './Catalog.dto';
+import { DieFaceDTO } from './DieFace.dto';
 import { PlayerIndex } from '@domain/types/Position.type';
 
-export type TargetGroupDTO = { side: string; mode: string; n: number[] };
-
-export type FaceEffectDTO = { effect: string; magnitude: number; targets: TargetGroupDTO[]; stat?: string; state?: string; duration?: number };
-
 export type StatInstanceDTO = { stat: string; value: number; roundsLeft: number };
-
-export type DieFaceDTO = {
-    description: string;
-    priority: number;
-    effects: FaceEffectDTO[];
-};
 
 export type CharacterDTO = {
     id: string;
