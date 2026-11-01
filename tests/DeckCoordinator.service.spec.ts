@@ -160,3 +160,20 @@ describe('ensureStarterDeck', () => {
         expect(await decks.countByUser(ALICE)).toBe(1);
     });
 });
+
+describe('bounds', () => {
+    it('accepts a 30-character name, counted after trimming', async () => {
+        const name = 'x'.repeat(30);
+        await expect(coordinator.create(ALICE, save(`  ${name}  `))).resolves.toEqual(expect.objectContaining({ name }));
+    });
+
+    it('builds the starter deck from the 6 smallest ids whatever order the catalog lists them in', async () => {
+        const catalog = makeTestCatalog(8);
+        const reversed = { ...catalog, ids: () => [...catalog.ids()].reverse() };
+        const starter = new DeckCoordinatorService(decks, reversed, collection as unknown as CollectionCoordinatorService);
+
+        await starter.ensureStarterDeck(ALICE);
+
+        expect(decks.decks[0].characterIds).toEqual(SIX);
+    });
+});

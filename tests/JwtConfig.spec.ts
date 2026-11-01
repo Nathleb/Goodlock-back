@@ -34,3 +34,10 @@ describe('jwtConfigFromEnv', () => {
         ).toThrow(/JWT_ACCESS_EXPIRES_IN/);
     });
 });
+
+describe('jwtConfigFromEnv secret length', () => {
+    it('accepts a 32-character secret and refuses 31', () => {
+        expect(jwtConfigFromEnv({ JWT_ACCESS_SECRET: 'a'.repeat(32), JWT_ACCESS_EXPIRES_IN: '15m' }).secret).toHaveLength(32);
+        expect(() => jwtConfigFromEnv({ JWT_ACCESS_SECRET: 'a'.repeat(31), JWT_ACCESS_EXPIRES_IN: '15m' })).toThrow(/JWT_ACCESS_SECRET/);
+    });
+});
