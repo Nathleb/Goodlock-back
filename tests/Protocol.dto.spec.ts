@@ -1,4 +1,5 @@
 import { ServerEvents } from '@application/dtos/Protocol.dto';
+import { typeErrorsOf } from './helpers/typeErrors';
 
 describe('ServerEvents', () => {
     it('types each event with its payload', () => {
@@ -12,13 +13,18 @@ describe('ServerEvents', () => {
     });
 
     it('rejects a payload that does not match its event', () => {
-        // @ts-expect-error a roundResolved payload needs gameState and resolveLog
-        const bad: ServerEvents['roundResolved'] = { wrong: 1 };
-        // @ts-expect-error sessionStarted carries a sessionId, not a message
-        const worse: ServerEvents['sessionStarted'] = { message: 'x' };
+        const prelude = `import { ServerEvents } from '@application/dtos/Protocol.dto';\n`;
 
-        expect([bad, worse]).toHaveLength(2);
-    });
+        const errors = typeErrorsOf({
+            valid: prelude + `export const ok: ServerEvents['sessionStarted'] = { sessionId: 's1' };`,
+            missingFields: prelude + `export const bad: ServerEvents['roundResolved'] = { wrong: 1 };`,
+            wrongField: prelude + `export const worse: ServerEvents['sessionStarted'] = { message: 'x' };`,
+        });
+
+        expect(errors.valid).toEqual([]);
+        expect(errors.missingFields).toEqual([expect.stringContaining("'wrong' does not exist in type 'RoundResolvedDTO'")]);
+        expect(errors.wrongField).toEqual([expect.stringContaining("'message' does not exist in type 'SessionStartedDTO'")]);
+    }, 60_000);
 
     it('lists exactly the events the server emits', () => {
         const names: (keyof ServerEvents)[] = [

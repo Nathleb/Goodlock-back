@@ -1,5 +1,6 @@
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomId, SocketId } from '@shared/branded.types';
+import { typeErrorsOf } from './helpers/typeErrors';
 
 const SOCKET = 's1' as SocketId;
 const ROOM = 'r1' as RoomId;
@@ -22,23 +23,35 @@ describe('WebSocketPort typing', () => {
         expect(port.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { message: 'boom' });
     });
 
-    it('refuses a payload that does not match the event', () => {
-        const port = makePort();
+    describe('refused at compile time', () => {
+        const PRELUDE = `import { WebSocketPort } from '@application/ports/WebSocketPort';
+import { RoomId, SocketId } from '@shared/branded.types';
+declare const port: WebSocketPort;
+declare const socket: SocketId;
+declare const room: RoomId;
+`;
+        let errors: Record<string, string[]>;
 
-        // @ts-expect-error roundResolved needs gameState and resolveLog
-        port.emitToRoom(ROOM, 'roundResolved', { wrong: 1 });
-        // @ts-expect-error error carries a message string
-        port.emitToSocket(SOCKET, 'error', { message: 42 });
+        beforeAll(() => {
+            errors = typeErrorsOf({
+                valid: PRELUDE + `port.emitToSocket(socket, 'error', { message: 'boom' });`,
+                wrongPayload: PRELUDE + `port.emitToRoom(room, 'roundResolved', { wrong: 1 });`,
+                wrongField: PRELUDE + `port.emitToSocket(socket, 'error', { message: 42 });`,
+                unknownEvent: PRELUDE + `port.emitToRoom(room, 'madeUpEvent', {});`,
+            });
+        }, 60_000);
 
-        expect(port.emitToRoom).toHaveBeenCalledTimes(1);
-    });
+        it('compiles a matching event and payload', () => {
+            expect(errors.valid).toEqual([]);
+        });
 
-    it('refuses an event the server does not send', () => {
-        const port = makePort();
+        it('refuses a payload that does not match the event', () => {
+            expect(errors.wrongPayload).toEqual([expect.stringContaining("'wrong' does not exist in type 'RoundResolvedDTO'")]);
+            expect(errors.wrongField).toEqual([expect.stringContaining("Type 'number' is not assignable to type 'string'")]);
+        });
 
-        // @ts-expect-error not a ServerEvents key
-        port.emitToRoom(ROOM, 'madeUpEvent', {});
-
-        expect(port.emitToRoom).toHaveBeenCalledTimes(1);
+        it('refuses an event the server does not send', () => {
+            expect(errors.unknownEvent).toEqual([expect.stringContaining('"madeUpEvent"')]);
+        });
     });
 });

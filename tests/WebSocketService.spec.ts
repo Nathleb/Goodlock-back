@@ -1,6 +1,7 @@
 import { WebSocketService } from '@infrastructure/adapters/websocket/services/WebSocketService';
 import { SharedWebSocketService } from '@infrastructure/adapters/websocket/services/SharedWebSocketService';
 import { RoomId, SocketId } from '@shared/branded.types';
+import { typeErrorsOf } from './helpers/typeErrors';
 
 const SOCKET = 's1' as SocketId;
 const ROOM = 'r1' as RoomId;
@@ -32,11 +33,21 @@ describe('WebSocketService', () => {
     });
 
     it('refuses an event or payload outside ServerEvents', () => {
-        const { service } = makeService();
+        const prelude = `import { WebSocketService } from '@infrastructure/adapters/websocket/services/WebSocketService';
+import { RoomId, SocketId } from '@shared/branded.types';
+declare const service: WebSocketService;
+declare const socket: SocketId;
+declare const room: RoomId;
+`;
 
-        // @ts-expect-error not a ServerEvents key
-        service.emitToRoom(ROOM, 'madeUpEvent', {});
-        // @ts-expect-error error carries a message string
-        service.emitToSocket(SOCKET, 'error', { message: 42 });
-    });
+        const errors = typeErrorsOf({
+            valid: prelude + `service.emitToSocket(socket, 'error', { message: 'boom' });`,
+            unknownEvent: prelude + `service.emitToRoom(room, 'madeUpEvent', {});`,
+            wrongField: prelude + `service.emitToSocket(socket, 'error', { message: 42 });`,
+        });
+
+        expect(errors.valid).toEqual([]);
+        expect(errors.unknownEvent).toEqual([expect.stringContaining('"madeUpEvent"')]);
+        expect(errors.wrongField).toEqual([expect.stringContaining("Type 'number' is not assignable to type 'string'")]);
+    }, 60_000);
 });
