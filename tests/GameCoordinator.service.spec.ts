@@ -387,6 +387,43 @@ describe('confirmPlacement', () => {
     });
 });
 
+// ── PLACEMENT emissions stay secret ──────────────────────────────────────────
+
+describe('PLACEMENT emissions hide the opponent', () => {
+    const sentTo = (socket: SocketId) =>
+        mockWs.emitToSocket.mock.calls.filter(c => c[0] === socket && c[1] === 'gameStateUpdated').map(c => c[2]);
+    const teamIds = (pi: 0 | 1) => baseGs.players[pi].team.map(ch => ch.id);
+
+    // cancelPlacement only emits when the actor had confirmed.
+    const readyAs = (pi: 0 | 1) => (pi === 0 ? p0Ready(baseGs) : p1Ready(baseGs));
+    const actions: [string, (pi: 0 | 1) => GameState, (socket: SocketId, pi: 0 | 1) => void][] = [
+        ['rearrangeTeam', () => baseGs, (socket, pi) => { const [a, b, c, d] = teamIds(pi); coordinator.rearrangeTeam(socket, [d, null, c, b, a]); }],
+        ['the first confirmPlacement', () => baseGs, socket => coordinator.confirmPlacement(socket)],
+        ['cancelPlacement', readyAs, socket => coordinator.cancelPlacement(socket)],
+    ];
+
+    it.each(actions)('%s shows player 0 their own team and an empty opponent team', (_label, startFrom, act) => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(startFrom(0)));
+
+        act(SOCKET_0, 0);
+
+        const [dto] = sentTo(SOCKET_0);
+        expect(dto.players[0].team.map((ch: { id: string }) => ch.id).sort()).toEqual([...teamIds(0)].sort());
+        expect(dto.players[1].team).toEqual([]);
+    });
+
+    it.each(actions)('%s shows player 1 their own team and an empty opponent team', (_label, startFrom, act) => {
+        mockSession.getSession.mockReturnValue(SESSION_1);
+        mockRoom.getRoom.mockReturnValue(makeRoom(startFrom(1)));
+
+        act(SOCKET_1, 1);
+
+        const [dto] = sentTo(SOCKET_1);
+        expect(dto.players[1].team.map((ch: { id: string }) => ch.id).sort()).toEqual([...teamIds(1)].sort());
+        expect(dto.players[0].team).toEqual([]);
+    });
+});
+
 // ── confirmKeep ───────────────────────────────────────────────────────────────
 
 describe('confirmKeep', () => {
