@@ -125,3 +125,18 @@ describe('checkConsistency (boot)', () => {
         expect(error).toHaveBeenCalledWith(expect.stringContaining('db down'));
     });
 });
+
+describe('messages listing several ids', () => {
+    it('a refused grant names every unknown id', async () => {
+        await expect(coordinator.grant(USER, [id('ghost'), id('wraith')])).rejects.toThrow('Unknown catalog ids: ghost, wraith');
+    });
+
+    it('the boot warning names every owned id missing from the catalog', async () => {
+        const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+        collection.listUnknownIds.mockResolvedValue(['retired', 'gone']);
+
+        await coordinator.onApplicationBootstrap();
+
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('Owned characters missing from the catalog: retired, gone'));
+    });
+});

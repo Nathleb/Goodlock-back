@@ -324,8 +324,9 @@ describe('what is stored and signed', () => {
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const sha256 = (raw: string) => createHash('sha256').update(raw).digest('hex');
 
-    beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(NOW));
-    afterEach(() => jest.restoreAllMocks());
+    // Fake timers fix both Date.now() and new Date(): refresh checks the expiry with new Date().
+    beforeEach(() => jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate'] }));
+    afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
     it('saves the bcrypt hash of the password, never the password itself', async () => {
         mockUserPort.findByUsername.mockResolvedValue(undefined);
@@ -366,8 +367,44 @@ describe('what is stored and signed', () => {
         mockRefreshTokenPort.findByHash.mockResolvedValue({ userId: USER_ID, expiresAt: new Date(NOW + 60_000), isRevoked: false });
         mockUserPort.findById.mockResolvedValue(undefined);
 
-        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(UnauthorizedException);
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Invalid credentials'));
         expect(mockJwtService.signAsync).not.toHaveBeenCalled();
         expect(mockRefreshTokenPort.save).not.toHaveBeenCalled();
+    });
+});
+
+describe('refusal messages and the expiry edge', () => {
+    const NOW = new Date('2026-11-01T12:00:00Z').getTime();
+    const record = (over: object) => ({ userId: USER_ID, expiresAt: new Date(NOW + 60_000), isRevoked: false, ...over });
+
+    beforeEach(() => jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate'] }));
+    afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
+
+    it('says the username is taken', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        await expect(service.register({ username: 'testuser', password: 'password123' })).rejects.toThrow(new ConflictException('Username already taken'));
+    });
+
+    it('says why a refresh token is refused: unknown, reused, or expired', async () => {
+        mockRefreshTokenPort.findByHash.mockResolvedValue(undefined);
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Invalid refresh token'));
+
+        mockRefreshTokenPort.findByHash.mockResolvedValue(record({ isRevoked: true }));
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Session compromised, please log in again'));
+
+        mockRefreshTokenPort.findByHash.mockResolvedValue(record({ expiresAt: new Date(NOW - 1) }));
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Refresh token expired'));
+    });
+
+    it('still accepts a refresh token in its last millisecond', async () => {
+        mockRefreshTokenPort.findByHash.mockResolvedValue(record({ expiresAt: new Date(NOW) }));
+        mockUserPort.findById.mockResolvedValue(MOCK_USER);
+
+        await expect(service.refresh({ refreshToken: 'raw' })).resolves.toEqual(expect.objectContaining({ accessToken: 'signed-access-token' }));
+    });
+
+    it('says the user is not found', async () => {
+        mockUserPort.findById.mockResolvedValue(undefined);
+        await expect(service.getMe(USER_ID)).rejects.toThrow(new NotFoundException('User not found'));
     });
 });

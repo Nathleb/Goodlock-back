@@ -1,9 +1,10 @@
-import { P0, P1, asRoom } from './helpers/ids';
+import { P0, P1, asRoom, asSession } from './helpers/ids';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
+import GamePhase from '@domain/types/GamePhase.type';
 import { UserId, CatalogId, SocketId, DeckId } from '@shared/branded.types';
 import { Logger, NotFoundException } from '@nestjs/common';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
@@ -208,5 +209,61 @@ describe('selectDeck', () => {
         await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'GAME_ALREADY_STARTED', message: 'Game already started' });
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+});
+
+describe('guards and edges', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    const STARTED: Room = {
+        ...ROOM, isStarted: true, playerOrder: [P0, P1],
+        gameState: { phase: GamePhase.KEEP, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] },
+    };
+
+    it('a socket without a session gets no answer at all, not even an error', () => {
+        mockSession.getSession.mockReturnValue(undefined);
+        coordinator.createRoom(SOCKET);
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
+    it('leaving clears the room from the session', () => {
+        mockSession.getSession.mockReturnValue({ ...SESSION, roomId: asRoom('room-1') });
+        mockRoom.getRoom.mockReturnValue(ROOM);
+        mockRoom.quitRoom.mockReturnValue(ROOM);
+        coordinator.quitRoom(SOCKET);
+        expect(mockSession.setSessionRoom).toHaveBeenCalledWith(SOCKET, undefined);
+    });
+
+    it('someone without a seat leaving a started room concedes nothing', () => {
+        mockSession.getSession.mockReturnValue({ ...SESSION, sessionId: asSession('stranger'), roomId: asRoom('room-1') });
+        mockRoom.getRoom.mockReturnValue(STARTED);
+        mockRoom.quitRoom.mockReturnValue(STARTED);
+        coordinator.quitRoom(SOCKET);
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'gameOver', expect.anything());
+    });
+
+    it('reports an unexpected failure while quitting as INTERNAL', () => {
+        jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockSession.getSession.mockReturnValue({ ...SESSION, roomId: asRoom('room-1') });
+        mockRoom.getRoom.mockReturnValue(ROOM);
+        mockRoom.quitRoom.mockImplementationOnce(() => { throw new Error('boom'); });
+        coordinator.quitRoom(SOCKET);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'INTERNAL', message: 'Internal error' });
+    });
+
+    it('selectDeck from a socket without a session does nothing', async () => {
+        mockSession.getSession.mockReturnValue(undefined);
+        await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
+        expect(mockDecks.getOwnDeckCharacterIds).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
+    it('selectDeck stores nothing and says nothing when the session ended during the deck lookup', async () => {
+        mockSession.getSession.mockReturnValueOnce({ ...SESSION, roomId: asRoom('room-1') }).mockReturnValue(undefined);
+        mockDecks.getOwnDeckCharacterIds.mockResolvedValue(['a']);
+        await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
+        expect(mockRoom.setDeckSelection).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
     });
 });

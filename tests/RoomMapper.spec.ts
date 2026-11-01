@@ -17,3 +17,10 @@ describe('RoomMapper', () => {
         expect(JSON.stringify(dto)).not.toContain('"a"');
     });
 });
+
+describe('RoomMapper before any deck choice', () => {
+    it('says nobody has a deck when the room has no selections yet', () => {
+        const room: Room = { roomId: asRoom('r1'), ownerId: P0, playersId: [P0, P1], isStarted: false };
+        expect(RoomMapper.toDTO(room).players.map(p => p.hasDeck)).toEqual([false, false]);
+    });
+});
