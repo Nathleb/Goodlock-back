@@ -35,3 +35,14 @@ describe('validateCatalog', () => {
         expect(errors[0]).toContain('eve');
     });
 });
+
+describe('validateCatalog messages', () => {
+    it('names the template without an id', () => {
+        expect(validateCatalog([template(undefined, 'Alicent')])).toEqual(['Template "Alicent" has no id']);
+    });
+
+    it('shows the malformed id and the expected pattern', () => {
+        const [message] = validateCatalog([template('Ali cent', 'Alicent')]);
+        expect(message).toMatch(/^Template "Alicent" has malformed id "Ali cent" \(expected \/.+\/\)$/);
+    });
+});
