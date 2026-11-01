@@ -6,6 +6,7 @@ import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
+import Character from '@domain/types/Character.type';
 import { UserId, CatalogId, SocketId } from '@shared/branded.types';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
 import { unwrap } from './helpers/result';
@@ -148,6 +149,27 @@ describe('handleConnect — reconnect before combat keeps secrets', () => {
         expect(snapshot.players[0].team).toHaveLength(4);
         expect(snapshot.players[1].team).toEqual([]);
         expect(JSON.stringify(snapshot)).not.toContain('Name-b5');
+    });
+
+    it('during KEEP, once the opponent confirmed, the snapshot hides which dice they locked', () => {
+        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build)), 0, PICK_P0, build));
+        const lockFirst = (team: readonly Character[]) => team.map((c, i) => ({ ...c, isFaceLocked: i === 0 }));
+        const keeping: GameState = {
+            ...placing,
+            phase: GamePhase.KEEP,
+            playersReady: [false, true],
+            players: [
+                { ...placing.players[0], team: lockFirst(placing.players[0].team) },
+                { ...placing.players[1], team: lockFirst(placing.players[1].team) },
+            ],
+        };
+
+        const snapshot = reconnectInto(keeping);
+
+        expect(snapshot.phase).toBe('KEEP_PHASE');
+        expect(snapshot.players[0].team[0].isFaceLocked).toBe(true);
+        expect(snapshot.players[1].team).toHaveLength(4);
+        expect(snapshot.players[1].team.every((c: { isFaceLocked: boolean }) => c.isFaceLocked === false)).toBe(true);
     });
 });
 
