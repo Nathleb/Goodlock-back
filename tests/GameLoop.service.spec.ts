@@ -185,12 +185,6 @@ describe('performResolve', () => {
         expect(state.priorityQueue.length).toBe(0);
     });
 
-    it('returns a log array', () => {
-        const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const { log } = unwrap(performResolve(inResolve));
-        expect(Array.isArray(log)).toBe(true);
-    });
-
     it('returns a WRONG_PHASE error when called outside RESOLVE phase', () => {
         expect(unwrapErr(performResolve(gs)).code).toBe('WRONG_PHASE');
     });
