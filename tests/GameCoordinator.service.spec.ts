@@ -586,7 +586,7 @@ describe('confirmKeep', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalled();
     });
 
-    it('accepts all 5 characters locked', () => {
+    it('accepts all 4 characters locked', () => {
         const allIds = keepGs.players[0].team.map(c => c.id);
         coordinator.confirmKeep(SOCKET_0, allIds);
         expect(mockRoom.updateGameState).toHaveBeenCalled();

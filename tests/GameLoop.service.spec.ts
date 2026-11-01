@@ -143,7 +143,7 @@ describe('confirmKeep', () => {
 
     it('does not reroll locked dice', () => {
         const inKeep = beginKeepPhase(gs);
-        // Lock slot 0 for player 0 only (not all 5, so no skip-to-RESOLVE)
+        // Lock slot 0 for player 0 only (not the whole team, so no skip-to-RESOLVE)
         const withOneLock = {
             ...inKeep,
             players: [
