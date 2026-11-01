@@ -204,8 +204,8 @@ describe('PriorityQueueService', () => {
 
     const { log } = unstackPriorityQueueWithLog(stateWithQueue);
 
-    expect(log).toHaveLength(2);
-    expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining([actor1.id, actor2.id]));
+    // Same bracket, same speed: the initiative holder (player 0 by default) goes first.
+    expect(log.map(s => s.characterId)).toEqual([actor1.id, actor2.id]);
     expect(log.every(s => !s.skipped)).toBe(true);
   });
 
@@ -379,14 +379,13 @@ describe('PriorityQueueService', () => {
       expect(log[1].characterId).toBe('last');
     });
 
-    it('equal bracket and equal speed both resolve (order not asserted)', () => {
+    it('equal bracket and equal speed both resolve, the initiative holder first', () => {
       const state = buildState([
         { face: noop(0), id: 'x', speed: 5, playerIndex: 0 },
         { face: noop(0), id: 'y', speed: 5, playerIndex: 1 },
       ]);
       const { log } = unstackPriorityQueueWithLog(state);
-      expect(log).toHaveLength(2);
-      expect(log.map(s => s.characterId)).toEqual(expect.arrayContaining(['x', 'y']));
+      expect(log.map(s => s.characterId)).toEqual(['x', 'y']);
     });
 
     describe('initiative breaks exact ties', () => {
