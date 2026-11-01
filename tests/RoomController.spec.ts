@@ -42,10 +42,10 @@ describe('GET /rooms', () => {
         expect(controller.listOpenRooms()).toEqual([]);
     });
 
-    it('does not expose started rooms', () => {
+    it('maps whatever rooms the port lists: the filtering is RoomManager.listOpenRooms', () => {
         mockRoom.listOpenRooms.mockReturnValue([STARTED_ROOM]);
         const result = controller.listOpenRooms();
         expect(result).toHaveLength(1);
-        expect(result[0].isStarted).toBe(true); // listOpenRooms filters — controller just maps
+        expect(result[0].isStarted).toBe(true);
     });
 });

@@ -172,3 +172,13 @@ describe('sweepAbandonedRooms — thresholds', () => {
         expect(manager.sweepAbandonedRooms(100_000 + 600_000, 600_000)).toEqual([roomId]);
     });
 });
+
+describe('listOpenRooms', () => {
+    it('lists the rooms not started yet and leaves the started ones out', () => {
+        const manager = new RoomManager();
+        const lobby = manager.createRoom(P2);
+        startedRoom(manager);
+
+        expect(manager.listOpenRooms().map(r => r.roomId)).toEqual([lobby.roomId]);
+    });
+});
