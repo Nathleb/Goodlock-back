@@ -6,7 +6,7 @@
 
 Three guarantees on the WebSocket path:
 
-1. A request that arrives without a usable session, room or game never disappears silently: the client gets an `error { code, message }` (`NOT_CONNECTED` or `ACTION_NOT_AVAILABLE`, see the Result-based error handling spec).
+1. A request that arrives without a usable session, room or game never disappears silently: the client gets an `error { code, message }` (`NOT_CONNECTED` or `ACTION_NOT_AVAILABLE`, see the Result-based error handling spec). The gateway's `SessionGuard` answers `NOT_CONNECTED` before any coordinator runs; the coordinators' own early returns for a missing session or room are a defense for a session that vanishes between the guard and the handler, and stay silent.
 2. A player who already confirmed a phase (`playersReady[i] = true`) cannot confirm it again.
 3. A player who already confirmed cannot change that phase's input afterwards (e.g. `rearrangeTeam` after `confirmPlacement`).
 
