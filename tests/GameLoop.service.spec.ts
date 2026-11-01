@@ -152,8 +152,12 @@ describe('confirmKeep', () => {
             ] as [Player, Player],
         };
         const lockedFace = withOneLock.players[0].team[0].face;
+        // Every reroll lands on the last face, never the current one: a reroll of the locked die would show.
+        const random = jest.spyOn(Math, 'random').mockReturnValue(0.99);
         const after0 = unwrap(confirmKeep(withOneLock, 0));
         const result = unwrap(confirmKeep(after0, 1));
+        random.mockRestore();
+        expect(result.players[0].team[1].face).toBe(result.players[0].team[1].baseDie[5]);
         expect(result.players[0].team[0].face).toBe(lockedFace);
     });
 
