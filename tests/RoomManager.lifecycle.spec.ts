@@ -150,3 +150,25 @@ describe('setDeckSelection', () => {
         expect(unwrapErr(new RoomManager().setDeckSelection(asRoom('nope'), P0, SEVEN)).code).toBe('ROOM_NOT_FOUND');
     });
 });
+
+describe('sweepAbandonedRooms — thresholds', () => {
+    it('keeps a room where both players left but one only recently', () => {
+        const manager = new RoomManager();
+        const roomId = startedRoom(manager);
+        manager.setPresence(roomId, 0, false, 1000);
+        manager.setPresence(roomId, 1, false, 500_000);
+
+        expect(manager.sweepAbandonedRooms(700_000, 600_000)).toEqual([]);
+        expect(manager.getRoom(roomId)).toBeDefined();
+    });
+
+    it('deletes the room once the last player has been gone exactly the threshold', () => {
+        const manager = new RoomManager();
+        const roomId = startedRoom(manager);
+        manager.setPresence(roomId, 0, false, 1000);
+        manager.setPresence(roomId, 1, false, 100_000);
+
+        expect(manager.sweepAbandonedRooms(100_000 + 600_000 - 1, 600_000)).toEqual([]);
+        expect(manager.sweepAbandonedRooms(100_000 + 600_000, 600_000)).toEqual([roomId]);
+    });
+});

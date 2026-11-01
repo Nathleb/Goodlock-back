@@ -92,3 +92,28 @@ describe('team selection counts as a confirm phase', () => {
         expect(computeAfkClaimInMs(gs(GamePhase.SELECTION, [false, false]), NOW - 20_000, NOW, 120_000)).toBe(100_000);
     });
 });
+
+describe('AFK ground — limits and phases', () => {
+    it('is refused one millisecond before the AFK limit', () => {
+        expect(unwrapErr(evaluateClaim(gs(GamePhase.KEEP, [true, false]), 0, ONLINE, NOW - 119_999, NOW, CONFIG)).code).toBe('CLAIM_NOT_ALLOWED');
+    });
+
+    it('is valid in PLACEMENT when the opponent has not confirmed', () => {
+        expect(unwrap(evaluateClaim(gs(GamePhase.PLACEMENT, [true, false]), 0, ONLINE, NOW - 120_000, NOW, CONFIG))).toBe('afk');
+    });
+
+    it.each([
+        [GamePhase.SELECTION, true],
+        [GamePhase.PLACEMENT, true],
+        [GamePhase.KEEP, true],
+        [GamePhase.ROLL, false],
+        [GamePhase.RESOLVE, false],
+        [GamePhase.RESULT, false],
+    ])('in %s, the AFK ground applies: %s', (phase, applies) => {
+        const claim = evaluateClaim(gs(phase, [true, false]), 0, ONLINE, NOW - 999_999, NOW, CONFIG);
+        const countdown = computeAfkClaimInMs(gs(phase, [true, false]), NOW - 999_999, NOW, CONFIG.afkLimitMs);
+
+        expect(claim.isOk()).toBe(applies);
+        expect(countdown).toBe(applies ? 0 : null);
+    });
+});
