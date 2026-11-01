@@ -2,7 +2,7 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { hasLost, rollDiceForTurn } from "@domain/services/Player.service";
+import { allDiceLocked, hasLost, rollDiceForTurn } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
@@ -41,5 +41,11 @@ describe('PlayerService', () => {
     const dead = loseHp(makeChar(), 100);
     const team: Player = { playerIndex: 0, team: [dead, makeChar(), makeChar(), makeChar()] };
     expect(hasLost(team)).toBe(false);
+  });
+
+  it('allDiceLocked is true only when every die of the team is locked', () => {
+    const locked = (isFaceLocked: boolean) => ({ ...makeChar(), isFaceLocked });
+    expect(allDiceLocked({ playerIndex: 0, team: [locked(true), locked(true)] })).toBe(true);
+    expect(allDiceLocked({ playerIndex: 0, team: [locked(true), locked(false)] })).toBe(false);
   });
 });

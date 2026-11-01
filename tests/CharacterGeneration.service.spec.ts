@@ -181,3 +181,45 @@ describe('CharacterGenerationService', () => {
     expect(() => createCharacterFromTemplate(JSON.parse(json))).toThrow();
   });
 });
+
+describe('template error messages', () => {
+  const build = (effect: object) => () => createCharacterFromTemplate(JSON.parse(JSON.stringify({
+    name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill({ description: 'Bite', priority: 0, effects: [effect] }),
+  })));
+
+  it('names the effect, the face and the target problem', () => {
+    expect(build({ effect: 'Damage', magnitude: 1, targets: [] }))
+      .toThrow('Invalid targets for effect "Damage" on face "Bite": targets must be a non-empty array');
+  });
+
+  it('names the effect, the face and the stat problem', () => {
+    expect(build({ effect: 'ApplyStat', stat: 'POWER', magnitude: 0, duration: 1, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }))
+      .toThrow('Invalid stat parameters for effect "ApplyStat" on face "Bite": magnitude must be a non-zero integer');
+  });
+
+  it('names the effect, the face and the state problem', () => {
+    expect(build({ effect: 'ApplyState', state: 'STUN', duration: 0, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }))
+      .toThrow('Invalid state parameters for effect "ApplyState" on face "Bite": duration must be an integer >= 1');
+  });
+});
+
+describe('template error messages with several problems', () => {
+  it('separates the problems with a semicolon', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'Bite', priority: 0, effects: [{ effect: 'Damage', magnitude: 1, targets: [{ side: 'FOE', mode: 'NEAR', n: [0] }] }] }) });
+    expect(() => createCharacterFromTemplate(JSON.parse(json))).toThrow(
+      'Invalid targets for effect "Damage" on face "Bite": group 0: side must be ALLY or ENEMY; group 0: mode must be ABSOLUTE or RELATIVE');
+  });
+
+  it('separates stat problems with a semicolon', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'Bite', priority: 0, effects: [{ effect: 'ApplyStat', stat: 'POWER', magnitude: 0, duration: 0, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }] }) });
+    expect(() => createCharacterFromTemplate(JSON.parse(json))).toThrow(': magnitude must be a non-zero integer; duration must be an integer >= 1');
+  });
+
+  it('separates state problems with a semicolon', () => {
+    const json = JSON.stringify({ name: 'T', maxHp: 10, baseSpeed: 3, baseDieInstructions: Array(6).fill(
+      { description: 'Bite', priority: 0, effects: [{ effect: 'ApplyState', state: 'STUN', duration: 0, magnitude: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }) });
+    expect(() => createCharacterFromTemplate(JSON.parse(json))).toThrow(': a state has no magnitude; duration must be an integer >= 1');
+  });
+});

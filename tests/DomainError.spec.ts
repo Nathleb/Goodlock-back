@@ -31,3 +31,15 @@ describe('isDomainError', () => {
         expect(isDomainError({ code: 'ROOM_FULL' })).toBe(false);
     });
 });
+
+describe('isDomainError and thrown errors', () => {
+    it('rejects an Error even when it carries a domain code', () => {
+        expect(isDomainError(Object.assign(new Error('Room is full'), { code: 'ROOM_FULL' }))).toBe(false);
+    });
+});
+
+describe('isDomainError and null', () => {
+    it('answers false for null instead of throwing', () => {
+        expect(isDomainError(null)).toBe(false);
+    });
+});

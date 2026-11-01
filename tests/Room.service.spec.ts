@@ -3,9 +3,10 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks } from "@domain/services/Room.service";
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks, setPresenceInRoom } from "@domain/services/Room.service";
 import { unwrap, unwrapErr } from "./helpers/result";
 import { CatalogId } from "@shared/branded.types";
+import { Room } from "@domain/types/Room.type";
 import { createGameState } from "./helpers/gameState";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -120,5 +121,32 @@ describe('deck selection in the lobby', () => {
         expect(unwrapErr(selectedDecks(one)).code).toBe('DECKS_NOT_CHOSEN');
         const both = unwrap(selectDeckInRoom(one, P1, OTHER));
         expect(unwrap(selectedDecks(both))).toEqual([SEVEN, OTHER]);
+    });
+});
+
+describe('lobby edge cases', () => {
+    const DECK = ['a', 'b', 'c', 'd', 'e', 'f'] as CatalogId[];
+
+    it('selectedDecks refuses a room where nobody chose a deck yet', () => {
+        const nobody = unwrap(addPlayerToRoom(createRoom(P0), P1));
+        expect(nobody.deckSelections).toBeUndefined();
+        expect(unwrapErr(selectedDecks(nobody))).toEqual({ code: 'DECKS_NOT_CHOSEN', message: 'Both players must choose a deck' });
+    });
+
+    it('selectedDecks refuses a room with a single player, even with a deck', () => {
+        const alone = unwrap(selectDeckInRoom(createRoom(P0), P0, DECK));
+        expect(unwrapErr(selectedDecks(alone)).code).toBe('DECKS_NOT_CHOSEN');
+    });
+
+    it('explains why a deck choice is refused', () => {
+        const lobby = unwrap(addPlayerToRoom(createRoom(P0), P1));
+        expect(unwrapErr(selectDeckInRoom({ ...lobby, isStarted: true }, P0, DECK)).message).toBe('Game already started');
+        expect(unwrapErr(selectDeckInRoom(lobby, asSession('stranger'), DECK)).message).toBe('Player is not in this room');
+    });
+
+    it('setPresenceInRoom updates the seat it is given, seat 0 included', () => {
+        const started = { ...unwrap(addPlayerToRoom(createRoom(P0), P1)), presence: [{ connected: true, disconnectedAt: null }, { connected: true, disconnectedAt: null }] as Room['presence'] };
+        expect(setPresenceInRoom(started, 0, false, 42).presence).toEqual([{ connected: false, disconnectedAt: 42 }, { connected: true, disconnectedAt: null }]);
+        expect(setPresenceInRoom(started, 2, false, 42)).toBe(started);
     });
 });

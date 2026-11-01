@@ -427,6 +427,22 @@ describe('PriorityQueueService', () => {
         expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['other-high', 'holder-low']);
       });
 
+      it('with full teams, every actor of the initiative holder resolves before the tied opponents', () => {
+        const at = (playerIndex: PlayerIndex, slot: SlotIndex) => ({
+          ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex, slot } }),
+          id: asCharacter(`p${playerIndex}-s${slot}`),
+        });
+        const p0 = [at(0, 0), at(0, 1)];
+        const p1 = [at(1, 0), at(1, 1)];
+        const state: GameState = {
+          ...createGameState({ playerIndex: 0, team: p0 }, { playerIndex: 1, team: p1 }),
+          initiativePlayerIndex: 1,
+          priorityQueue: [...p0, ...p1].map(c => [noop(0), c.id, 5] as const),
+        };
+
+        expect(unstackPriorityQueueWithLog(state).log.map(s => s.characterId)).toEqual(['p1-s0', 'p1-s1', 'p0-s0', 'p0-s1']);
+      });
+
       it('inside one team, equal bracket and speed go by slot ascending whatever the array order', () => {
         const at = (slot: SlotIndex, id: string) => ({
           ...createCharacter({ catalogId: TEST_CATALOG_ID, name: id, maxHp: 100, baseSpeed: 5, baseDie: dieOf(noop(0)), position: { playerIndex: 0, slot } }),

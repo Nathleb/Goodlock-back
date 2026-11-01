@@ -1,4 +1,6 @@
-import { resolveTargets, validateEffectTargets } from "@domain/services/TargetResolution.service";
+import { resolveTargets, validateEffectTargets, validateStatParams, validateStateParams } from "@domain/services/TargetResolution.service";
+import { STAT_NAMES } from "@domain/types/Modifier.type";
+import { STATE_NAMES } from "@domain/types/State.type";
 import Position from "@domain/types/Position.type";
 import TargetGroup from "@domain/types/TargetGroup.type";
 import { enemyAbs, allyAbs, enemyRel, allyRel } from "./helpers/targets";
@@ -100,5 +102,62 @@ describe('validateEffectTargets', () => {
         expect(validateEffectTargets('Swap', [enemyRel(0)])).not.toEqual([]);
         expect(validateEffectTargets('Swap', [enemyRel(-1, 0, 1)])).not.toEqual([]);
         expect(validateEffectTargets('Swap', [allyRel(0), enemyRel(0)])).not.toEqual([]);
+    });
+});
+
+describe('resolveTargets — upper edge', () => {
+    it('drops relative cells past the last slot', () => {
+        expect(resolveTargets([enemyRel(0, 1)], { playerIndex: 0, slot: 4 })).toEqual([{ playerIndex: 1, slot: 4 }]);
+    });
+});
+
+// These messages are what a template author reads when a bad catalog stops the boot.
+describe('validation messages', () => {
+    it('names every problem of the target groups', () => {
+        const bad = [
+            { side: 'FOE', mode: 'NEAR', n: [0] },
+            { side: 'ENEMY', mode: 'ABSOLUTE', n: [] },
+            { side: 'ENEMY', mode: 'ABSOLUTE', n: [1.5, 5] },
+            { side: 'ALLY', mode: 'RELATIVE', n: [-5] },
+        ] as unknown as TargetGroup[];
+
+        expect(validateEffectTargets('Damage', bad)).toEqual([
+            'group 0: side must be ALLY or ENEMY',
+            'group 0: mode must be ABSOLUTE or RELATIVE',
+            'group 1: n must be a non-empty array',
+            'group 2: 1.5 is not an integer',
+            'group 2: 5 is outside 0..4',
+            'group 3: -5 is outside -4..4',
+        ]);
+        expect(validateEffectTargets('Damage', [])).toEqual(['targets must be a non-empty array']);
+    });
+
+    it('names the Swap problems', () => {
+        expect(validateEffectTargets('Swap', [allyRel(0), enemyRel(0, 1)])).toEqual([
+            'Swap needs exactly 2 cells, got 3',
+            'Swap cells must all be on the same side',
+        ]);
+    });
+
+    it('names every problem of an ApplyStat entry', () => {
+        expect(validateStatParams({ stat: 'LUCK', magnitude: 0, duration: 0 })).toEqual([
+            `stat must be one of ${STAT_NAMES.join(', ')}`,
+            'magnitude must be a non-zero integer',
+            'duration must be an integer >= 1',
+        ]);
+    });
+
+    it('names every problem of an ApplyState entry', () => {
+        expect(validateStateParams({ state: 'ASLEEP', duration: 0, magnitude: 2, stat: 'POWER' })).toEqual([
+            'a state has no magnitude',
+            'a state has no stat',
+            `state must be one of ${STATE_NAMES.join(', ')}`,
+            'duration must be an integer >= 1',
+        ]);
+    });
+
+    it('accepts a duration of exactly one round', () => {
+        expect(validateStatParams({ stat: STAT_NAMES[0], magnitude: 1, duration: 1 })).toEqual([]);
+        expect(validateStateParams({ state: STATE_NAMES[0], duration: 1 })).toEqual([]);
     });
 });

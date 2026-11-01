@@ -126,6 +126,14 @@ describe('confirmKeep', () => {
         expect(result.playersReady).toEqual([false, false]);
     });
 
+    it('still rerolls when only one player has locked every die', () => {
+        const kept = beginKeepPhase(gs);
+        const p0Locked = { ...kept, players: [lockAllPlayers(kept).players[0], kept.players[1]] as typeof kept.players };
+        const result = unwrap(confirmKeep(unwrap(confirmKeep(p0Locked, 0)), 1));
+        expect(result.phase).toBe(GamePhase.KEEP);
+        expect(result.rollsLeft).toBe(1);
+    });
+
     it('skips rerolls and transitions to RESOLVE when all dice are locked', () => {
         const inKeep = lockAllPlayers(beginKeepPhase(gs)); // rollsLeft: 2 but all locked
         const after0 = unwrap(confirmKeep(inKeep, 0));

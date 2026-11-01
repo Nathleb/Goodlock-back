@@ -6,6 +6,7 @@ import { createPlayer } from "@domain/services/Player.service";
 import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
+import Swap from "@domain/strategies/Swap.class";
 import GameState from "@domain/types/GameState.type";
 import TargetGroup from "@domain/types/TargetGroup.type";
 import { enemyAbs, allyAbs, allyRel } from "./helpers/targets";
@@ -342,5 +343,14 @@ describe('Swap: move to a fixed slot', () => {
         const { state } = resolveSwap(gs, charA.id, [allyAbs(0, 4)]);
 
         expect(state.players[1].team.map(c => c.id)).toEqual(before);
+    });
+});
+
+describe('Swap across teams', () => {
+    it('fizzles when its two cells are on different teams', () => {
+        const state = createGameState(player1, player2);
+        const { state: after, affected } = new Swap().solve(state, [{ playerIndex: 0, slot: 0 }, { playerIndex: 1, slot: 1 }], player1.team[0].id);
+        expect(after).toBe(state);
+        expect(affected).toEqual([]);
     });
 });
