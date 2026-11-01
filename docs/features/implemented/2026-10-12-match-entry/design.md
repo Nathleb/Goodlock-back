@@ -17,7 +17,7 @@ confirmSelection     each player secretly keeps 4 of their 6 (cancelSelection to
 both confirmed       -> PLACEMENT_PHASE with the 4 picks (pick order = slots 0..3, slot 4 empty)
                         the opponent's team stays hidden
 rearrangeTeam ... confirmPlacement
-both confirmed       -> ROLL: first room-wide state, both teams revealed
+both confirmed       -> roll: first room-wide state (phase KEEP), both teams revealed
 ```
 
 ## Decisions
@@ -58,4 +58,4 @@ both confirmed       -> ROLL: first room-wide state, both teams revealed
 
 ## Tests
 
-Domain first (selection rules, room deck snapshot, claim phases), then mapper masking (no pick or opponent team ever leaks before ROLL, including the reconnect snapshot, with a JSON-level check that the opponent's pick ids appear nowhere in the viewer payload), then the coordinators (including the async `selectDeck` race: player left during the await), then gateway wiring.
+Domain first (selection rules, room deck snapshot, claim phases), then mapper masking (no pick or opponent team ever leaks before ROLL, including the reconnect snapshot, with a JSON-level check that the viewer payload carries no opponent pick list and no opponent team; the ids themselves appear in the revealed decks, so what stays secret is which 4 were kept and where they stand), then the coordinators (including the async `selectDeck` race: player left during the await), then gateway wiring.
