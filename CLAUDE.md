@@ -168,6 +168,6 @@ The HTTP coordinators (auth, collection, decks) still throw Nest exceptions from
 
 One application-layer exception: `confirmSelection` casts the picked ids to `CatalogId` and lets the domain check them against the revealed deck. Character ids sent for matching (`confirmKeep`, `rearrangeTeam`) stay `string` until they are matched against the real team. Wire DTOs keep `string`. Tests cast through `tests/helpers/ids.ts`.
 
-**Test colocation**: tests live in `tests/` mirroring `src/` structure. One spec file per service or strategy. Domain specs must not import NestJS.
+**Test layout**: tests live flat in `tests/`, named after what they test (`<Service>.spec.ts`); a large subject may be split by topic (`Character.states.spec.ts`, `GameCoordinator.claim.spec.ts`). Shared fixtures go in `tests/helpers/`. Domain specs must not import NestJS.
 
 **Game state stays in-memory**: the `Manager` classes in `infrastructure/adapters/managers/` are the single source of truth for all game state (rooms, sessions, live games) and must never be persisted to the database. Persistence (Prisma/Postgres) is reserved for **auth and player data** — `User`, `RefreshToken`, `UserCharacter`, `Deck`, `DeckSlot` — accessed via the repositories in `adapters/repositories/`. Content (character definitions) stays in `tmplt/`, not in the database. Do not introduce a new DB-backed entity, a different ORM, or persist game state without explicit discussion.

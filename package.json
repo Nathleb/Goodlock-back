@@ -18,7 +18,6 @@
     "test:watch": "jest --watch --config jest.config.ts",
     "test:cov": "jest --coverage --config jest.config.ts",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --config jest.config.ts",
-    "test:e2e": "jest --config ./tests/jest-e2e.json",
     "test:failed": "jest --onlyFailures",
     "test:mutation": "stryker run",
     "check:dup": "jscpd",

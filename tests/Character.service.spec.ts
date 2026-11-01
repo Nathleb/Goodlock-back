@@ -1,7 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
-import { describe } from "node:test";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead } from "@domain/services/Character.service";
