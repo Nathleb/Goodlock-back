@@ -1,8 +1,8 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { WsException } from '@nestjs/websockets';
-import { SessionGuard } from '../src/infrastructure/adapters/websocket/guards/Session.guard';
-import { SESSION_PORT } from '../src/application/ports/tokens';
+import { SessionGuard } from '@infrastructure/adapters/websocket/guards/Session.guard';
+import { SESSION_PORT } from '@application/ports/tokens';
 
 const mockSessionPort = {
     getSession: jest.fn(),
