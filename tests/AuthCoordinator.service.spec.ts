@@ -318,3 +318,56 @@ describe('starter deck (temporary)', () => {
         expect(error).toHaveBeenCalledWith(expect.stringContaining('deck hiccup'));
     });
 });
+
+describe('what is stored and signed', () => {
+    const NOW = new Date('2026-11-01T12:00:00Z').getTime();
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const sha256 = (raw: string) => createHash('sha256').update(raw).digest('hex');
+
+    beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(NOW));
+    afterEach(() => jest.restoreAllMocks());
+
+    it('saves the bcrypt hash of the password, never the password itself', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(undefined);
+
+        await service.register({ username: 'newuser', password: 'password123' });
+
+        const saved = mockUserPort.save.mock.calls[0][0];
+        expect(saved).toEqual(expect.objectContaining({ username: 'newuser', passwordHash: 'hashed' }));
+        expect(JSON.stringify(saved)).not.toContain('password123');
+    });
+
+    it('stores only the SHA-256 of the returned refresh token, valid for 7 days', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+
+        const { refreshToken } = await service.login({ username: 'testuser', password: 'password123' });
+
+        expect(mockRefreshTokenPort.save).toHaveBeenCalledWith(sha256(refreshToken), USER_ID, new Date(NOW + SEVEN_DAYS_MS));
+    });
+
+    it('signs the access token for the user id and username', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+
+        await service.login({ username: 'testuser', password: 'password123' });
+
+        expect(mockJwtService.signAsync).toHaveBeenCalledWith({ sub: USER_ID, username: 'testuser' });
+    });
+
+    it('issues a different refresh token on each login', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+
+        const first = await service.login({ username: 'testuser', password: 'password123' });
+        const second = await service.login({ username: 'testuser', password: 'password123' });
+
+        expect(first.refreshToken).not.toBe(second.refreshToken);
+    });
+
+    it('refuses to refresh for a user deleted since, and issues nothing', async () => {
+        mockRefreshTokenPort.findByHash.mockResolvedValue({ userId: USER_ID, expiresAt: new Date(NOW + 60_000), isRevoked: false });
+        mockUserPort.findById.mockResolvedValue(undefined);
+
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(UnauthorizedException);
+        expect(mockJwtService.signAsync).not.toHaveBeenCalled();
+        expect(mockRefreshTokenPort.save).not.toHaveBeenCalled();
+    });
+});
