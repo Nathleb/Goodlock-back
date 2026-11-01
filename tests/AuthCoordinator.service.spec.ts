@@ -324,8 +324,9 @@ describe('what is stored and signed', () => {
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const sha256 = (raw: string) => createHash('sha256').update(raw).digest('hex');
 
-    beforeEach(() => jest.spyOn(Date, 'now').mockReturnValue(NOW));
-    afterEach(() => jest.restoreAllMocks());
+    // Fake timers fix both Date.now() and new Date(): refresh checks the expiry with new Date().
+    beforeEach(() => jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate'] }));
+    afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
     it('saves the bcrypt hash of the password, never the password itself', async () => {
         mockUserPort.findByUsername.mockResolvedValue(undefined);
@@ -366,7 +367,7 @@ describe('what is stored and signed', () => {
         mockRefreshTokenPort.findByHash.mockResolvedValue({ userId: USER_ID, expiresAt: new Date(NOW + 60_000), isRevoked: false });
         mockUserPort.findById.mockResolvedValue(undefined);
 
-        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(UnauthorizedException);
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Invalid credentials'));
         expect(mockJwtService.signAsync).not.toHaveBeenCalled();
         expect(mockRefreshTokenPort.save).not.toHaveBeenCalled();
     });
