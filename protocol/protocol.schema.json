@@ -131,7 +131,38 @@
           "maxItems": 2
         },
         "selection": {
-          "$ref": "#/definitions/SelectionViewDTO",
+          "type": "object",
+          "properties": {
+            "decks": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/CatalogCharacterDTO"
+                }
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "myPicks": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "decks",
+            "myPicks"
+          ],
+          "additionalProperties": false,
           "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
         }
       },
@@ -230,7 +261,24 @@
         "modifiers": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/StatInstanceDTO"
+            "type": "object",
+            "properties": {
+              "stat": {
+                "type": "string"
+              },
+              "value": {
+                "type": "number"
+              },
+              "roundsLeft": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "stat",
+              "value",
+              "roundsLeft"
+            ],
+            "additionalProperties": false
           },
           "description": "Active stat instances (buffs and debuffs)."
         },
@@ -279,7 +327,56 @@
         "effects": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/FaceEffectDTO"
+            "type": "object",
+            "properties": {
+              "effect": {
+                "type": "string"
+              },
+              "magnitude": {
+                "type": "number"
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "side": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string"
+                    },
+                    "n": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "required": [
+                    "side",
+                    "mode",
+                    "n"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "stat": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect",
+              "magnitude",
+              "targets"
+            ],
+            "additionalProperties": false
           }
         }
       },
@@ -287,115 +384,6 @@
         "description",
         "priority",
         "effects"
-      ],
-      "additionalProperties": false
-    },
-    "FaceEffectDTO": {
-      "type": "object",
-      "properties": {
-        "effect": {
-          "type": "string"
-        },
-        "magnitude": {
-          "type": "number"
-        },
-        "targets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TargetGroupDTO"
-          }
-        },
-        "stat": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        },
-        "duration": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "effect",
-        "magnitude",
-        "targets"
-      ],
-      "additionalProperties": false
-    },
-    "TargetGroupDTO": {
-      "type": "object",
-      "properties": {
-        "side": {
-          "type": "string"
-        },
-        "mode": {
-          "type": "string"
-        },
-        "n": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          }
-        }
-      },
-      "required": [
-        "side",
-        "mode",
-        "n"
-      ],
-      "additionalProperties": false
-    },
-    "StatInstanceDTO": {
-      "type": "object",
-      "properties": {
-        "stat": {
-          "type": "string"
-        },
-        "value": {
-          "type": "number"
-        },
-        "roundsLeft": {
-          "type": "number"
-        }
-      },
-      "required": [
-        "stat",
-        "value",
-        "roundsLeft"
-      ],
-      "additionalProperties": false
-    },
-    "SelectionViewDTO": {
-      "type": "object",
-      "properties": {
-        "decks": {
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/CatalogCharacterDTO"
-            }
-          },
-          "minItems": 2,
-          "maxItems": 2
-        },
-        "myPicks": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "decks",
-        "myPicks"
       ],
       "additionalProperties": false
     },
@@ -472,7 +460,38 @@
           "maxItems": 2
         },
         "selection": {
-          "$ref": "#/definitions/SelectionViewDTO",
+          "type": "object",
+          "properties": {
+            "decks": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/CatalogCharacterDTO"
+                }
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "myPicks": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "decks",
+            "myPicks"
+          ],
+          "additionalProperties": false,
           "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
         }
       },
@@ -517,13 +536,55 @@
         "effects": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ResolvedEffectDTO"
+            "type": "object",
+            "properties": {
+              "effect": {
+                "type": "string"
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "playerIndex": {
+                      "type": "number"
+                    },
+                    "slot": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "playerIndex",
+                    "slot"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "effect",
+              "targets"
+            ],
+            "additionalProperties": false
           }
         },
         "changes": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ResolveChangeDTO"
+            "type": "object",
+            "properties": {
+              "characterId": {
+                "type": "string"
+              },
+              "after": {
+                "$ref": "#/definitions/CharacterDTO"
+              }
+            },
+            "required": [
+              "characterId",
+              "after"
+            ],
+            "additionalProperties": false
           }
         }
       },
@@ -532,54 +593,6 @@
         "skipped",
         "effects",
         "changes"
-      ],
-      "additionalProperties": false
-    },
-    "ResolvedEffectDTO": {
-      "type": "object",
-      "properties": {
-        "effect": {
-          "type": "string"
-        },
-        "targets": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "playerIndex": {
-                "type": "number"
-              },
-              "slot": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "playerIndex",
-              "slot"
-            ],
-            "additionalProperties": false
-          }
-        }
-      },
-      "required": [
-        "effect",
-        "targets"
-      ],
-      "additionalProperties": false
-    },
-    "ResolveChangeDTO": {
-      "type": "object",
-      "properties": {
-        "characterId": {
-          "type": "string"
-        },
-        "after": {
-          "$ref": "#/definitions/CharacterDTO"
-        }
-      },
-      "required": [
-        "characterId",
-        "after"
       ],
       "additionalProperties": false
     },
