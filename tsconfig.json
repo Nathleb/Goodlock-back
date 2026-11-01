@@ -22,9 +22,7 @@
       "@application/*": ["src/application/*"],
       "@domain/*": ["src/domain/*"],
       "@infrastructure/*": ["src/infrastructure/*"],
-      "@server/*": ["src/server/*"],
-      "@shared/*": ["src/shared/*"],
-      "@features/*": ["src/features/*"]
+      "@shared/*": ["src/shared/*"]
     }
   }
 }
