@@ -4,7 +4,7 @@ import { generateProtocolSchema } from '../scripts/protocol-schema';
 
 const committedPath = join(__dirname, '..', 'protocol', 'protocol.schema.json');
 
-type SchemaDefinition = { properties?: Record<string, unknown>; additionalProperties?: boolean };
+type SchemaDefinition = { properties?: Record<string, unknown>; required?: string[]; additionalProperties?: boolean };
 
 describe('protocol schema', () => {
     const generated = generateProtocolSchema();
@@ -36,6 +36,16 @@ describe('protocol schema', () => {
         const afk = definitions.GameStateUpdatePayload.properties.afkClaimInMs;
 
         expect(JSON.stringify(afk)).toContain('"null"');
+    });
+
+    it('requires the error code the client branches on', () => {
+        const error = definitions.ErrorPayload;
+
+        expect(error.required).toEqual(expect.arrayContaining(['code', 'message']));
+        const inlined = JSON.stringify(error.properties.code, (_key, value: { $ref?: string }) =>
+            value?.$ref ? definitions[value.$ref.split('/').pop()] : value,
+        );
+        expect(inlined).toContain('"ROOM_FULL"');
     });
 
     it('rejects unknown properties', () => {

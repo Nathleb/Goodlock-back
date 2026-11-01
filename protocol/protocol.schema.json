@@ -682,14 +682,59 @@
     "ErrorPayload": {
       "type": "object",
       "properties": {
+        "code": {
+          "$ref": "#/definitions/ErrorCode"
+        },
         "message": {
           "type": "string"
         }
       },
       "required": [
+        "code",
         "message"
       ],
       "additionalProperties": false
+    },
+    "ErrorCode": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DomainErrorCode"
+        },
+        {
+          "type": "string",
+          "const": "INVALID_REQUEST"
+        },
+        {
+          "type": "string",
+          "const": "NOT_CONNECTED"
+        },
+        {
+          "type": "string",
+          "const": "INTERNAL"
+        }
+      ],
+      "description": "Every code a client can receive in an `error` event."
+    },
+    "DomainErrorCode": {
+      "type": "string",
+      "enum": [
+        "ROOM_NOT_FOUND",
+        "DECK_NOT_FOUND",
+        "ROOM_FULL",
+        "GAME_ALREADY_STARTED",
+        "ROOM_NOT_READY",
+        "NOT_IN_ROOM",
+        "NOT_ROOM_OWNER",
+        "DECKS_NOT_CHOSEN",
+        "WRONG_PHASE",
+        "ALREADY_CONFIRMED",
+        "NO_SELECTION",
+        "INVALID_SELECTION",
+        "INVALID_PLACEMENT",
+        "INVALID_LOCK",
+        "ACTION_NOT_AVAILABLE",
+        "CLAIM_NOT_ALLOWED"
+      ]
     }
   }
 }

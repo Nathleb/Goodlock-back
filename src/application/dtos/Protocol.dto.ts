@@ -1,12 +1,11 @@
 import { GameOverDTO, GameStateDTO, GameStateUpdatePayload, PresenceChangedDTO, ResolveStepDTO } from './GameState.dto';
+import { ErrorPayload } from './Error.dto';
 import { RoomDTO } from './Room.dto';
 
 export type RoundResolvedDTO = {
     gameState: GameStateDTO;
     resolveLog: ResolveStepDTO[];
 };
-
-export type ErrorPayload = { message: string };
 
 export type SessionStartedDTO = { sessionId: string };
 

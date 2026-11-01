@@ -17,10 +17,10 @@ describe('WebSocketPort typing', () => {
     it('accepts an event with its own payload', () => {
         const port = makePort();
 
-        port.emitToSocket(SOCKET, 'error', { message: 'boom' });
+        port.emitToSocket(SOCKET, 'error', { code: 'INTERNAL', message: 'boom' });
         port.emitToRoom(ROOM, 'gameOver', { winner: 0, reason: 'elimination' });
 
-        expect(port.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { message: 'boom' });
+        expect(port.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { code: 'INTERNAL', message: 'boom' });
     });
 
     describe('refused at compile time', () => {
@@ -34,9 +34,9 @@ declare const room: RoomId;
 
         beforeAll(() => {
             errors = typeErrorsOf({
-                valid: PRELUDE + `port.emitToSocket(socket, 'error', { message: 'boom' });`,
+                valid: PRELUDE + `port.emitToSocket(socket, 'error', { code: 'INTERNAL', message: 'boom' });`,
                 wrongPayload: PRELUDE + `port.emitToRoom(room, 'roundResolved', { wrong: 1 });`,
-                wrongField: PRELUDE + `port.emitToSocket(socket, 'error', { message: 42 });`,
+                wrongField: PRELUDE + `port.emitToSocket(socket, 'error', { code: 'INTERNAL', message: 42 });`,
                 unknownEvent: PRELUDE + `port.emitToRoom(room, 'madeUpEvent', {});`,
             });
         }, 60_000);

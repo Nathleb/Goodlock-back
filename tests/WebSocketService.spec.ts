@@ -17,10 +17,10 @@ describe('WebSocketService', () => {
     it('sends a typed event to one socket', () => {
         const { service, to, emit } = makeService();
 
-        service.emitToSocket(SOCKET, 'error', { message: 'boom' });
+        service.emitToSocket(SOCKET, 'error', { code: 'INTERNAL', message: 'boom' });
 
         expect(to).toHaveBeenCalledWith(SOCKET);
-        expect(emit).toHaveBeenCalledWith('error', { message: 'boom' });
+        expect(emit).toHaveBeenCalledWith('error', { code: 'INTERNAL', message: 'boom' });
     });
 
     it('sends a typed event to a room', () => {
@@ -41,9 +41,9 @@ declare const room: RoomId;
 `;
 
         const errors = typeErrorsOf({
-            valid: prelude + `service.emitToSocket(socket, 'error', { message: 'boom' });`,
+            valid: prelude + `service.emitToSocket(socket, 'error', { code: 'INTERNAL', message: 'boom' });`,
             unknownEvent: prelude + `service.emitToRoom(room, 'madeUpEvent', {});`,
-            wrongField: prelude + `service.emitToSocket(socket, 'error', { message: 42 });`,
+            wrongField: prelude + `service.emitToSocket(socket, 'error', { code: 'INTERNAL', message: 42 });`,
         });
 
         expect(errors.valid).toEqual([]);
