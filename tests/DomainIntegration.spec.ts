@@ -31,9 +31,9 @@ function uniformDie(
     return generateFullDie([face, face, face, face, face, face]);
 }
 
-/** Team of 5 characters sharing one die. */
+/** Team of 4 characters sharing one die, on slots 0..3: slot 4 is the empty cell, as on the real board. */
 function makeTeam(die: DieFn, playerIndex: 0 | 1, maxHp = 50) {
-    return ([0, 1, 2, 3, 4] as SlotIndex[]).map(slot =>
+    return ([0, 1, 2, 3] as SlotIndex[]).map(slot =>
         createCharacter({ catalogId: TEST_CATALOG_ID, name: `P${playerIndex}S${slot}`, maxHp, baseSpeed: 0, baseDie: die, position: { playerIndex, slot } }),
     );
 }
@@ -63,12 +63,12 @@ function advanceToResolve(gameState: GameState): GameState {
 const noopDie = uniformDie('No-op', 1, []);
 
 /**
- * Team of 5 where only the listed slots carry a real die; every other slot idles.
+ * Team of 4 (slots 0..3) where only the listed slots carry a real die; every other slot idles.
  * Everyone fires now (targets live in the face), so this reproduces the old
  * fixtures where only the characters given a target acted.
  */
 function makeTeamWith(playerIndex: 0 | 1, dies: Partial<Record<SlotIndex, DieFn>>, maxHp = 50) {
-    return ([0, 1, 2, 3, 4] as SlotIndex[]).map(slot =>
+    return ([0, 1, 2, 3] as SlotIndex[]).map(slot =>
         createCharacter({ catalogId: TEST_CATALOG_ID, name: `P${playerIndex}S${slot}`, maxHp, baseSpeed: 0, baseDie: dies[slot] ?? noopDie, position: { playerIndex, slot } }),
     );
 }
@@ -374,7 +374,7 @@ describe('Domain integration — cleave effects', () => {
 // ─── Full-team effects ─────────────────────────────────────────────────────────
 
 describe('Domain integration — Full-team effects', () => {
-    it('full-team damage deals damage to all 5 enemy characters', () => {
+    it('full-team damage hits all 4 enemy characters, the empty cell included in the pattern', () => {
         const fullTeamDmgDie = uniformDie('Full-team damage', 1, [{ effect: EffectLabel.Damage, magnitude: 6, targets: [enemyAbs(0, 1, 2, 3, 4)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
@@ -382,7 +382,7 @@ describe('Domain integration — Full-team effects', () => {
         state.players[1].team.forEach(char => expect(char.hp).toBe(44));
     });
 
-    it('full-team heal restores HP to all 5 ally characters including actor', () => {
+    it('full-team heal restores HP to all 4 ally characters including the actor', () => {
         const fullTeamHealDie = uniformDie('Full-team heal', 1, [{ effect: EffectLabel.Heal, magnitude: 12, targets: [allyAbs(0, 1, 2, 3, 4)] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
@@ -398,7 +398,7 @@ describe('Domain integration — Full-team effects', () => {
         state.players[0].team.forEach(char => expect(char.hp).toBe(42)); // 30 + 12
     });
 
-    it('full-team shield grants shield to all 5 ally characters', () => {
+    it('full-team shield grants shield to all 4 ally characters', () => {
         const fullTeamShieldDie = uniformDie('Full-team shield', 1, [{ effect: EffectLabel.Shield, magnitude: 4, targets: [allyAbs(0, 1, 2, 3, 4)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamShieldDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
@@ -412,41 +412,42 @@ describe('Domain integration — Full-team effects', () => {
 describe('Domain integration — Win conditions', () => {
     const killDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyRel(0)] }]);
 
-    it('checkWinner returns 0 when player 1 loses 3 or more characters', () => {
+    it('checkWinner returns 0 when player 1 loses 2 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(killDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
         expect(checkWinner(state)).toBe(0);
     });
 
-    it('checkWinner returns 1 when player 0 loses 3 or more characters', () => {
+    it('checkWinner returns 1 when player 0 loses 2 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(killDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
         expect(checkWinner(state)).toBe(1);
     });
 
-    it('checkWinner returns draw when both teams have 3+ dead characters', () => {
+    it('checkWinner returns draw when both teams have exactly 2 dead characters', () => {
         // Test checkWinner directly with a known-dead state: it isolates the
         // winner rule from the resolution order.
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const killThree = (team: typeof gameState.players[0]['team']) =>
-            team.map((char, idx) => idx < 3 ? { ...char, hp: 0 } : char);
+        const killTwo = (team: typeof gameState.players[0]['team']) =>
+            team.map((char, idx) => idx < 2 ? { ...char, hp: 0 } : char);
         const stateWithDeadChars: GameState = {
             ...gameState,
             players: [
-                { ...gameState.players[0], team: killThree(gameState.players[0].team) },
-                { ...gameState.players[1], team: killThree(gameState.players[1].team) },
+                { ...gameState.players[0], team: killTwo(gameState.players[0].team) },
+                { ...gameState.players[1], team: killTwo(gameState.players[1].team) },
             ] as typeof gameState.players,
         };
         expect(checkWinner(stateWithDeadChars)).toBe('draw');
     });
 
-    it('checkWinner returns null when fewer than 3 characters have died', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+    it('checkWinner returns null when only 1 character has died', () => {
+        const dmgDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
+        expect(state.players[1].team.filter(c => c.hp === 0)).toHaveLength(1);
         expect(checkWinner(state)).toBeNull();
     });
 });
@@ -477,48 +478,23 @@ describe('Domain integration — Round cleanup and multi-round', () => {
         }));
     });
 
-    it('shield granted in round 1 does not absorb damage in round 2 after endOfRound', () => {
+    it('a shield left over from round 1 does not absorb damage in round 2', () => {
         const selfShieldDie = uniformDie('Self-shield', 2, [{ effect: EffectLabel.Shield, magnitude: 10, targets: [allyRel(0)] }]);
-        const dmgDie        = uniformDie('Damage',     1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const dmgDie        = uniformDie('Damage',      1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeamWith(1, { 0: selfShieldDie }), 1));
 
-        const player0Team = [
-            createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Attacker', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } }),
-            ...[1, 2, 3, 4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P0S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 0, slot: idx as SlotIndex } })),
-        ];
-        const player1Team = [
-            createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Shielder', maxHp: 50, baseSpeed: 0, baseDie: selfShieldDie, position: { playerIndex: 1, slot: 0 as SlotIndex } }),
-            ...[1, 2, 3, 4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P1S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 1, slot: idx as SlotIndex } })),
-        ];
-        const gameState = createGameState(createPlayer(player0Team, 0), createPlayer(player1Team, 1));
+        // Round 1: the shield (priority 2) lands before the 5 damage (priority 1): 5 shield left, HP intact.
+        const { state: round1 } = unwrap(performResolve(advanceToResolve(gameState)));
+        expect(round1.players[1].team[0].hp).toBe(50);
+        expect(round1.players[1].team[0].shield).toBe(5);
 
-        // Round 1: P1 slot 0 self-shields (priority 2 fires first), P0 slot 0 deals 5 damage
-        let resolvedState = advanceToResolve(gameState);
-        const { state: round1State } = unwrap(performResolve(resolvedState));
-        // Shield (10) absorbed 5 damage → HP=50, shield=5 remaining
-        expect(round1State.players[1].team[0].hp).toBe(50);
-        expect(round1State.players[1].team[0].shield).toBe(5);
-
-        // endOfRound: shield resets, next round begins
-        const round2GameState = beginPlacementPhase(endOfRound(round1State));
-        expect(round2GameState.players[1].team[0].shield).toBe(0);
-
-        // Round 2: same setup. P1 slot 0 self-shields again (priority 2 fires first → shield=10),
-        // then P0 deals 5 damage (priority 1) → shield absorbs again
-        resolvedState = advanceToResolve(round2GameState);
-        const { state: round2State } = unwrap(performResolve(resolvedState));
-        expect(round2State.players[1].team[0].hp).toBe(50);  // shield absorbed again
-
-        // If we strip the self-shield by using a non-shielding P1, HP takes full damage
-        const round3GameState = beginPlacementPhase(endOfRound(round2State));
-        const player1NoShield = createPlayer(
-            [createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Target', maxHp: round3GameState.players[1].team[0].hp, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 1, slot: 0 as SlotIndex } }),
-             ...[1,2,3,4].map(idx => createCharacter({ catalogId: TEST_CATALOG_ID, name: `P1S${idx}`, maxHp: 50, baseSpeed: 0, baseDie: noopDie, position: { playerIndex: 1, slot: idx as SlotIndex } }))],
-            1,
-        );
-        const round3GameStateNoShield = { ...round3GameState, players: [round3GameState.players[0], player1NoShield] as typeof round3GameState.players };
-        resolvedState = advanceToResolve(round3GameStateNoShield);
-        const { state: round3State } = unwrap(performResolve(resolvedState));
-        expect(round3State.players[1].team[0].hp).toBe(round3GameState.players[1].team[0].hp - 5); // no shield → full damage
+        // Round 2: endOfRound wipes the leftover shield; the shielder now idles, so nothing absorbs the hit.
+        const idle = (team: typeof round1.players[1]['team']) => team.map(c => c.position.slot === 0 ? { ...c, baseDie: noopDie, face: noopDie[0] } : c);
+        const nextRound = beginPlacementPhase(endOfRound(round1));
+        expect(nextRound.players[1].team[0].shield).toBe(0);
+        const round2Start = { ...nextRound, players: [nextRound.players[0], { ...nextRound.players[1], team: idle(nextRound.players[1].team) }] as typeof nextRound.players };
+        const { state: round2 } = unwrap(performResolve(advanceToResolve(round2Start)));
+        expect(round2.players[1].team[0].hp).toBe(45);
     });
 
     it('damage accumulates correctly across two consecutive rounds', () => {

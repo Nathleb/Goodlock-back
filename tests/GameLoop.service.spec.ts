@@ -143,7 +143,7 @@ describe('confirmKeep', () => {
 
     it('does not reroll locked dice', () => {
         const inKeep = beginKeepPhase(gs);
-        // Lock slot 0 for player 0 only (not all 5, so no skip-to-RESOLVE)
+        // Lock slot 0 for player 0 only (not the whole team, so no skip-to-RESOLVE)
         const withOneLock = {
             ...inKeep,
             players: [
@@ -152,8 +152,12 @@ describe('confirmKeep', () => {
             ] as [Player, Player],
         };
         const lockedFace = withOneLock.players[0].team[0].face;
+        // Every reroll lands on the last face, never the current one: a reroll of the locked die would show.
+        const random = jest.spyOn(Math, 'random').mockReturnValue(0.99);
         const after0 = unwrap(confirmKeep(withOneLock, 0));
         const result = unwrap(confirmKeep(after0, 1));
+        random.mockRestore();
+        expect(result.players[0].team[1].face).toBe(result.players[0].team[1].baseDie[5]);
         expect(result.players[0].team[0].face).toBe(lockedFace);
     });
 
@@ -179,12 +183,6 @@ describe('performResolve', () => {
         const inResolve = { ...gs, phase: GamePhase.RESOLVE };
         const { state } = unwrap(performResolve(inResolve));
         expect(state.priorityQueue.length).toBe(0);
-    });
-
-    it('returns a log array', () => {
-        const inResolve = { ...gs, phase: GamePhase.RESOLVE };
-        const { log } = unwrap(performResolve(inResolve));
-        expect(Array.isArray(log)).toBe(true);
     });
 
     it('returns a WRONG_PHASE error when called outside RESOLVE phase', () => {

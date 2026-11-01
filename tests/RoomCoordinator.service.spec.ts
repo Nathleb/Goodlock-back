@@ -166,19 +166,19 @@ describe('quitRoom', () => {
 });
 
 describe('selectDeck', () => {
-    const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
+    const SIX = ['a', 'b', 'c', 'd', 'e', 'f'] as CatalogId[];
     const IN_ROOM: Session = { ...SESSION, roomId: asRoom('room-1') };
 
     beforeEach(() => {
         mockSession.getSession.mockReturnValue(IN_ROOM);
-        mockDecks.getOwnDeckCharacterIds.mockResolvedValue(SEVEN);
-        mockRoom.setDeckSelection.mockReturnValue(ok({ ...ROOM, deckSelections: { p0: SEVEN } }));
+        mockDecks.getOwnDeckCharacterIds.mockResolvedValue(SIX);
+        mockRoom.setDeckSelection.mockReturnValue(ok({ ...ROOM, deckSelections: { p0: SIX } }));
     });
 
     it("snapshots the player's deck in the room and tells the room who is ready", async () => {
         await coordinator.selectDeck(SOCKET, 'deck-1' as DeckId);
         expect(mockDecks.getOwnDeckCharacterIds).toHaveBeenCalledWith(USER_ID, 'deck-1');
-        expect(mockRoom.setDeckSelection).toHaveBeenCalledWith('room-1', P0, SEVEN);
+        expect(mockRoom.setDeckSelection).toHaveBeenCalledWith('room-1', P0, SIX);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roomUpdated',
             expect.objectContaining({ players: expect.arrayContaining([expect.objectContaining({ playerId: P0, hasDeck: true })]) }));
     });

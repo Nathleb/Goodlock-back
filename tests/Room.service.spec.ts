@@ -88,39 +88,39 @@ describe('RoomService', () => {
 });
 
 describe('deck selection in the lobby', () => {
-    const SEVEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g'] as CatalogId[];
-    const OTHER = ['h', 'i', 'j', 'k', 'l', 'm', 'n'] as CatalogId[];
+    const SIX = ['a', 'b', 'c', 'd', 'e', 'f'] as CatalogId[];
+    const OTHER = ['h', 'i', 'j', 'k', 'l', 'm'] as CatalogId[];
     const lobby = () => unwrap(addPlayerToRoom(createRoom(P0), P1));
 
     it('stores a snapshot of the chosen deck per player', () => {
-        const room = unwrap(selectDeckInRoom(lobby(), P0, SEVEN));
-        expect(room.deckSelections).toEqual({ p0: SEVEN });
+        const room = unwrap(selectDeckInRoom(lobby(), P0, SIX));
+        expect(room.deckSelections).toEqual({ p0: SIX });
     });
 
     it('replaces a previous choice', () => {
-        const room = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby(), P0, SEVEN)), P0, OTHER));
+        const room = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby(), P0, SIX)), P0, OTHER));
         expect(room.deckSelections).toEqual({ p0: OTHER });
     });
 
     it('refuses a player who is not in the room', () => {
-        expect(unwrapErr(selectDeckInRoom(lobby(), asSession('stranger'), SEVEN)).code).toBe('NOT_IN_ROOM');
+        expect(unwrapErr(selectDeckInRoom(lobby(), asSession('stranger'), SIX)).code).toBe('NOT_IN_ROOM');
     });
 
     it('refuses once the game has started', () => {
         const started = { ...lobby(), isStarted: true };
-        expect(unwrapErr(selectDeckInRoom(started, P0, SEVEN)).code).toBe('GAME_ALREADY_STARTED');
+        expect(unwrapErr(selectDeckInRoom(started, P0, SIX)).code).toBe('GAME_ALREADY_STARTED');
     });
 
     it("drops a leaving player's choice", () => {
-        const room = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby(), P0, SEVEN)), P1, OTHER));
-        expect(removePlayerFromRoom(room, P1)?.deckSelections).toEqual({ p0: SEVEN });
+        const room = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby(), P0, SIX)), P1, OTHER));
+        expect(removePlayerFromRoom(room, P1)?.deckSelections).toEqual({ p0: SIX });
     });
 
     it('selectedDecks returns both snapshots in player order, or a DECKS_NOT_CHOSEN error', () => {
-        const one = unwrap(selectDeckInRoom(lobby(), P0, SEVEN));
+        const one = unwrap(selectDeckInRoom(lobby(), P0, SIX));
         expect(unwrapErr(selectedDecks(one)).code).toBe('DECKS_NOT_CHOSEN');
         const both = unwrap(selectDeckInRoom(one, P1, OTHER));
-        expect(unwrap(selectedDecks(both))).toEqual([SEVEN, OTHER]);
+        expect(unwrap(selectedDecks(both))).toEqual([SIX, OTHER]);
     });
 });
 
