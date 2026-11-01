@@ -1,4 +1,8 @@
 import { WebSocketPort } from '@application/ports/WebSocketPort';
+import { RoomId, SocketId } from '@shared/branded.types';
+
+const SOCKET = 's1' as SocketId;
+const ROOM = 'r1' as RoomId;
 
 const makePort = (): WebSocketPort => ({
     joinRoom: jest.fn(),
@@ -12,19 +16,19 @@ describe('WebSocketPort typing', () => {
     it('accepts an event with its own payload', () => {
         const port = makePort();
 
-        port.emitToSocket('s1', 'error', { message: 'boom' });
-        port.emitToRoom('r1', 'gameOver', { winner: 0, reason: 'elimination' });
+        port.emitToSocket(SOCKET, 'error', { message: 'boom' });
+        port.emitToRoom(ROOM, 'gameOver', { winner: 0, reason: 'elimination' });
 
-        expect(port.emitToSocket).toHaveBeenCalledWith('s1', 'error', { message: 'boom' });
+        expect(port.emitToSocket).toHaveBeenCalledWith(SOCKET, 'error', { message: 'boom' });
     });
 
     it('refuses a payload that does not match the event', () => {
         const port = makePort();
 
         // @ts-expect-error roundResolved needs gameState and resolveLog
-        port.emitToRoom('r1', 'roundResolved', { wrong: 1 });
+        port.emitToRoom(ROOM, 'roundResolved', { wrong: 1 });
         // @ts-expect-error error carries a message string
-        port.emitToSocket('s1', 'error', { message: 42 });
+        port.emitToSocket(SOCKET, 'error', { message: 42 });
 
         expect(port.emitToRoom).toHaveBeenCalledTimes(1);
     });
@@ -33,7 +37,7 @@ describe('WebSocketPort typing', () => {
         const port = makePort();
 
         // @ts-expect-error not a ServerEvents key
-        port.emitToRoom('r1', 'madeUpEvent', {});
+        port.emitToRoom(ROOM, 'madeUpEvent', {});
 
         expect(port.emitToRoom).toHaveBeenCalledTimes(1);
     });
