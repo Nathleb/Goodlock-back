@@ -36,5 +36,5 @@ The template integrity spec (`tests/templates.spec.ts`) is the only bar: every t
 
 ## Tests
 
-- `PriorityQueue.service.spec`: a higher bracket resolves before a lower one regardless of speed; within a bracket higher speed goes first; equal bracket and speed both resolve in a non-deterministic order (asserted as set membership); negative brackets resolve last; a dead actor is skipped.
+- `PriorityQueue.service.spec`: a higher bracket resolves before a lower one regardless of speed; within a bracket higher speed goes first; equal bracket and speed resolve in a deterministic order, the initiative holder first, then by slot (see the initiative spec); negative brackets resolve last; a dead actor is skipped.
 - `templates.spec`: bracket and speed ranges for every template.
