@@ -216,3 +216,12 @@ describe('Round.service state ticking', () => {
         expect(active).toEqual([true, true, true, false]);
     });
 });
+
+describe('endOfRound resets the per-round flags', () => {
+    it('clears both ready flags', () => {
+        const makeChar = (pi: 0 | 1) => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: pi, slot: 0 } });
+        const bothReady = { ...createGameState(createPlayer([makeChar(0)], 0), createPlayer([makeChar(1)], 1)), playersReady: [true, true] as [boolean, boolean] };
+
+        expect(endOfRound(bothReady).playersReady).toEqual([false, false]);
+    });
+});
