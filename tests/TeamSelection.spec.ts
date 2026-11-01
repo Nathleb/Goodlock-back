@@ -96,3 +96,18 @@ describe('cancelSelection', () => {
         expect(unwrapErr(cancelSelection({ ...gs, phase: GamePhase.PLACEMENT }, 0)).code).toBe('WRONG_PHASE');
     });
 });
+
+describe('selection error messages', () => {
+    it('explains a pick of the wrong size', () => {
+        expect(unwrapErr(confirmSelection(gs, 0, ids('a0', 'a1', 'a2'), build)).message).toBe('Pick exactly 4 characters (got 3)');
+    });
+
+    it('lists every picked character that is not in the deck', () => {
+        expect(unwrapErr(confirmSelection(gs, 0, ids('a0', 'a1', 'b0', 'b1'), build)).message).toBe('Not in your deck: b0, b1');
+    });
+
+    it('explains a confirm when no selection is in progress', () => {
+        const noSelection = { ...gs, selection: undefined };
+        expect(unwrapErr(confirmSelection(noSelection, 0, PICK_0, build))).toEqual({ code: 'NO_SELECTION', message: 'No selection in progress' });
+    });
+});

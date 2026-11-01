@@ -87,6 +87,21 @@ describe('placeTeam', () => {
     });
 });
 
+describe('placeTeam messages', () => {
+    const player = createPlayer(team1.slice(0, 4), 0);
+    const [a, b, c, d] = player.team.map(ch => ch.id);
+
+    it.each([
+        ['4 cells', [a, b, c, d], 'Placement must list exactly 5 cells'],
+        ['a non-string id', [a, b, c, 4, null], 'Placement cells must be character IDs or null'],
+        ['two empty cells', [a, b, c, null, null], 'Placement must leave exactly 1 empty cell(s)'],
+        ['a duplicate', [a, a, c, d, null], 'Duplicate character IDs in placement'],
+        ['an unknown id', [a, b, c, 'ghost', null], 'Unknown character ID in placement'],
+    ])('explains %s', (_label, slots, message) => {
+        expect(unwrapErr(placeTeam(player, slots as unknown as (string | null)[])).message).toBe(message);
+    });
+});
+
 describe('checkPhase', () => {
     it('returns the state when the phase matches', () => {
         expect(unwrap(checkPhase(gs, GamePhase.PLACEMENT))).toBe(gs);
