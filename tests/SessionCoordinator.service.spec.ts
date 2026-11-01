@@ -211,3 +211,83 @@ describe('handleDisconnect — started game', () => {
         expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
     });
 });
+
+describe('handleConnect — edges', () => {
+    it('evicts nobody when there is no other socket', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION, evictedSocketId: null });
+        coordinator.handleConnect(SOCKET, USER_ID);
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(expect.anything(), 'sessionEvicted', expect.anything());
+        expect(mockWs.disconnectSocket).not.toHaveBeenCalled();
+    });
+
+    it('stops quietly when the session points at a room that no longer exists', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue(undefined);
+
+        expect(() => coordinator.handleConnect(SOCKET, USER_ID)).not.toThrow();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET, 'roomUpdated', expect.anything());
+    });
+
+    it('back in a lobby room, marks no presence and sends the room', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue(ROOM);
+
+        coordinator.handleConnect(SOCKET, USER_ID);
+
+        expect(mockRoom.setPresence).not.toHaveBeenCalled();
+        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'presenceChanged', expect.anything());
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'roomUpdated', expect.objectContaining({ roomId: 'room-1' }));
+    });
+
+    it('in a started room without a seat, marks no presence', () => {
+        mockSession.createOrReconnectSession.mockReturnValue({ session: { ...SESSION_WITH_ROOM, sessionId: asSession('stranger') }, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
+
+        coordinator.handleConnect(SOCKET, USER_ID);
+
+        expect(mockRoom.setPresence).not.toHaveBeenCalled();
+    });
+
+    it('sends the room as it is after the presence update', () => {
+        const updated: Room = { ...STARTED_ROOM, ownerId: P1 };
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
+        mockRoom.setPresence.mockReturnValue(updated);
+
+        coordinator.handleConnect(SOCKET, USER_ID);
+
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'roomUpdated', expect.objectContaining({ ownerId: P1 }));
+    });
+});
+
+describe('handleDisconnect — edges', () => {
+    it('treats a room that no longer exists like a lobby: quits it without throwing', () => {
+        mockSession.getSession.mockReturnValue(SESSION_WITH_ROOM);
+        mockRoom.getRoom.mockReturnValue(undefined);
+        mockRoom.quitRoom.mockReturnValue(null);
+
+        expect(() => coordinator.handleDisconnect(SOCKET)).not.toThrow();
+        expect(mockRoom.quitRoom).toHaveBeenCalledWith(P0);
+    });
+
+    it('in a started room, keeps the seat, marks the player away and leaves the socket room', () => {
+        mockSession.getSession.mockReturnValue(SESSION_WITH_ROOM);
+        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
+
+        coordinator.handleDisconnect(SOCKET);
+
+        expect(mockRoom.setPresence).toHaveBeenCalledWith('room-1', 0, false, expect.any(Number));
+        expect(mockRoom.quitRoom).not.toHaveBeenCalled();
+        expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
+    });
+
+    it('in a started room without a seat, marks no presence', () => {
+        mockSession.getSession.mockReturnValue({ ...SESSION_WITH_ROOM, sessionId: asSession('stranger') });
+        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
+
+        coordinator.handleDisconnect(SOCKET);
+
+        expect(mockRoom.setPresence).not.toHaveBeenCalled();
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+});

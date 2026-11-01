@@ -372,3 +372,39 @@ describe('what is stored and signed', () => {
         expect(mockRefreshTokenPort.save).not.toHaveBeenCalled();
     });
 });
+
+describe('refusal messages and the expiry edge', () => {
+    const NOW = new Date('2026-11-01T12:00:00Z').getTime();
+    const record = (over: object) => ({ userId: USER_ID, expiresAt: new Date(NOW + 60_000), isRevoked: false, ...over });
+
+    beforeEach(() => jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate'] }));
+    afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
+
+    it('says the username is taken', async () => {
+        mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
+        await expect(service.register({ username: 'testuser', password: 'password123' })).rejects.toThrow(new ConflictException('Username already taken'));
+    });
+
+    it('says why a refresh token is refused: unknown, reused, or expired', async () => {
+        mockRefreshTokenPort.findByHash.mockResolvedValue(undefined);
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Invalid refresh token'));
+
+        mockRefreshTokenPort.findByHash.mockResolvedValue(record({ isRevoked: true }));
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Session compromised, please log in again'));
+
+        mockRefreshTokenPort.findByHash.mockResolvedValue(record({ expiresAt: new Date(NOW - 1) }));
+        await expect(service.refresh({ refreshToken: 'raw' })).rejects.toThrow(new UnauthorizedException('Refresh token expired'));
+    });
+
+    it('still accepts a refresh token in its last millisecond', async () => {
+        mockRefreshTokenPort.findByHash.mockResolvedValue(record({ expiresAt: new Date(NOW) }));
+        mockUserPort.findById.mockResolvedValue(MOCK_USER);
+
+        await expect(service.refresh({ refreshToken: 'raw' })).resolves.toEqual(expect.objectContaining({ accessToken: 'signed-access-token' }));
+    });
+
+    it('says the user is not found', async () => {
+        mockUserPort.findById.mockResolvedValue(undefined);
+        await expect(service.getMe(USER_ID)).rejects.toThrow(new NotFoundException('User not found'));
+    });
+});
