@@ -7,6 +7,7 @@ import { RoomCoordinatorService } from '@application/services/RoomCoordinator.se
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
+import { ok } from '@shared/result.type';
 
 const SOCKET = 'sock-0' as SocketId;
 
@@ -65,5 +66,45 @@ describe('quitRoom on a started game', () => {
         mockRoom.quitRoom.mockReturnValue(null);
         coordinator.quitRoom(SOCKET);
         expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'gameOver', expect.anything());
+    });
+});
+
+describe('leaving a started game by another way', () => {
+    const NEW_ROOM: Room = { roomId: asRoom('room-2'), ownerId: P0, playersId: [P0], isStarted: false };
+
+    beforeEach(() => {
+        mockRoom.getRoom.mockReturnValue(STARTED);
+        mockRoom.quitRoom.mockReturnValue(STARTED);
+    });
+
+    it('concedes the match to player 0 when player 1 quits', () => {
+        mockSession.getSession.mockReturnValue({ sessionId: P1, socketId: SOCKET, userId: 'u', roomId: asRoom('room-1') });
+
+        coordinator.quitRoom(SOCKET);
+
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'concede' });
+        expect(mockRoom.setPresence).toHaveBeenCalledWith('room-1', 1, false, expect.any(Number));
+    });
+
+    it('creating a room mid-game concedes the match, then opens the new room', () => {
+        mockRoom.createRoom.mockReturnValue(NEW_ROOM);
+
+        coordinator.createRoom(SOCKET);
+
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 1, reason: 'concede' });
+        expect(mockRoom.updateGameState).toHaveBeenCalledWith('room-1', expect.objectContaining({ phase: GamePhase.RESULT }));
+        expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
+        expect(mockWs.joinRoom).toHaveBeenCalledWith(SOCKET, 'room-2');
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'roomCreated', expect.objectContaining({ roomId: 'room-2' }));
+    });
+
+    it('joining another room mid-game concedes the match, then joins it', () => {
+        mockRoom.joinRoom.mockReturnValue(ok({ ...NEW_ROOM, playersId: [P1, P0] }));
+
+        coordinator.joinRoom(SOCKET, asRoom('room-2'));
+
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 1, reason: 'concede' });
+        expect(mockRoom.joinRoom).toHaveBeenCalledWith(P0, 'room-2');
+        expect(mockWs.joinRoom).toHaveBeenCalledWith(SOCKET, 'room-2');
     });
 });
