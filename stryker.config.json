@@ -24,8 +24,8 @@
     "fileName": "reports/mutation/index.html"
   },
   "thresholds": {
-    "high": 90,
-    "low": 89,
-    "break": 89
+    "high": 96,
+    "low": 94,
+    "break": 94
   }
 }
