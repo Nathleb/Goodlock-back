@@ -177,3 +177,29 @@ describe('bounds', () => {
         expect(decks.decks[0].characterIds).toEqual(SIX);
     });
 });
+
+describe('refusal messages', () => {
+    it('says how many decks a user may have', async () => {
+        for (let i = 0; i < 5; i++) await coordinator.create(ALICE, save(`D${i}`));
+        await expect(coordinator.create(ALICE, save('Too many'))).rejects.toThrow('You can have at most 5 decks');
+    });
+
+    it('says the last deck cannot be deleted', async () => {
+        const { id } = await coordinator.create(ALICE, save('Only'));
+        await expect(coordinator.delete(ALICE, id as DeckId)).rejects.toThrow('You cannot delete your last deck');
+    });
+
+    it('answers a missing deck and another user\'s deck with the same message', async () => {
+        const { id } = await coordinator.create(BOB, save('Theirs'));
+        await expect(coordinator.update(ALICE, id as DeckId, save('X'))).rejects.toThrow('Deck not found');
+        await expect(coordinator.update(ALICE, 'nope' as DeckId, save('X'))).rejects.toThrow('Deck not found');
+    });
+
+    it('states the name rule', async () => {
+        const attempt = coordinator.create(ALICE, save(''));
+        await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+        await attempt.catch((e: BadRequestException) => {
+            expect((e.getResponse() as { message: string[] }).message).toEqual(['Deck name must be 1 to 30 characters']);
+        });
+    });
+});

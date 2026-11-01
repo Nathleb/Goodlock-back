@@ -43,6 +43,11 @@ describe('toDTOForViewer', () => {
         expect(dto.players[1].team.every(c => c.isFaceLocked === false)).toBe(true);
     });
 
+    it('shows opponent locks again once KEEP is over, even with the opponent still flagged ready', () => {
+        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.RESOLVE, [false, true]), 0);
+        expect(dto.players[1].team[0].isFaceLocked).toBe(true);
+    });
+
     it('keeps opponent locks during KEEP when the opponent has not confirmed', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [false, false]), 0);
         expect(dto.players[1].team[0].isFaceLocked).toBe(true);

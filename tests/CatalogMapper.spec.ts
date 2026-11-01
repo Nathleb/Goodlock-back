@@ -48,3 +48,10 @@ describe('CatalogMapper', () => {
         expect('stat' in effect).toBe(false);
     });
 });
+
+describe('CatalogMapper without targets', () => {
+    it('describes an effect with no target groups as an empty list', () => {
+        const bare = { ...template, baseDieInstructions: Array(6).fill({ description: 'wait', priority: 0, effects: [{ effect: 'Shield', magnitude: 1 }] }) } as unknown as CharacterTemplate;
+        expect(CatalogMapper.toDTO(bare).baseDie[0].effects[0].targets).toEqual([]);
+    });
+});
