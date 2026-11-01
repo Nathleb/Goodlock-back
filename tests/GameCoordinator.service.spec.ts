@@ -640,3 +640,83 @@ describe('cancelKeep', () => {
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 });
+
+// ── guards and edges (mutation survivors) ────────────────────────────────────
+
+describe('startGame guards', () => {
+    it('does nothing for a socket without a session', () => {
+        mockSession.getSession.mockReturnValue(undefined);
+        expect(() => coordinator.startGame(SOCKET_0)).not.toThrow();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the room is gone', () => {
+        mockRoom.getRoom.mockReturnValue(undefined);
+        expect(() => coordinator.startGame(SOCKET_0)).not.toThrow();
+        expect(mockRoom.startGame).not.toHaveBeenCalled();
+        expect(mockWs.emitToSocket).not.toHaveBeenCalled();
+    });
+
+    it('logs which deck character the catalog does not know', () => {
+        const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+        mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0, p1: [...DECK_P1.slice(0, 5), 'ghost' as CatalogId] } });
+        coordinator.startGame(SOCKET_0);
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Unknown character in deck: ghost' }));
+    });
+
+    it('still sends the other player their view when one session is gone', () => {
+        mockRoom.getRoom.mockReturnValue(lobbyRoom);
+        mockRoom.startGame.mockImplementation((_id, gs) => ok({ ...lobbyRoom, isStarted: true, gameState: gs, playerOrder: [P0, P1] }));
+        mockSession.getSessionById.mockImplementation((id: string) => (id === P1 ? SESSION_1 : undefined));
+
+        expect(() => coordinator.startGame(SOCKET_0)).not.toThrow();
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'gameStateUpdated', expect.anything());
+    });
+});
+
+describe('confirmSelection guards', () => {
+    it('refuses ids that are not strings, saying what it expects', () => {
+        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)])), playerOrder: [P0, P1] });
+        coordinator.confirmSelection(SOCKET_0, ['c0', 'c1', 'c2', 3] as unknown as string[]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'characterIds must be an array of catalog ids' });
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
+    });
+
+    it('seats the PLACEMENT views by playerOrder, not by playersId', () => {
+        const PICK_P0 = ['c5', 'c0', 'c1', 'c2'] as CatalogId[];
+        const PICK_P1 = ['c9', 'c8', 'c7', 'c6'] as CatalogId[];
+        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)]);
+        const p1Picked = unwrap(confirmSelection(fresh, 1, PICK_P1, t => createCharacterFromTemplate(t)));
+        // playersId lists the seats the other way round: only playerOrder says who holds seat 0.
+        mockRoom.getRoom.mockReturnValue({ ...makeRoom(p1Picked), playersId: [P1, P0], playerOrder: [P0, P1] });
+        mockSession.getSessionById.mockImplementation((id: string) => (id === P0 ? SESSION_0 : id === P1 ? SESSION_1 : undefined));
+
+        coordinator.confirmSelection(SOCKET_0, PICK_P0);
+
+        const toP0 = mockWs.emitToSocket.mock.calls.find(c => c[0] === SOCKET_0 && c[1] === 'gameStateUpdated')?.[2];
+        expect(toP0.players[0].team).toHaveLength(4);
+        expect(toP0.players[1].team).toEqual([]);
+    });
+});
+
+describe('a round that ends the match', () => {
+    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 0 })))));
+
+    it('saves the final board before announcing the winner', () => {
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockRoom.updateGameState).toHaveBeenCalledTimes(1);
+    });
+
+    it('starts no next round', () => {
+        coordinator.confirmKeep(SOCKET_0, []);
+        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.anything());
+    });
+});
+
+describe('confirmKeep payload message', () => {
+    it('says the locked ids must be an array', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(keepGs));
+        coordinator.confirmKeep(SOCKET_0, 'a' as unknown as string[]);
+        expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_LOCK', message: 'lockedCharacterIds must be an array' });
+    });
+});
