@@ -1,6 +1,6 @@
 # Protocol schema — plan
 
-**Status:** in progress (started 2026-10-26). Spec: `design.md`.
+**Status:** implemented 2026-11-03. Spec: `design.md`.
 
 Each step is one layer, one failing test first, one commit.
 

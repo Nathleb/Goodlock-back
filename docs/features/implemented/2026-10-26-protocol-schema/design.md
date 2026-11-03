@@ -1,6 +1,6 @@
 # Protocol schema: a machine-readable contract with the client — design
 
-**Status:** approved 2026-10-26. Client side: `../Goodlock-app/docs/features/active/2026-10-26-protocol-schema/plan.md`.
+**Status:** implemented 2026-11-03. Client side: `../Goodlock-app/docs/features/implemented/2026-10-26-protocol-schema/plan.md`.
 
 ## Why
 
@@ -18,6 +18,7 @@ The client mirrors the server's protocol by hand (`Goodlock-app/lib/net/models.d
 
 - Decision: type `WebSocketPort` emits against `ServerEvents` rather than keep a separate list of events, because only a compiled map stays in sync with the code.
 - Decision: generate the schema with `ts-json-schema-generator` rather than `class-validator-jsonschema`, because the outbound DTOs are plain TS types, not decorated classes.
+- Decision: the schema is generated with `strictNullChecks` on (`tsconfig.protocol.json`) so `| null` survives, while the app and the typing tests compile with it off, rather than turning it on app-wide, because that is a separate refactor. Limit: an emit of `null` or `undefined` where the schema requires a value still compiles, and JSON drops an `undefined` field. Only the client's fixture validation catches it. No emitter does this today.
 - Decision: commit the generated schema, and let the client keep a synced copy, rather than have client tests read `../Goodlock-back`, because the client repo must stay testable on its own.
 
 ## Client contract
