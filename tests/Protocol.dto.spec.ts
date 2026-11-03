@@ -29,18 +29,19 @@ describe('ServerEvents', () => {
     }, 60_000);
 
     it('lists exactly the events the server emits', () => {
-        const names: (keyof ServerEvents)[] = [
-            'roomCreated',
-            'roomUpdated',
-            'gameStateUpdated',
-            'roundResolved',
-            'gameOver',
-            'presenceChanged',
-            'sessionStarted',
-            'sessionEvicted',
-            'error',
-        ];
+        // A Record literal is exhaustive both ways: adding or removing an event of ServerEvents fails to compile here.
+        const events: Record<keyof ServerEvents, true> = {
+            roomCreated: true,
+            roomUpdated: true,
+            gameStateUpdated: true,
+            roundResolved: true,
+            gameOver: true,
+            presenceChanged: true,
+            sessionStarted: true,
+            sessionEvicted: true,
+            error: true,
+        };
 
-        expect(names).toHaveLength(9);
+        expect(Object.keys(events)).toHaveLength(9);
     });
 });
