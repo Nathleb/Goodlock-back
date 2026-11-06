@@ -42,7 +42,9 @@ lerna-debug.log*
 # BMad Method
 .bmad-core/
 .ai/
-.claude/
+.claude/*
+!.claude/settings.json
+.claude/settings.local.json
 web-bundles/
 goodlock-handoff
 # MCP servers (local)
