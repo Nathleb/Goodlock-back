@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Backend of Goodlock, a tactical PvP dice game. **Rules reference: `docs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules. It is a guard file: every change to it, rules and rationale alike, needs the user's approval. Never write in `../Goodlock-specs/`; changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
+Backend of Goodlock, a tactical PvP dice game. **Rules reference: `../Goodlock-specs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules, written in the language of the game, each rule with an ID. It lives in the specs space, isolated from the code: read it, never write there (permission denied). `docs/GLOSSARY.md` maps its terms to the code. Changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
 
 ## Commands
 
@@ -53,14 +53,14 @@ Facts that the code does not make obvious:
 1. **Coordinator pattern**: Application-layer coordinators (`*CoordinatorService`) call domain services then dispatch WebSocket events. The gateway calls coordinators, never domain services directly.
 2. **Session identity**: `socketId` changes on reconnect; `sessionId` (UUID) is persistent and bound to the authenticated `userId`. `SessionManager.createOrReconnectSession` handles the re-binding.
 3. **All game resolution is server-side**: dice rolls, action resolution, priority ordering. The client is display-only.
-4. **Priority resolution**: the rules (bracket, then speed, tiebreak) are in `docs/GAME-DESIGN.md` section 3. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
+4. **Priority resolution**: the rules (bracket, then speed, tiebreak) are PRIO-1 to PRIO-5 of the rules reference. The queue is a flat `QueueEntry[]`; entries carry the actor's speed.
 5. **Match entry and secrecy**: each player picks a deck in the room (`selectDeck`, loaded from the DB and snapshotted in the in-memory room — the only `await` on the WebSocket path). `startGame` opens SELECTION: both 6-decks are revealed, each player secretly keeps 4. The opponent's picks and team stay hidden (sent as `[]`) through SELECTION and PLACEMENT; the first room-wide state is the result of the roll, in the KEEP phase. Any emission before ROLL must go through the per-viewer mappers (`GameStateMapper.toDTOForViewer`). On connect the server sends `sessionStarted { sessionId }`; clients locate their seat (player index) in `room.players` with it.
-6. **Auto-targeting**: players never choose targets (rules in `docs/GAME-DESIGN.md` section 3). Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. `team` holds 4 characters ordered by slot; `position.slot` (0..4, `BOARD_SIZE` = 5) is the truth, never the array index.
+6. **Auto-targeting**: players never choose targets (TGT-1 to TGT-4 of the rules reference). Each effect in a template carries `targets: { side: ALLY|ENEMY, mode: ABSOLUTE|RELATIVE, n: number[] }[]`, resolved to cells just before the effect applies. `team` holds 4 characters ordered by slot; `position.slot` (0..4, `BOARD_SIZE` = 5) is the truth, never the array index.
 7. **HTTP vs WebSocket**: player data (auth, collection, decks) goes over HTTP controllers; lobby and match flow goes over the WebSocket gateway. The one exception is `selectDeck`, a WebSocket event that loads the deck from the DB. A new feature goes on the side of the data it touches; do not split one use case across both without discussing it.
 
 ## Reference docs
 
-Read only when relevant, they are not loaded automatically: `docs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates; changed only with the user's approval), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
+Read only when relevant, they are not loaded automatically: `../Goodlock-specs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates), `docs/GLOSSARY.md` (game terms to code names), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
 
 ## Workflow (Goodlock specifics)
 
@@ -112,7 +112,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
     "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
     ".dependency-cruiser.cjs",
     "quality-baseline.json", "scripts/quality-ratchet.mjs", "package.json", ".gitignore",
-    "jest.config.ts", "tsconfig.json", ".github/workflows/", "CLAUDE.md", "docs/GAME-DESIGN.md"
+    "jest.config.ts", "tsconfig.json", ".github/workflows/", "CLAUDE.md"
   ]
 }
 ```
