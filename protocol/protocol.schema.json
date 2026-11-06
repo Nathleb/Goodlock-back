@@ -1,0 +1,740 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ServerEvents",
+  "definitions": {
+    "ServerEvents": {
+      "type": "object",
+      "properties": {
+        "roomCreated": {
+          "$ref": "#/definitions/RoomDTO"
+        },
+        "roomUpdated": {
+          "$ref": "#/definitions/RoomDTO"
+        },
+        "gameStateUpdated": {
+          "$ref": "#/definitions/GameStateUpdatePayload"
+        },
+        "roundResolved": {
+          "$ref": "#/definitions/RoundResolvedDTO"
+        },
+        "gameOver": {
+          "$ref": "#/definitions/GameOverDTO"
+        },
+        "presenceChanged": {
+          "$ref": "#/definitions/PresenceChangedDTO"
+        },
+        "sessionStarted": {
+          "$ref": "#/definitions/SessionStartedDTO"
+        },
+        "sessionEvicted": {
+          "$ref": "#/definitions/SessionEvictedDTO"
+        },
+        "error": {
+          "$ref": "#/definitions/ErrorPayload"
+        }
+      },
+      "required": [
+        "roomCreated",
+        "roomUpdated",
+        "gameStateUpdated",
+        "roundResolved",
+        "gameOver",
+        "presenceChanged",
+        "sessionStarted",
+        "sessionEvicted",
+        "error"
+      ],
+      "additionalProperties": false,
+      "description": "Every event the server sends to clients, with its payload. The single list of the outbound protocol: `WebSocketPort` is typed against it and `protocol/protocol.schema.json` is generated from it."
+    },
+    "RoomDTO": {
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string"
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlayerDTO"
+          }
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "isStarted": {
+          "type": "boolean"
+        },
+        "gameState": {
+          "$ref": "#/definitions/GameStateDTO"
+        }
+      },
+      "required": [
+        "roomId",
+        "players",
+        "ownerId",
+        "isStarted"
+      ],
+      "additionalProperties": false
+    },
+    "PlayerDTO": {
+      "type": "object",
+      "properties": {
+        "playerId": {
+          "type": "string"
+        },
+        "isOwner": {
+          "type": "boolean"
+        },
+        "hasDeck": {
+          "type": "boolean",
+          "description": "Has chosen a deck for the next match (the deck itself is revealed only at team preview)."
+        }
+      },
+      "required": [
+        "playerId",
+        "isOwner",
+        "hasDeck"
+      ],
+      "additionalProperties": false
+    },
+    "GameStateDTO": {
+      "type": "object",
+      "properties": {
+        "phase": {
+          "type": "string"
+        },
+        "currentRound": {
+          "type": "number"
+        },
+        "initiativePlayerIndex": {
+          "$ref": "#/definitions/PlayerIndex",
+          "description": "Player index that wins exact ties in the resolution order this round. Public in every phase."
+        },
+        "rollsLeft": {
+          "type": "number"
+        },
+        "playersReady": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlayerGameStateDTO"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "selection": {
+          "type": "object",
+          "properties": {
+            "decks": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/CatalogCharacterDTO"
+                }
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "myPicks": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "decks",
+            "myPicks"
+          ],
+          "additionalProperties": false,
+          "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
+        }
+      },
+      "required": [
+        "phase",
+        "currentRound",
+        "initiativePlayerIndex",
+        "rollsLeft",
+        "playersReady",
+        "players"
+      ],
+      "additionalProperties": false
+    },
+    "PlayerIndex": {
+      "type": "number",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "PlayerGameStateDTO": {
+      "type": "object",
+      "properties": {
+        "playerIndex": {
+          "type": "number",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "team": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CharacterDTO"
+          }
+        }
+      },
+      "required": [
+        "playerIndex",
+        "team"
+      ],
+      "additionalProperties": false
+    },
+    "CharacterDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "catalogId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "hp": {
+          "type": "number"
+        },
+        "maxHp": {
+          "type": "number"
+        },
+        "shield": {
+          "type": "number"
+        },
+        "baseSpeed": {
+          "type": "number"
+        },
+        "baseDie": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DieFaceDTO"
+          }
+        },
+        "face": {
+          "$ref": "#/definitions/DieFaceDTO"
+        },
+        "isFaceLocked": {
+          "type": "boolean"
+        },
+        "position": {
+          "type": "object",
+          "properties": {
+            "playerIndex": {
+              "type": "number"
+            },
+            "slot": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "playerIndex",
+            "slot"
+          ],
+          "additionalProperties": false
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stat": {
+                "type": "string"
+              },
+              "value": {
+                "type": "number"
+              },
+              "roundsLeft": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "stat",
+              "value",
+              "roundsLeft"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Active stat instances (buffs and debuffs)."
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Net value per stat, capped; computed by the server so clients do not duplicate the cap."
+        },
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Signed duration counter per state axis (SPEED: + hasted / - slowed, ...), 0 when none."
+        }
+      },
+      "required": [
+        "id",
+        "catalogId",
+        "name",
+        "hp",
+        "maxHp",
+        "shield",
+        "baseSpeed",
+        "baseDie",
+        "face",
+        "isFaceLocked",
+        "position",
+        "modifiers",
+        "stats",
+        "states"
+      ],
+      "additionalProperties": false
+    },
+    "DieFaceDTO": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "number"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "effect": {
+                "type": "string"
+              },
+              "magnitude": {
+                "type": "number"
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "side": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string"
+                    },
+                    "n": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "required": [
+                    "side",
+                    "mode",
+                    "n"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "stat": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "effect",
+              "magnitude",
+              "targets"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "description",
+        "priority",
+        "effects"
+      ],
+      "additionalProperties": false
+    },
+    "CatalogCharacterDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "maxHp": {
+          "type": "number"
+        },
+        "baseSpeed": {
+          "type": "number"
+        },
+        "baseDie": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DieFaceDTO"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "maxHp",
+        "baseSpeed",
+        "baseDie"
+      ],
+      "additionalProperties": false,
+      "description": "A catalog character as the client sees it: identity, stats and the full die with targeting."
+    },
+    "GameStateUpdatePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "afkClaimInMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Remaining ms until an AFK claim becomes valid against the non-ready player; null when not applicable. Computed server-side at emit time."
+        },
+        "phase": {
+          "type": "string"
+        },
+        "currentRound": {
+          "type": "number"
+        },
+        "initiativePlayerIndex": {
+          "$ref": "#/definitions/PlayerIndex",
+          "description": "Player index that wins exact ties in the resolution order this round. Public in every phase."
+        },
+        "rollsLeft": {
+          "type": "number"
+        },
+        "playersReady": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlayerGameStateDTO"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "selection": {
+          "type": "object",
+          "properties": {
+            "decks": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/CatalogCharacterDTO"
+                }
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "myPicks": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "decks",
+            "myPicks"
+          ],
+          "additionalProperties": false,
+          "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
+        }
+      },
+      "required": [
+        "afkClaimInMs",
+        "currentRound",
+        "initiativePlayerIndex",
+        "phase",
+        "players",
+        "playersReady",
+        "rollsLeft"
+      ]
+    },
+    "RoundResolvedDTO": {
+      "type": "object",
+      "properties": {
+        "gameState": {
+          "$ref": "#/definitions/GameStateDTO"
+        },
+        "resolveLog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolveStepDTO"
+          }
+        }
+      },
+      "required": [
+        "gameState",
+        "resolveLog"
+      ],
+      "additionalProperties": false
+    },
+    "ResolveStepDTO": {
+      "type": "object",
+      "properties": {
+        "characterId": {
+          "type": "string"
+        },
+        "skipped": {
+          "type": "boolean"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "effect": {
+                "type": "string"
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "playerIndex": {
+                      "type": "number"
+                    },
+                    "slot": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "playerIndex",
+                    "slot"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "effect",
+              "targets"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "characterId": {
+                "type": "string"
+              },
+              "after": {
+                "$ref": "#/definitions/CharacterDTO"
+              }
+            },
+            "required": [
+              "characterId",
+              "after"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "characterId",
+        "skipped",
+        "effects",
+        "changes"
+      ],
+      "additionalProperties": false
+    },
+    "GameOverDTO": {
+      "type": "object",
+      "properties": {
+        "winner": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "enum": [
+            0,
+            1,
+            "draw"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "elimination",
+            "forfeit",
+            "afk",
+            "concede"
+          ]
+        }
+      },
+      "required": [
+        "winner",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "PresenceChangedDTO": {
+      "type": "object",
+      "properties": {
+        "playerIndex": {
+          "type": "number",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "claimInMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Remaining ms until a forfeit claim becomes valid; null when connected."
+        }
+      },
+      "required": [
+        "playerIndex",
+        "connected",
+        "claimInMs"
+      ],
+      "additionalProperties": false
+    },
+    "SessionStartedDTO": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionId"
+      ],
+      "additionalProperties": false
+    },
+    "SessionEvictedDTO": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "const": "signed-in-elsewhere"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ErrorPayload": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/definitions/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "ErrorCode": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DomainErrorCode"
+        },
+        {
+          "type": "string",
+          "const": "INVALID_REQUEST"
+        },
+        {
+          "type": "string",
+          "const": "NOT_CONNECTED"
+        },
+        {
+          "type": "string",
+          "const": "INTERNAL"
+        }
+      ],
+      "description": "Every code a client can receive in an `error` event."
+    },
+    "DomainErrorCode": {
+      "type": "string",
+      "enum": [
+        "ROOM_NOT_FOUND",
+        "DECK_NOT_FOUND",
+        "ROOM_FULL",
+        "GAME_ALREADY_STARTED",
+        "ROOM_NOT_READY",
+        "NOT_IN_ROOM",
+        "NOT_ROOM_OWNER",
+        "DECKS_NOT_CHOSEN",
+        "WRONG_PHASE",
+        "ALREADY_CONFIRMED",
+        "NO_SELECTION",
+        "INVALID_SELECTION",
+        "INVALID_PLACEMENT",
+        "INVALID_LOCK",
+        "ACTION_NOT_AVAILABLE",
+        "CLAIM_NOT_ALLOWED"
+      ]
+    }
+  }
+}

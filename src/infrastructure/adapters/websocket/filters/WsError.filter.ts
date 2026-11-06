@@ -2,9 +2,13 @@ import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { ErrorCode, ErrorPayload } from '@application/dtos/Error.dto';
+import { ServerEvents } from '@application/dtos/Protocol.dto';
 import { toErrorPayload } from '@application/errors/toErrorPayload';
 
 // The codes the gateway itself raises (a WsException may carry one of these, anything else is a plain bad request).
+// The one server event sent outside WebSocketPort, so its name and payload are checked against ServerEvents here.
+const ERROR_EVENT = 'error' satisfies keyof ServerEvents;
+
 const GATEWAY_CODES: readonly ErrorCode[] = ['INVALID_REQUEST', 'NOT_CONNECTED'];
 
 /**
@@ -18,10 +22,10 @@ export class WsErrorFilter implements ExceptionFilter {
 
     catch(exception: unknown, host: ArgumentsHost): void {
         const client = host.switchToWs().getClient<Socket>();
-        const payload = exception instanceof WsException
+        const payload: ServerEvents[typeof ERROR_EVENT] = exception instanceof WsException
             ? this.refusal(exception)
             : toErrorPayload(exception, this.logger);
-        client.emit('error', payload);
+        client.emit(ERROR_EVENT, payload);
     }
 
     private refusal(exception: WsException): ErrorPayload {
