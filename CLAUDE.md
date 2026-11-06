@@ -1,13 +1,6 @@
 # CLAUDE.md
 
-## Project
-
-Goodlock is the backend for a tactical PvP dice game (each character is a 6-faced die; rules, phases and authoring principles are in `docs/GAME-DESIGN.md`). Built with NestJS + Socket.io. **Game state is in-memory** (rooms, sessions, live game state live in `Manager` classes, never persisted). A **Postgres database (via Prisma)** persists authentication (`User`, `RefreshToken`) and player data (`UserCharacter`: which catalog characters a user owns; `Deck` + `DeckSlot`: decks of 6 characters, max 5 per user). Character definitions are not in the database: they are git-authored in `tmplt/*.json`. Postgres runs locally via `docker-compose.yml`; the app itself is containerized via `Dockerfile`.
-
-## Tooling
-
-- **Plan mode** (Shift+Tab) enforces planning: no file can be modified until the plan is approved.
-- **Claude-Mem** persists observations across sessions and re-injects relevant context on session start. Query past work with the `mem-search` skill.
+Backend of Goodlock, a tactical PvP dice game. **Rules reference: `docs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules.
 
 ## Commands
 
@@ -43,15 +36,7 @@ npm run test:scripts    # tests of scripts/quality-ratchet.mjs
 
 ## Architecture
 
-Hexagonal Architecture, three layers. Dependencies point inward only (enforced by `no-restricted-imports` in `eslint.config.mjs`: domain imports no other layer, no NestJS, Prisma or socket.io; application imports no infrastructure):
-
-```
-src/
-  domain/          # Pure game logic and types. No NestJS, no I/O. Imports nothing from the other layers.
-  application/     # Use cases: coordinators, ports (interfaces), DTOs, mappers. Imports domain only.
-  infrastructure/  # NestJS adapters: WebSocket gateway, HTTP controllers, in-memory managers, Prisma repositories, catalog loader. Implements the ports.
-  shared/          # Cross-layer utilities (branded IDs, the Result re-export)
-```
+Hexagonal Architecture, three layers (`domain`, `application`, `infrastructure`) plus `shared`. Dependencies point inward only, enforced by `no-restricted-imports` in `eslint.config.mjs`: domain imports no other layer, no NestJS, Prisma or socket.io; application imports no infrastructure.
 
 **Path aliases** (`tsconfig.json`): `@domain/*`, `@application/*`, `@infrastructure/*`, `@shared/*` map to the matching `src/` folder.
 
@@ -75,18 +60,16 @@ Facts that the code does not make obvious:
 
 ## Reference docs
 
-Read only when relevant, they are not loaded automatically: `docs/GAME-DESIGN.md` (game rules, dice authoring principles, value scale; read before any change to game mechanics or character templates, and update it when a feature changes a rule it states), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
+Read only when relevant, they are not loaded automatically: `docs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates; a rule is added or changed there only once the user has validated it), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
 
 ## Workflow (Goodlock specifics)
 
-The general workflow (plan, TDD, verify, review, record, git rules, conventional commits, trivial-task bypass) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. Also covered by the workflow: `prisma/schema.prisma` and migrations (always the full workflow) and `tmplt/*.json` edits (no plan, but `npm run test` must pass, since the catalog is validated at boot). `Dockerfile`, `docker-compose.yml` and `docs/` are trivial unless they change behavior. What follows is only what Goodlock adds.
+The general workflow (plan, TDD, verify, git rules, conventional commits, trivial-task bypass) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. Also covered by the workflow: `prisma/schema.prisma` and migrations (always the full workflow) and `tmplt/*.json` edits (no plan, but `npm run test` must pass, since the catalog is validated at boot). `Dockerfile`, `docker-compose.yml` and `docs/` are trivial unless they change behavior. What follows is only what Goodlock adds.
 
-- **Memory roles**: the auto-memory (`MEMORY.md` and its `project_*` files) holds the state of features (what shipped, what is pending). Claude-Mem holds the history of decisions and observations. To recover context, read `MEMORY.md` for the state, then run `mem-search` for the why when the task touches past work (an effect, a refactor in progress, a known bug, a pending spec). Record state in the auto-memory only; decisions go in "Decision:" phrasing for Claude-Mem to capture.
 - **Plan**: also state new ports/adapters, new branded IDs and new effects/templates. Order steps bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
 - **Step size**: a step never spans more than one layer.
 - **Verify**: `npm run test`, `npm run lint:check`, `npx tsc --noEmit` (typechecks src and tests together), and `npm run build` before a Docker build. Never use `npm run lint` (`--fix`) as a check: it rewrites files. Then every quality gate below (`npm run quality`, and `npm run test:mutation` on the code of the feature). GitHub Actions (`.github/workflows/ci.yml`) runs all of them on every push to `main` and every pull request.
-- **Review**: the `reviewer` agent is defined globally in `~/.claude/agents/reviewer.md`. `/code-review` is the lighter alternative.
-- **Record**: mark the feature's `project_*` auto-memory entry as done (absolute date, what shipped, what is pending, e.g. client follow-up) and keep its `MEMORY.md` line in sync; create the entry if none exists.
+- **Review**: run by the user with `/review-feature` (the `reviewer` agent, one step commit at a time). `/code-review` is the lighter alternative.
 - **Subagents**: besides search and the review, a protocol change can be mirrored in Goodlock-app by a subagent (no shared state).
 
 ## Quality gates
@@ -121,7 +104,9 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
   ],
   "suppressions": [
     "eslint-disable", "@ts-ignore", "@ts-expect-error", "@ts-nocheck", "istanbul ignore",
-    "Stryker disable", "jscpd:ignore", "@public", "@internal", "/* eslint "
+    "Stryker disable", "jscpd:ignore", "@public", "@internal", "/* eslint ",
+    "it.only(", "describe.only(", "test.only(", "it.skip(", "describe.skip(", "test.skip(",
+    " xit(", " xdescribe(", " xtest(", " fit(", " fdescribe("
   ],
   "guardFiles": [
     "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
@@ -134,7 +119,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
 
 ## Recurring tasks
 
-**Add an effect**: add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first, one spec per strategy); add its case to `effectFor` (`domain/strategies/effectFor.ts`: the exhaustive switch does not compile until it is there); check that `validateEffectTargets` accepts its target groups; use it in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
+**Add an effect**: add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first, written or validated by the user since it states a rule; one spec per strategy); add its case to `effectFor` (`domain/strategies/effectFor.ts`: the exhaustive switch does not compile until it is there); check that `validateEffectTargets` accepts its target groups; use it in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
 
 **Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (a failed Result is reported as `error { code, message }`, see Conventions); handler in `session.gateway.ts` with the existing guards; payload class in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. The gateway validates every `@MessageBody()` with a `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`), so every property of a payload class needs a class-validator decorator, or every real client message is refused with "property X should not exist". `tests/SessionGateway.validation.spec.ts` mounts the gateway on a real socket: add a case there for the new payload. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Add the event and its payload type to `ServerEvents` (`application/dtos/Protocol.dto.ts`; `WebSocketPort` emits are typed against it) and run `npm run protocol:schema`. Then mirror the event in Goodlock-app (see Client contract).
 
