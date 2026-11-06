@@ -1,6 +1,6 @@
 # Game design
 
-The game rules and the design principles behind them. Feature specs (`docs/features/`) describe how a mechanic is built; this document describes what the game is and how content is authored for it. Code architecture lives in `CLAUDE.md`.
+The game rules and the design principles behind them. Feature specs (`docs/features/active/` while a feature is built) describe how a mechanic is built; this document describes what the game is and how content is authored for it. Code architecture lives in `CLAUDE.md`.
 
 ## 1. The game
 
