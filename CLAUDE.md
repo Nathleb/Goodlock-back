@@ -112,7 +112,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
     "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
     ".dependency-cruiser.cjs",
     "quality-baseline.json", "scripts/quality-ratchet.mjs", "package.json", ".gitignore",
-    "jest.config.ts", "tsconfig.json", ".github/workflows/"
+    "jest.config.ts", "tsconfig.json", ".github/workflows/", "CLAUDE.md"
   ]
 }
 ```
