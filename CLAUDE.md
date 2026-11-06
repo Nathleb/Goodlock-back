@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Backend of Goodlock, a tactical PvP dice game. **Rules reference: `docs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules.
+Backend of Goodlock, a tactical PvP dice game. **Rules reference: `docs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules. It is a guard file: every change to it, rules and rationale alike, needs the user's approval. Never write in `../Goodlock-specs/`; changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
 
 ## Commands
 
@@ -60,7 +60,7 @@ Facts that the code does not make obvious:
 
 ## Reference docs
 
-Read only when relevant, they are not loaded automatically: `docs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates; a rule is added or changed there only once the user has validated it), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
+Read only when relevant, they are not loaded automatically: `docs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates; changed only with the user's approval), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
 
 ## Workflow (Goodlock specifics)
 
@@ -112,7 +112,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
     "eslint.config.mjs", "stryker.config.json", ".jscpd.json", "knip.json",
     ".dependency-cruiser.cjs",
     "quality-baseline.json", "scripts/quality-ratchet.mjs", "package.json", ".gitignore",
-    "jest.config.ts", "tsconfig.json", ".github/workflows/", "CLAUDE.md"
+    "jest.config.ts", "tsconfig.json", ".github/workflows/", "CLAUDE.md", "docs/GAME-DESIGN.md"
   ]
 }
 ```
