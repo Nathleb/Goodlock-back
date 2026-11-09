@@ -1,5 +1,5 @@
 import Character from "../types/Character.type";
-import { isDead, rollForTurn } from "./Character.service";
+import { rollForTurn } from "./Character.service";
 import { Player } from "../types/Player.type";
 import { BOARD_SIZE, SlotIndex, PlayerIndex } from "../types/Position.type";
 import { DomainError, domainError } from "../errors/DomainError";
@@ -22,7 +22,7 @@ export function allDiceLocked(player: Player): boolean {
 const LOSS_DEATHS = 2;
 
 export function hasLost(player: Player): boolean {
-    return player.team.filter(char => isDead(char)).length >= LOSS_DEATHS;
+    return (player.fallen ?? []).length >= LOSS_DEATHS;
 }
 
 /**

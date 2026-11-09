@@ -49,9 +49,18 @@ describe('STATE-7: upkeep', () => {
         expect(at(upkeep(nearlyFull), 0, 1).hp).toBe(20);
     });
 
-    it('REGEN never revives a dead character', () => {
-        const dead = patch(gs, 0, 1, { ...vitality(2), hp: 0 });
-        expect(at(upkeep(dead), 0, 1).hp).toBe(0);
+    it('DEAD-2: REGEN never brings a dead character back', () => {
+        const dead: GameState = {
+            ...gs,
+            players: [{ ...gs.players[0], team: gs.players[0].team.filter((_, i) => i !== 1), fallen: [{ ...at(gs, 0, 1), ...vitality(2), hp: 0 }] }, gs.players[1]],
+        };
+        expect(upkeep(dead)).toEqual(dead);
+    });
+
+    it('DEAD-1: a character the POISON kills leaves the board', () => {
+        const after = upkeep(patch(gs, 0, 1, { ...vitality(-1), hp: POISON_DAMAGE }));
+        expect(after.players[0].team.find(c => c.position.slot === 1)).toBeUndefined();
+        expect(after.players[0].fallen?.[0].hp).toBe(0);
     });
 
     it('does nothing to a character without a VITALITY counter', () => {

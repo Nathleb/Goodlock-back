@@ -2,7 +2,7 @@ import Effect from "../types/Effect.type";
 import GameState from "../types/GameState.type";
 import Position, { SlotIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
-import { isDead, stateValue } from "../services/Character.service";
+import { stateValue } from "../services/Character.service";
 import { CharacterId } from "@shared/branded.types";
 
 /**
@@ -22,8 +22,8 @@ function swapSlotsOnSameTeam(
     const atA = player.team.find(c => c.position.slot === slotA);
     const atB = player.team.find(c => c.position.slot === slotB);
     if (!atA && !atB) return { state: gameState, affected: [] };
-    // A living rooted character cannot be moved, nor move: any Swap involving its cell fizzles. A dead one is no longer rooted.
-    if ([atA, atB].some(c => c !== undefined && !isDead(c) && stateValue(c, 'ROOT') > 0)) return { state: gameState, affected: [] };
+    // A rooted character cannot be moved, nor move: any Swap involving its cell fizzles (STATE-5).
+    if ([atA, atB].some(c => c !== undefined && stateValue(c, 'ROOT') > 0)) return { state: gameState, affected: [] };
 
     const newTeam = player.team
         .map(c => {

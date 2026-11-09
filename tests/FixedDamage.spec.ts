@@ -24,11 +24,6 @@ const withShield = (s: GameState, pi: PlayerIndex, slot: number, amount: number)
     players[pi] = { ...players[pi], team: players[pi].team.map((c, i) => i === slot ? gainShield(c, amount) : c) };
     return { ...s, players };
 };
-const withHp = (s: GameState, pi: PlayerIndex, slot: number, hp: number): GameState => {
-    const players = [...s.players] as [Player, Player];
-    players[pi] = { ...players[pi], team: players[pi].team.map((c, i) => i === slot ? { ...c, hp } : c) };
-    return { ...s, players };
-};
 const actorId = () => at(gs, 0, 2).id;
 
 describe('DMG-3: FixedDamage', () => {
@@ -47,9 +42,11 @@ describe('DMG-3: FixedDamage', () => {
         expect(affected).toEqual([at(gs, 1, 2).id]);
     });
 
-    it('leaves a dead occupant at 0 hp', () => {
-        const { state } = new FixedDamage(5).solve(withHp(gs, 1, 0, 0), [pos(1, 0)], actorId());
-        expect(at(state, 1, 0).hp).toBe(0);
+    it('DEAD-1: does nothing on the cell a dead character left', () => {
+        const killed = new FixedDamage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const { state, affected } = new FixedDamage(5).solve(killed, [pos(1, 0)], actorId());
+        expect(state).toEqual(killed);
+        expect(affected).toEqual([]);
     });
 
     it('works on an ALLY cell as a self-cost, shield untouched', () => {

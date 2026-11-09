@@ -1,5 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import ApplyStat from "@domain/strategies/ApplyStat.class";
+import Damage from "@domain/strategies/Damage.class";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
@@ -37,16 +38,13 @@ describe('STAT-2: ApplyStat', () => {
         expect(at(twice, 0, 1).modifiers.map(m => m.value)).toEqual([3, -1]);
     });
 
-    it('gives no instance to a dead occupant', () => {
-        const withDead: GameState = {
-            ...gs,
-            players: [gs.players[0], { ...gs.players[1], team: gs.players[1].team.map((c, i) => i === 0 ? { ...c, hp: 0 } : c) }],
-        };
+    it('DEAD-1: gives no instance to the cell a dead character left, the rest of the pattern applies', () => {
+        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
 
-        const { state } = new ApplyStat('POWER', 3, 2).solve(withDead, [pos(1, 0), pos(1, 1)], actorId());
+        const { state } = new ApplyStat('POWER', 3, 2).solve(killed, [pos(1, 0), pos(1, 1)], actorId());
 
-        expect(at(state, 1, 0).modifiers).toEqual([]);
-        expect(at(state, 1, 1).modifiers).toHaveLength(1);
+        expect(state.players[1].fallen?.[0].modifiers).toEqual([]);
+        expect(state.players[1].team.find(c => c.position.slot === 1)?.modifiers).toHaveLength(1);
     });
 
     it('TGT-4: does nothing on an empty cell while the rest of the pattern applies', () => {
@@ -59,14 +57,11 @@ describe('STAT-2: ApplyStat', () => {
         expect(affected).toEqual([holed.players[1].team[3].id]);
     });
 
-    it('still lists a dead occupant as affected, like Damage on a dead target', () => {
-        const withDead: GameState = {
-            ...gs,
-            players: [gs.players[0], { ...gs.players[1], team: gs.players[1].team.map((c, i) => i === 0 ? { ...c, hp: 0 } : c) }],
-        };
+    it('DEAD-1: does not list the cell a dead character left as affected', () => {
+        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
 
-        const { affected } = new ApplyStat('POWER', 3, 2).solve(withDead, [pos(1, 0)], actorId());
+        const { affected } = new ApplyStat('POWER', 3, 2).solve(killed, [pos(1, 0)], actorId());
 
-        expect(affected).toEqual([at(gs, 1, 0).id]);
+        expect(affected).toEqual([]);
     });
 });

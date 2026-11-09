@@ -1,6 +1,7 @@
 import GameState from "../types/GameState.type";
 import { Player } from "../types/Player.type";
 import { gainHp, loseHp, stateValue } from "./Character.service";
+import { buryIfDead } from "../utils/TargetUtils";
 
 /** Hit points lost by a poisoned character at the start of each round. */
 export const POISON_DAMAGE = 5;
@@ -12,7 +13,7 @@ export const REGEN_HEAL = 5;
  * not touched here, they tick at the end of the round.
  */
 export function upkeep(gameState: GameState): GameState {
-    const players = gameState.players.map(player => ({
+    const hurt = gameState.players.map(player => ({
         ...player,
         team: player.team.map(c => {
             const vitality = stateValue(c, 'VITALITY');
@@ -23,5 +24,10 @@ export function upkeep(gameState: GameState): GameState {
             return c;
         }),
     })) as unknown as [Player, Player];
+    // A character the poison killed leaves the board (DEAD-1).
+    const players = hurt.reduce<readonly [Player, Player]>(
+        (acc, player) => player.team.reduce((inner, c) => buryIfDead(inner, player.playerIndex, c.id), acc),
+        hurt,
+    );
     return { ...gameState, players };
 }

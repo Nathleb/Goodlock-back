@@ -2,8 +2,8 @@
 
 Each step: rule tests first (red, titles citing the rule ID), minimum code, `npm run test` + `npx tsc --noEmit` + `npm run lint:check` green, one commit. Existing tests that assert the old behavior are rewritten to state the rule (authorized by the user on 2026-11-09).
 
-- [ ] **1 domain, DEAD-1 + GAME-4**: `Player.fallen`; a killed character leaves the board after the cell application that killed it; `hasLost` counts `fallen`. Rewrite the tests that keep a dead character on the board.
-- [ ] **2 domain, END-1 + END-2 + DEAD-3 in Resolve**: per-effect death check, author loses on a double second death, resolution stops; an acting character that dies stops its action; `GameState.winner`, `checkWinner` without draw.
+- [x] **1 domain, DEAD-1 + DEAD-3 + GAME-4**: `Player.fallen`; a killed character leaves the board after the cell application that killed it (also from Upkeep poison); `hasLost` counts `fallen`; an actor that dies during its own action stops it (the loop would otherwise crash on a missing actor). Tests that kept a dead character on the board are rewritten.
+- [ ] **2 domain, END-1 + END-2 in Resolve**: per-effect death check, author loses on a double second death, resolution stops; an acting character that dies stops its action; `GameState.winner`, `checkWinner` without draw.
 - [ ] **3 domain, UPK-1 + END-2 in Upkeep**: one character at a time in the PRIO order without the bracket; a death check after each.
 - [ ] **4 application, protocol**: `GameOverDTO.winner` without draw, `PlayerGameStateDTO.fallen`, coordinator reads `winner`; `npm run protocol:schema`.
 - [ ] **5 client**: mirror the protocol in Goodlock-app.

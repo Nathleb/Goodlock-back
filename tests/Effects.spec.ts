@@ -70,10 +70,11 @@ describe('DMG-1: Damage', () => {
         expect(at(state, 1, 0).hp).toBe(18);
     });
 
-    it('hits a dead occupant without effect on hp (damage wasted)', () => {
-        const dead = withHp(gs, 1, 0, 0);
-        const { state } = new Damage(5).solve(dead, [pos(1, 0)], actorId());
-        expect(at(state, 1, 0).hp).toBe(0);
+    it('DEAD-1: a hit on the cell a dead character left does nothing', () => {
+        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const { state, affected } = new Damage(5).solve(killed, [pos(1, 0)], actorId());
+        expect(state).toEqual(killed);
+        expect(affected).toEqual([]);
     });
 
     it('hits a repeated cell once per occurrence (stacking)', () => {
@@ -153,10 +154,11 @@ describe('HEAL-1: Heal', () => {
         expect(at(state, 0, 1).hp).toBe(20);
     });
 
-    it('does not revive a dead occupant', () => {
-        const dead = withHp(gs, 0, 1, 0);
-        const { state } = new Heal(5).solve(dead, [pos(0, 1)], actorId());
-        expect(at(state, 0, 1).hp).toBe(0);
+    it('DEAD-2: does not bring a dead character back', () => {
+        const killed = new Damage(20).solve(gs, [pos(0, 1)], actorId()).state;
+        const { state } = new Heal(5).solve(killed, [pos(0, 1)], actorId());
+        expect(state).toEqual(killed);
+        expect(state.players[0].fallen?.[0].hp).toBe(0);
     });
 
     it('heals a repeated cell once per occurrence', () => {
@@ -225,11 +227,46 @@ describe('SWAP-1: Swap', () => {
     it('fizzles when the 2 cells are on different teams', () => {
         expect(new Swap().solve(gs, [pos(0, 1), pos(1, 1)], actorId())).toEqual({ state: gs, affected: [] });
     });
+});
 
-    it('can move a dead character', () => {
-        const dead = withHp(gs, 0, 0, 0);
-        const deadId = at(dead, 0, 0).id;
-        const { state } = new Swap().solve(dead, [pos(0, 0), pos(0, 4)], actorId());
-        expect(at(state, 0, 4).id).toBe(deadId);
+describe('DEAD-1: a character whose HP reaches 0 dies and leaves the board at once', () => {
+    const inCell = (s: GameState, pi: PlayerIndex, slot: number) => s.players[pi].team.find(c => c.position.slot === slot);
+
+    it('leaves its cell empty and joins the fallen of its player, with 0 HP', () => {
+        const victim = at(gs, 1, 0);
+        const { state, affected } = new Damage(20).solve(gs, [pos(1, 0)], actorId());
+        expect(inCell(state, 1, 0)).toBeUndefined();
+        expect(state.players[1].fallen).toEqual([expect.objectContaining({ id: victim.id, hp: 0 })]);
+        expect(affected).toEqual([victim.id]);
+    });
+
+    it('a second hit on the same cell finds it empty', () => {
+        const { state } = new Damage(20).solve(gs, [pos(1, 0), pos(1, 0)], actorId());
+        expect(state.players[1].fallen).toHaveLength(1);
+        expect(state.players[1].team).toHaveLength(4);
+    });
+
+    it('the next cell of the pattern still applies after a death', () => {
+        const { state } = new Damage(20).solve(withHp(gs, 1, 1, 30), [pos(1, 0), pos(1, 1)], actorId());
+        expect(inCell(state, 1, 1)?.hp).toBe(10);
+    });
+
+    it('applies to any effect: a lethal HP loss leaves the board too', () => {
+        const { state } = applyAtPositions(gs, [pos(0, 3)], c => ({ ...c, hp: 0 }));
+        expect(inCell(state, 0, 3)).toBeUndefined();
+        expect(state.players[0].fallen).toHaveLength(1);
+    });
+
+    it('a character can move into the cell the dead character left', () => {
+        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const mover = at(gs, 1, 1);
+        const { state } = new Swap().solve(killed, [pos(1, 0), pos(1, 1)], actorId());
+        expect(inCell(state, 1, 0)?.id).toBe(mover.id);
+        expect(inCell(state, 1, 1)).toBeUndefined();
+    });
+
+    it('fallen keep the order of death', () => {
+        const { state } = new Damage(20).solve(gs, [pos(1, 3), pos(1, 1)], actorId());
+        expect(state.players[1].fallen?.map(c => c.id)).toEqual([at(gs, 1, 3).id, at(gs, 1, 1).id]);
     });
 });

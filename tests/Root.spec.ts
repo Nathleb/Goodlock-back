@@ -1,5 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import Swap from "@domain/strategies/Swap.class";
+import FixedDamage from "@domain/strategies/FixedDamage.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
@@ -104,19 +105,16 @@ describe('STATE-5: ROOT', () => {
         expect(occupant(state, 0, 1)!.id).toBe(rooted.id);
     });
 
-    it('a dead character is no longer rooted: Swaps into or out of its cell work', () => {
+    it('DEAD-1: a rooted character that died leaves its cell free: a Swap into it works', () => {
         const base = root(createGameState(five(0, 'A'), five(1, 'B')), 0, 2);
-        const gs: GameState = {
-            ...base,
-            players: [{ ...base.players[0], team: base.players[0].team.map(c => c.position.slot === 2 ? { ...c, hp: 0 } : c) }, base.players[1]],
-        };
-        const [alive, dead] = [occupant(gs, 0, 1)!.id, occupant(gs, 0, 2)!.id];
+        const alive = occupant(base, 0, 1)!.id;
+        const gs = new FixedDamage(999).solve(base, [pos(0, 2)], alive).state;
 
         const { state, affected } = new Swap().solve(gs, [pos(0, 1), pos(0, 2)], alive);
 
-        expect(affected.sort()).toEqual([alive, dead].sort());
+        expect(affected).toEqual([alive]);
         expect(occupant(state, 0, 2)!.id).toBe(alive);
-        expect(occupant(state, 0, 1)!.id).toBe(dead);
+        expect(occupant(state, 0, 1)).toBeUndefined();
     });
 
     describe('applied inside the resolution', () => {

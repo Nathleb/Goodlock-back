@@ -75,7 +75,7 @@ describe('PriorityQueueService', () => {
     const stateWithDead: GameState = {
       ...gameState,
       players: [
-        { playerIndex: 0, team: [deadActor] },
+        { playerIndex: 0, team: [], fallen: [deadActor] },
         { playerIndex: 1, team: [targetChar] },
       ],
       priorityQueue: addEffectsToPriorityQueue(
@@ -507,7 +507,7 @@ describe('PriorityQueueService', () => {
       q = addEffectsToPriorityQueue(q, noop(1), deadHigh.id, 0);
       q = addEffectsToPriorityQueue(q, noop(0), liveLow.id, 0);
       const state: GameState = {
-        ...createGameState({ playerIndex: 0, team: [deadHigh] }, { playerIndex: 1, team: [liveLow] }),
+        ...createGameState({ playerIndex: 0, team: [], fallen: [deadHigh] }, { playerIndex: 1, team: [liveLow] }),
         priorityQueue: q,
       };
 
@@ -877,14 +877,28 @@ describe('PriorityQueueService', () => {
       expect(hp(state, 1, 1)).toBe(20);
     });
 
-    it('a dead actor is skipped with no effects logged', () => {
+    it('RES-1: an actor killed before its turn is skipped with no effects logged', () => {
       const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
+      const lethal = face(1, [{ effect: EffectLabel.Damage, magnitude: 99, targets: [enemyRel(0)] }]);
       const p0 = teamOf(0, { 0: hit });
-      const deadP0 = { ...p0, team: p0.team.map((c, i) => i === 0 ? { ...c, hp: 0 } : c) };
-      const { state, log } = run(deadP0, teamOf(1));
+      const { state, log } = run(p0, teamOf(1, { 0: lethal }));
       expect(hp(state, 1, 0)).toBe(20);
-      expect(log.find(s => s.characterId === deadP0.team[0].id)).toEqual(
-        { characterId: deadP0.team[0].id, skipped: true, effects: [], changes: [] });
+      expect(log.find(s => s.characterId === p0.team[0].id)).toEqual(
+        { characterId: p0.team[0].id, skipped: true, effects: [], changes: [] });
+    });
+
+    it('DEAD-3: an actor that dies during its own action stops it: the rest of its face does not apply', () => {
+      const selfCostThenHit = face(0, [
+        { effect: EffectLabel.FixedDamage, magnitude: 99, targets: [allyRel(0)] },
+        { effect: EffectLabel.Damage, magnitude: 9, targets: [enemyRel(0)] },
+      ]);
+      const p0 = teamOf(0, { 0: selfCostThenHit });
+      const { state, log } = run(p0, teamOf(1));
+      expect(hp(state, 1, 0)).toBe(20);
+      expect(state.players[0].fallen).toHaveLength(1);
+      const step = log.find(s => s.characterId === p0.team[0].id)!;
+      expect(step.skipped).toBe(false);
+      expect(step.effects).toHaveLength(1);
     });
   });
 });

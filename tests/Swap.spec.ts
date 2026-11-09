@@ -7,6 +7,7 @@ import { addEffectsToPriorityQueue, createPriorityQueue, unstackPriorityQueueWit
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import Swap from "@domain/strategies/Swap.class";
+import FixedDamage from "@domain/strategies/FixedDamage.class";
 import GameState from "@domain/types/GameState.type";
 import TargetGroup from "@domain/types/TargetGroup.type";
 import { enemyAbs, allyAbs, allyRel } from "./helpers/targets";
@@ -109,22 +110,15 @@ describe('SWAP-1: Swap: actor with an ally', () => {
         expect(result.players[0].team[4].id).toBe(charA.id);
     });
 
-    it('works with a dead ally', () => {
+    it('DEAD-1: moves into the cell a dead ally left', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
-        const deadB = { ...gs.players[0].team[1], hp: 0 };
-        const gsWithDead = {
-            ...gs,
-            players: [
-                { ...gs.players[0], team: [charA, deadB, ...gs.players[0].team.slice(2)] },
-                gs.players[1],
-            ] as typeof gs.players,
-        };
+        const gsWithDead = new FixedDamage(999).solve(gs, [{ playerIndex: 0, slot: 1 }], charA.id).state;
 
         const { state } = resolveSwap(gsWithDead, charA.id, [allyRel(0), allyAbs(1)]);
 
-        expect(state.players[0].team[1].id).toBe(charA.id);
-        expect(state.players[0].team[0].id).toBe(deadB.id);
+        expect(state.players[0].team.find(c => c.position.slot === 1)?.id).toBe(charA.id);
+        expect(state.players[0].team.find(c => c.position.slot === 0)).toBeUndefined();
     });
 
     it('log reports both affected character IDs', () => {

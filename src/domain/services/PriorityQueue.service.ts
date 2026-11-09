@@ -33,18 +33,19 @@ export function resetPriorityQueue(gameState: GameState): GameState {
     return { ...gameState, priorityQueue: createPriorityQueue() };
 }
 
-function isAlive(gameState: GameState, characterId: CharacterId): boolean {
-    return gameState.players.some(player =>
-        player.team.some(char => char.id === characterId && char.hp > 0)
-    );
-}
-
+/** A character on the board. A dead one has left it (DEAD-1). */
 function findCharacter(gameState: GameState, characterId: CharacterId): Character | undefined {
     for (const player of gameState.players) {
         const char = player.team.find(c => c.id === characterId);
         if (char) return char;
     }
     return undefined;
+}
+
+/** A character on the board, or one that fell: the log shows the killing blow with 0 HP. */
+function findOnBoardOrFallen(gameState: GameState, characterId: CharacterId): Character | undefined {
+    return findCharacter(gameState, characterId)
+        ?? gameState.players.flatMap(p => p.fallen ?? []).find(c => c.id === characterId);
 }
 
 // Tie-break keys, captured when RESOLVE starts so that a Swap during the round does not
@@ -92,7 +93,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
         const [face, characterId] = remaining.shift()!;
         const self = findCharacter(state, characterId);
         // A stun is read when the turn comes: one landing before the action cancels it, like death.
-        if (!isAlive(state, characterId) || self === undefined || stateValue(self, 'STUN') > 0) {
+        if (self === undefined || stateValue(self, 'STUN') > 0) {
             log.push({ characterId, skipped: true, effects: [], changes: [] });
             continue;
         }
@@ -102,7 +103,9 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
         for (const faceEffect of face.effects) {
             // Cells are resolved just before each effect, from the actor's *current*
             // position — an earlier swap (this face or another actor's) shifts them.
-            const actor = findCharacter(state, characterId)!;
+            const actor = findCharacter(state, characterId);
+            // DEAD-3: an actor who died during its own action stops it.
+            if (actor === undefined) break;
             const targets = resolveTargets(faceEffect.targets, actor.position);
             effects.push({ effect: faceEffect.label, targets });
             if (targets.length === 0) continue;
@@ -112,7 +115,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
         }
 
         const changes = [...affectedIds]
-            .map(id => findCharacter(state, id))
+            .map(id => findOnBoardOrFallen(state, id))
             .filter((c): c is Character => c !== undefined)
             .map(c => ({ characterId: c.id, character: c }));
 
