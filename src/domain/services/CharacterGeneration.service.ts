@@ -44,6 +44,7 @@ export function createCharacter({ catalogId, name, maxHp, baseSpeed, baseDie, po
         states: {},
         face: baseDie[0],
         isFaceLocked: false,
+        keptAtLastRoll: false,
         position,
     };
 }

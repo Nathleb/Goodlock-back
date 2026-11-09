@@ -19,7 +19,7 @@ const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean): Character {
     return {
         id: asCharacter(id), catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [], states: {},
-        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked,
+        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked, keptAtLastRoll: false,
         position: { playerIndex, slot: slot as SlotIndex },
     };
 }
