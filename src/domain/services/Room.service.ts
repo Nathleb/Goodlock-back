@@ -1,13 +1,10 @@
 import { Room } from '../types/Room.type';
 import GameState from '../types/GameState.type';
-import { PlayerPresence } from '../types/Presence.type';
 import { CatalogId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '../errors/DomainError';
 import { Result, ok, err } from '@shared/result.type';
 
 const ROOM_CAPACITY = 2;
-
-const CONNECTED: PlayerPresence = { connected: true, disconnectedAt: null };
 
 export function createRoom(ownerId: SessionId): Room {
     return {
@@ -39,7 +36,6 @@ export function startRoom(room: Room, gameState: GameState): Result<Room, Domain
         isStarted: true,
         gameState,
         playerOrder: [room.playersId[0], room.playersId[1]],
-        presence: [CONNECTED, CONNECTED],
     });
 }
 
@@ -73,12 +69,4 @@ export function selectedDecks(room: Room): Result<[readonly CatalogId[], readonl
 export function resolvePlayerIndex(room: Room, sessionId: SessionId): number {
     if (room.playerOrder) return room.playerOrder.indexOf(sessionId);
     return room.playersId.indexOf(sessionId);
-}
-
-export function setPresenceInRoom(room: Room, playerIndex: number, connected: boolean, now: number): Room {
-    if (!room.presence) return room;
-    if (playerIndex < 0 || playerIndex >= room.presence.length) return room;
-    const presence: [PlayerPresence, PlayerPresence] = [...room.presence];
-    presence[playerIndex] = { connected, disconnectedAt: connected ? null : now };
-    return { ...room, presence };
 }

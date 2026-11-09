@@ -18,7 +18,6 @@ const DOMAIN_ERROR_CODES = [
     'INVALID_PLACEMENT',
     'INVALID_LOCK',
     'ACTION_NOT_AVAILABLE',
-    'CLAIM_NOT_ALLOWED',
 ] as const;
 
 export type DomainErrorCode = (typeof DOMAIN_ERROR_CODES)[number];

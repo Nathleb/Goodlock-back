@@ -683,8 +683,7 @@
         "INVALID_SELECTION",
         "INVALID_PLACEMENT",
         "INVALID_LOCK",
-        "ACTION_NOT_AVAILABLE",
-        "CLAIM_NOT_ALLOWED"
+        "ACTION_NOT_AVAILABLE"
       ]
     }
   }

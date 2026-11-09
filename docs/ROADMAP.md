@@ -29,7 +29,7 @@ serve the phone experience, not the other way around.
 - Phases: SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT.
   REST: `auth/*`, `rooms`, `collection`, `decks`.
 - Auth: JWT access + refresh tokens. Postgres via Prisma holds auth + player data (`UserCharacter`,
-  `Deck`, `DeckSlot`); live game state stays in-memory. Session reconnect, AFK/forfeit claims.
+  `Deck`, `DeckSlot`); live game state stays in-memory. Session reconnect, match clocks and reconnection time.
 
 **Client (`Goodlock-app`, Oct 2026) — Flutter + Flame prototype.**
 - Chosen for the most UI + mobile game-feel headroom (TypeScript was not a criterion). Talks to the

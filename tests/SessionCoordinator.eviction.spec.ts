@@ -61,7 +61,7 @@ describe('ACC-2: a signed-in-elsewhere eviction during a match', () => {
         coordinator.handleDisconnect(OLD_SOCKET);
 
         const room = rooms.getRoom(roomId)!;
-        expect(room.presence?.[0]).toEqual(expect.objectContaining({ connected: true }));
+        expect(room.gameState?.clocks[0]).toEqual(expect.objectContaining({ connected: true }));
         expect(room.playersId).toContain(sessionId);
         expect(sessions.getSession(NEW_SOCKET)).toEqual(expect.objectContaining({ sessionId, roomId }));
         expect(ws.emitToRoom).not.toHaveBeenCalled();
