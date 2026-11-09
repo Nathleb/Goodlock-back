@@ -25,7 +25,7 @@ serve the phone experience, not the other way around.
   in a room each player picks a deck, then **team preview**: both decks revealed, each secretly keeps
   **4**; the opponent's picks stay hidden until the first ROLL.
 - **Four of six** (Oct 19 2026): deck 6, keep 4, 5-cell board with one empty cell chosen at placement
-  (Swap moves into it), defeat at 2 dead. See `docs/features/implemented/2026-10-19-four-of-six/`.
+  (Swap moves into it), defeat at 2 dead. See `Goodlock-specs/features/2026-10-19-four-of-six/design.md` (outside the repo).
 - Phases: SELECTION → PLACEMENT → ROLL → KEEP → RESOLVE → RESULT.
   REST: `auth/*`, `rooms`, `collection`, `decks`.
 - Auth: JWT access + refresh tokens. Postgres via Prisma holds auth + player data (`UserCharacter`,
@@ -125,7 +125,7 @@ them. Each phase has an explicit **exit criterion** measured on a device build.
 
 ## Dice authoring and statuses (backend, done)
 
-Umbrella design: `docs/features/implemented/2026-10-26-dice-authoring-and-statuses/design.md`. Shipped: deterministic
+Umbrella design: `Goodlock-specs/features/2026-10-26-dice-authoring-and-statuses/design.md` (outside the repo). Shipped: deterministic
 initiative, `FixedDamage`, POWER and ARMOR, the five states (STUN, ROOT, DIVINE_SHIELD, POISON/REGEN, HASTE/SLOW) and the
 six-character roster. Still to do: an animated upkeep log (the poison HP drop is only visible in the next state),
 `DIE_LOCK` (acts on the keep decision), a player-set tie preset within a team, client badges for stats and states
