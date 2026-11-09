@@ -14,6 +14,10 @@ export type CharacterDTO = {
     baseSpeed: number;
     baseDie: DieFaceDTO[];
     face: DieFaceDTO;
+    /**
+     * Whether the die was kept at the last Roll (ROLL-2). In the state sent to one player only,
+     * their own dice show instead what they last confirmed in the current Keep (GAME-9).
+     */
     isFaceLocked: boolean;
     position: { playerIndex: number; slot: number };
     /** Active stat instances (buffs and debuffs). */

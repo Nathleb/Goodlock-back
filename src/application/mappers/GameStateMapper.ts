@@ -64,15 +64,14 @@ export class GameStateMapper {
         if (gameState.phase === GamePhase.PLACEMENT) {
             return GameStateMapper.toDTOForPlacement(gameState, viewerIndex);
         }
+        // The viewer's own dice as they last confirmed them (KEEP-1); the opponent's stay as kept at the last Roll.
         const dto = GameStateMapper.toDTO(gameState);
-        const enemyIndex = (1 - viewerIndex) as 0 | 1;
-        const maskLocks = gameState.phase === GamePhase.KEEP && gameState.playersReady[enemyIndex];
-        const enemyTeam = dto.players[enemyIndex].team.map(char => ({
-            ...char,
-            isFaceLocked: maskLocks ? false : char.isFaceLocked,
-        }));
+        const own = gameState.players[viewerIndex];
         const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
-        players[enemyIndex] = { ...players[enemyIndex], team: enemyTeam };
+        players[viewerIndex] = {
+            ...players[viewerIndex],
+            team: own.team.map(char => ({ ...GameStateMapper.characterToDTO(char), isFaceLocked: char.isFaceLocked })),
+        };
         return GameStateMapper.withOwnConfirmation({ ...dto, players }, gameState, viewerIndex);
     }
 
@@ -109,7 +108,8 @@ export class GameStateMapper {
             baseSpeed: char.baseSpeed,
             baseDie: char.baseDie.map(GameStateMapper.faceToDTO),
             face: GameStateMapper.faceToDTO(char.face),
-            isFaceLocked: char.isFaceLocked,
+            // Public: kept at the last Roll (ROLL-2). A choice in the current Keep stays with its owner (GAME-9).
+            isFaceLocked: char.keptAtLastRoll,
             position: char.position,
             modifiers: char.modifiers.map(m => ({ stat: m.stat, value: m.value, roundsLeft: m.roundsLeft })),
             stats: Object.fromEntries(STAT_NAMES.map(stat => [stat, netStat(char, stat)])),

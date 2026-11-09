@@ -151,9 +151,10 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
         expect(JSON.stringify(snapshot)).not.toContain('Name-b5');
     });
 
-    it('during KEEP, once the opponent confirmed, the snapshot hides which dice they locked', () => {
+    it('GAME-9, ROLL-2: during KEEP, the snapshot shows the opponent\'s dice kept at the last Roll, not their confirmed choice', () => {
         const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build)), 0, PICK_P0, build));
-        const lockFirst = (team: readonly Character[]) => team.map((c, i) => ({ ...c, isFaceLocked: i === 0 }));
+        // The first die is kept for the next Roll; the second was kept at the last Roll.
+        const lockFirst = (team: readonly Character[]) => team.map((c, i) => ({ ...c, isFaceLocked: i === 0, keptAtLastRoll: i === 1 }));
         const keeping: GameState = {
             ...placing,
             phase: GamePhase.KEEP,
@@ -169,7 +170,7 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
         expect(snapshot.phase).toBe('KEEP_PHASE');
         expect(snapshot.players[0].team[0].isFaceLocked).toBe(true);
         expect(snapshot.players[1].team).toHaveLength(4);
-        expect(snapshot.players[1].team.every((c: { isFaceLocked: boolean }) => c.isFaceLocked === false)).toBe(true);
+        expect(snapshot.players[1].team.map((c: { isFaceLocked: boolean }) => c.isFaceLocked)).toEqual([false, true, false, false]);
     });
 });
 

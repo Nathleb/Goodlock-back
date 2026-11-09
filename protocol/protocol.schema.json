@@ -235,7 +235,8 @@
           "$ref": "#/definitions/DieFaceDTO"
         },
         "isFaceLocked": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether the die was kept at the last Roll (ROLL-2). In the state sent to one player only, their own dice show instead what they last confirmed in the current Keep (GAME-9)."
         },
         "position": {
           "type": "object",
