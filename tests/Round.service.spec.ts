@@ -5,7 +5,7 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { gainShield, loseHp } from "@domain/services/Character.service";
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
-import { endOfRound, checkWinner } from "@domain/services/Round.service";
+import { endOfRound, checkWinner, checkMatchEnd } from "@domain/services/Round.service";
 import { Player } from "@domain/types/Player.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
@@ -105,22 +105,29 @@ describe('checkWinner', () => {
         expect(checkWinner(createGameState(p1, p2))).toBeNull();
     });
 
-    it('GAME-4: should return 1 when player 0 has 2+ dead characters', () => {
-        const p1 = withTwoFallen(0);
-        const p2 = createPlayer(alive4(), 1);
-        expect(checkWinner(createGameState(p1, p2))).toBe(1);
+    it('GAME-4: checkMatchEnd makes player 1 win when player 0 has 2 dead characters', () => {
+        const ended = checkMatchEnd(createGameState(withTwoFallen(0), createPlayer(alive4(), 1)), 0);
+        expect(checkWinner(ended)).toBe(1);
     });
 
-    it('GAME-4: should return 0 when player 1 has 2+ dead characters', () => {
-        const p1 = createPlayer(alive4(), 0);
-        const p2 = withTwoFallen(1);
-        expect(checkWinner(createGameState(p1, p2))).toBe(0);
+    it('GAME-4: checkMatchEnd makes player 0 win when player 1 has 2 dead characters', () => {
+        const ended = checkMatchEnd(createGameState(createPlayer(alive4(), 0), withTwoFallen(1)), 1);
+        expect(checkWinner(ended)).toBe(0);
     });
 
-    it('should return draw when both players have 2+ dead characters', () => {
-        const p1 = withTwoFallen(0);
-        const p2 = withTwoFallen(1);
-        expect(checkWinner(createGameState(p1, p2))).toBe('draw');
+    it('GAME-4: checkMatchEnd decides nothing while nobody has 2 dead characters', () => {
+        const gs = createGameState(createPlayer(alive4(), 0), createPlayer(alive4(), 1));
+        expect(checkMatchEnd(gs, 0)).toBe(gs);
+    });
+
+    it.each([0, 1] as const)('END-2: when both players have 2 dead characters, the author loses (author: player %i)', (author) => {
+        const ended = checkMatchEnd(createGameState(withTwoFallen(0), withTwoFallen(1)), author);
+        expect(checkWinner(ended)).toBe(1 - author);
+    });
+
+    it('END-1: a decided winner does not change', () => {
+        const decided = { ...createGameState(withTwoFallen(0), createPlayer(alive4(), 1)), winner: 1 as const };
+        expect(checkMatchEnd({ ...decided, players: [decided.players[0], withTwoFallen(1)] }, 0)).toEqual(expect.objectContaining({ winner: 1 }));
     });
 });
 

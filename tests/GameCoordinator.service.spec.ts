@@ -12,6 +12,7 @@ import { Room } from '@domain/types/Room.type';
 import { BaseDieInstructions } from '@domain/types/BaseDieInstructions.type';
 import { SlotIndex } from '@domain/types/Position.type';
 import GamePhase from '@domain/types/GamePhase.type';
+import EffectLabel from '@domain/types/EffectLabels.type';
 import { createCharacter, generateFullDie, createCharacterFromTemplate } from '@domain/services/CharacterGeneration.service';
 import { createSelectionState, confirmSelection } from '@domain/services/GameLoop.service';
 import { createGameState } from './helpers/gameState';
@@ -51,9 +52,14 @@ const keepGs  = beginKeepPhase(baseGs);
 const p0Ready = (gs: typeof baseGs) => ({ ...gs, playersReady: [true, false] as [boolean, boolean] });
 const p1Ready = (gs: typeof baseGs) => ({ ...gs, playersReady: [false, true] as [boolean, boolean] });
 
+// The enemy has lost one character and the other one in front of our slot 0 has 1 HP left: the round's first action ends the match.
+const lethalDie = generateFullDie(Array(6).fill({ description: 'Kill', priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 99, targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }] }] }) as unknown as BaseDieInstructions);
 const withDeadEnemies = (gs: typeof baseGs) => ({
     ...gs,
-    players: [gs.players[0], { ...gs.players[1], team: gs.players[1].team.slice(3), fallen: gs.players[1].team.slice(0, 3).map(c => ({ ...c, hp: 0 })) }] as [Player, Player],
+    players: [
+        { ...gs.players[0], team: gs.players[0].team.map((c, i) => i === 0 ? { ...c, face: lethalDie[0] } : c) },
+        { ...gs.players[1], team: gs.players[1].team.slice(0, 3).map((c, i) => i === 0 ? { ...c, hp: 1 } : c), fallen: gs.players[1].team.slice(3).map(c => ({ ...c, hp: 0 })) },
+    ] as [Player, Player],
 });
 
 const makeRoom = (gameState: typeof baseGs): Room => ({
@@ -560,13 +566,14 @@ describe('confirmKeep', () => {
             expect(saved.players[0].fallen).toHaveLength(2);
         });
 
-        it('is a draw when the poison kills both players second characters', () => {
+        it('END-2: there is no draw when the poison kills both players second characters: the first one hurt, in the order of the resolution, loses', () => {
             const both = edit(edit(fall(fall(keepGs, 0, 0), 1, 0), 0, 0, { hp: 5, states: poisoned }), 1, 0, { hp: 5, states: poisoned });
             mockRoom.getRoom.mockReturnValue(makeRoom(resolving(both)));
 
             coordinator.confirmKeep(SOCKET_0, []);
 
-            expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameOver', { winner: 'draw', reason: 'elimination' });
+            // Equal speeds: the initiative, which has passed to player 1 at the end of the round, hurts player 1 first.
+            expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameOver', { winner: 0, reason: 'elimination' });
         });
 
         it('does not touch the state when nobody is poisoned or regenerating', () => {

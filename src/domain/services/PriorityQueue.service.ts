@@ -5,6 +5,8 @@ import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
 import { stateValue } from "./Character.service";
 import { effectFor } from "../strategies/effectFor";
+import { checkMatchEnd } from "./Round.service";
+import { PlayerIndex } from "../types/Position.type";
 import { CharacterId } from "@shared/branded.types";
 
 export function createPriorityQueue(): PriorityQueue {
@@ -52,9 +54,9 @@ function findOnBoardOrFallen(gameState: GameState, characterId: CharacterId): Ch
 // reshuffle ties: the initiative holder first, then the slot (0 -> 4).
 type TieKeys = ReadonlyMap<CharacterId, { readonly initiative: number; readonly slot: number }>;
 
-function captureTieKeys(state: GameState): TieKeys {
+function captureTieKeys(state: GameState, characterIds: readonly CharacterId[]): TieKeys {
     const keys = new Map<CharacterId, { initiative: number; slot: number }>();
-    for (const [, characterId] of state.priorityQueue) {
+    for (const characterId of characterIds) {
         const holds = state.players.some(p => p.playerIndex === state.initiativePlayerIndex && p.team.some(c => c.id === characterId));
         // An actor missing from the state sorts as a non-holder in slot 0.
         keys.set(characterId, { initiative: holds ? 0 : 1, slot: findCharacter(state, characterId)?.position.slot ?? 0 });
@@ -66,18 +68,29 @@ function captureTieKeys(state: GameState): TieKeys {
 // slowed), then baseSpeed desc, then the initiative holder's actors first, then slot asc. A pure
 // sort: no randomness. The SPEED state is read live, so a HASTE or SLOW landing during the round
 // reorders the entries that have not played yet; the bracket is never crossed.
-function compareEntries(state: GameState, tieKeys: TieKeys) {
+type Actor = { readonly id: CharacterId; readonly bracket: number; readonly speed: number };
+
+function compareActors(state: GameState, tieKeys: TieKeys) {
     const speedRank = (characterId: CharacterId): number => {
         const self = findCharacter(state, characterId);
         const speed = self ? stateValue(self, 'SPEED') : 0;
         return speed > 0 ? 0 : speed < 0 ? 2 : 1;
     };
-    return (a: QueueEntry, b: QueueEntry): number =>
-        (b[0].priority - a[0].priority)
-        || (speedRank(a[1]) - speedRank(b[1]))
-        || (b[2] - a[2])
-        || (tieKeys.get(a[1])!.initiative - tieKeys.get(b[1])!.initiative)
-        || (tieKeys.get(a[1])!.slot - tieKeys.get(b[1])!.slot);
+    return (a: Actor, b: Actor): number =>
+        (b.bracket - a.bracket)
+        || (speedRank(a.id) - speedRank(b.id))
+        || (b.speed - a.speed)
+        || (tieKeys.get(a.id)!.initiative - tieKeys.get(b.id)!.initiative)
+        || (tieKeys.get(a.id)!.slot - tieKeys.get(b.id)!.slot);
+}
+
+const entryActor = ([face, id, speed]: QueueEntry): Actor => ({ id, bracket: face.priority, speed });
+
+/** The characters on the board in resolution order without the bracket: the order of the start-of-round effects (UPK-1). */
+export function startOfRoundOrder(state: GameState): CharacterId[] {
+    const actors = state.players.flatMap(p => p.team).map(c => ({ id: c.id, bracket: 0, speed: c.baseSpeed }));
+    const tieKeys = captureTieKeys(state, actors.map(a => a.id));
+    return actors.sort(compareActors(state, tieKeys)).map(a => a.id);
 }
 
 export function unstackPriorityQueueWithLog(gameState: GameState): { state: GameState; log: ResolveStep[] } {
@@ -86,10 +99,11 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
 
     // Each entry is consumed once. Before every step the entries that have not played yet are
     // sorted again, so only a SPEED change can reorder them; hp, shield and positions never do.
-    const tieKeys = captureTieKeys(state);
+    const tieKeys = captureTieKeys(state, state.priorityQueue.map(([, id]) => id));
     const remaining = [...state.priorityQueue];
-    while (remaining.length > 0) {
-        remaining.sort(compareEntries(state, tieKeys));
+    while (remaining.length > 0 && state.winner === undefined) {
+        const compare = compareActors(state, tieKeys);
+        remaining.sort((a, b) => compare(entryActor(a), entryActor(b)));
         const [face, characterId] = remaining.shift()!;
         const self = findCharacter(state, characterId);
         // A stun is read when the turn comes: one landing before the action cancels it, like death.
@@ -110,8 +124,10 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             effects.push({ effect: faceEffect.label, targets });
             if (targets.length === 0) continue;
             const { state: newState, affected } = effectFor(faceEffect).solve(state, targets, characterId);
-            state = newState;
+            // END-2: deaths are checked after each effect; the match ends at once (END-1).
+            state = checkMatchEnd(newState, actor.position.playerIndex as PlayerIndex);
             affected.forEach(id => affectedIds.add(id));
+            if (state.winner !== undefined) break;
         }
 
         const changes = [...affectedIds]

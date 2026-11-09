@@ -9,7 +9,7 @@ import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
 import { beginPlacementPhase } from "@domain/services/Phase.service";
-import { endOfRound, checkWinner } from "@domain/services/Round.service";
+import { endOfRound, checkWinner, checkMatchEnd } from "@domain/services/Round.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
 } from "@domain/services/GameLoop.service";
@@ -430,8 +430,8 @@ describe('Domain integration — Win conditions', () => {
         expect(checkWinner(state)).toBe(1);
     });
 
-    it('checkWinner returns draw when both teams have exactly 2 dead characters', () => {
-        // Test checkWinner directly with a known-dead state: it isolates the
+    it('END-2: there is no draw: when both teams have exactly 2 dead characters, the author loses', () => {
+        // Test checkMatchEnd directly with a known-dead state: it isolates the
         // winner rule from the resolution order.
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const killTwo = (player: typeof gameState.players[0]) => ({
@@ -443,7 +443,7 @@ describe('Domain integration — Win conditions', () => {
             ...gameState,
             players: [killTwo(gameState.players[0]), killTwo(gameState.players[1])],
         };
-        expect(checkWinner(stateWithDeadChars)).toBe('draw');
+        expect(checkWinner(checkMatchEnd(stateWithDeadChars, 0))).toBe(1);
     });
 
     it('checkWinner returns null when only 1 character has died', () => {

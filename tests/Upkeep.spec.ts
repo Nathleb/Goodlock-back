@@ -99,6 +99,43 @@ describe('STATE-7: upkeep', () => {
     });
 });
 
+describe('UPK-1, END-2: the start-of-round effects apply one character at a time, in the order of the resolution', () => {
+    // Each player has already lost one character and has one poisoned character on its last life: whose dies first decides.
+    const lastLives = (speeds: [number, number], initiative: PlayerIndex = 0, hastedPlayer1 = false): GameState => {
+        const fallen = (s: GameState, pi: PlayerIndex): GameState => {
+            const players = [...s.players] as [Player, Player];
+            players[pi] = { ...players[pi], team: players[pi].team.slice(0, 4), fallen: [{ ...players[pi].team[4], hp: 0 }] };
+            return { ...s, players };
+        };
+        let s = fallen(fallen({ ...gs, initiativePlayerIndex: initiative }, 0), 1);
+        s = patch(s, 0, 0, { ...vitality(-1), hp: POISON_DAMAGE, baseSpeed: speeds[0] });
+        const hasted = hastedPlayer1 ? { SPEED: { value: 1, touchedRound: 0 } } : {};
+        return patch(s, 1, 0, { states: { VITALITY: { value: -1, touchedRound: 0 }, ...hasted }, hp: POISON_DAMAGE, baseSpeed: speeds[1] });
+    };
+
+    it('the faster character is hurt first: its player is the first to have 2 dead characters and loses', () => {
+        const after = upkeep(lastLives([3, 1]));
+        expect(after.winner).toBe(1);
+        expect(after.players[1].team.find(c => c.position.slot === 0)?.hp).toBe(POISON_DAMAGE);
+    });
+
+    it('the slower character is hurt later: the other player loses', () => {
+        expect(upkeep(lastLives([1, 3])).winner).toBe(0);
+    });
+
+    it.each([[0, 1], [1, 0]] as const)('equal speeds go to the initiative holder (player %i): they lose', (holder, winner) => {
+        expect(upkeep(lastLives([2, 2], holder)).winner).toBe(winner);
+    });
+
+    it('the Speed state comes before the base speed', () => {
+        expect(upkeep(lastLives([5, 1], 0, true)).winner).toBe(0);
+    });
+
+    it('nobody wins while nobody reaches 2 dead characters', () => {
+        expect(upkeep(patch(gs, 0, 1, { ...vitality(-1), hp: POISON_DAMAGE })).winner).toBeUndefined();
+    });
+});
+
 describe('STATE-2, STATE-7: upkeep timeline', () => {
     const nextRoundStart = (s: GameState) => upkeep(endOfRound(s));
     const applyAt = (s: GameState, state: 'POISON' | 'REGEN', duration: number) =>
