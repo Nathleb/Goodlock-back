@@ -19,3 +19,6 @@ The rules live in `../Goodlock-specs/GAME-DESIGN.md` (read-only from this repo),
 | Axes Speed, Vitality, Stun, Root, Divine Shield (STATE-1) | `STATE_AXES`: `SPEED`, `VITALITY`, `STUN`, `ROOT`, `DIVINE_SHIELD` |
 | Haste, Slow, Regen, Poison, Stun, Root, Divine Shield | `HASTE`, `SLOW`, `REGEN`, `POISON`, `STUN`, `ROOT`, `DIVINE_SHIELD` |
 | Max HP, HP, shield | `Character.maxHp`, `.hp`, `.shield` |
+| Dead character, off the board (DEAD-1) | `Player.fallen`, in order of death; `Player.team` lists the characters on the board only |
+| Winner, no draw (END-1, END-2) | `GameState.winner`, set by `checkMatchEnd` |
+| Order of the start-of-round effects (UPK-1) | `startOfRoundOrder` (`domain/services/PriorityQueue.service.ts`) |
