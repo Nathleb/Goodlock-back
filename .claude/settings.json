@@ -1,0 +1,8 @@
+{
+  "model": "opusplan",
+  "permissions": {
+    "deny": [
+      "Edit(//home/lebih/projects/Goodlock/Goodlock-specs/**)"
+    ]
+  }
+}
