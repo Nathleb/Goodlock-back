@@ -70,7 +70,7 @@ beforeEach(() => {
     );
 });
 
-describe('register', () => {
+describe('ACC-1: register', () => {
     it('saves a new user and returns token pair', async () => {
         mockUserPort.findByUsername.mockResolvedValue(undefined);
         mockUserPort.save.mockResolvedValue(undefined);
@@ -95,7 +95,7 @@ describe('register', () => {
     });
 });
 
-describe('login', () => {
+describe('ACC-1: login', () => {
     it('returns token pair on valid credentials', async () => {
         mockUserPort.findByUsername.mockResolvedValue(MOCK_USER);
         mockBcrypt.compare.mockResolvedValue(true as never);
@@ -224,7 +224,7 @@ describe('getMe', () => {
     });
 });
 
-describe('deleteAccount', () => {
+describe('ACC-3: deleteAccount', () => {
     it('deletes all refresh tokens then the user', async () => {
         mockRefreshTokenPort.deleteAllForUser.mockResolvedValue(undefined);
         mockUserPort.delete.mockResolvedValue(undefined);
@@ -236,7 +236,7 @@ describe('deleteAccount', () => {
     });
 });
 
-describe('collection grant (temporary grant-all)', () => {
+describe('COLL-1: collection grant (temporary grant-all)', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('register grants every catalog character to the new user', async () => {
@@ -283,7 +283,7 @@ describe('collection grant (temporary grant-all)', () => {
     });
 });
 
-describe('starter deck (temporary)', () => {
+describe('DECK-3: starter deck (temporary)', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('register creates the starter deck after granting the collection', async () => {

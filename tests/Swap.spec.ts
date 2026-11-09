@@ -53,7 +53,7 @@ function resolveSwap(gs: GameState, actorId: CharacterId, targets: TargetGroup[]
     return unstackPriorityQueueWithLog(state);
 }
 
-describe('Swap: actor with an ally', () => {
+describe('SWAP-1: Swap: actor with an ally', () => {
     it('swaps actor with targeted ally', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0
@@ -140,7 +140,7 @@ describe('Swap: actor with an ally', () => {
     });
 });
 
-describe('Swap: push patterns', () => {
+describe('SWAP-1, TGT-3: Swap: push patterns', () => {
     it('push-left moves target one slot to the left', () => {
         const gs = createGameState(player1, player2);
         const charB = gs.players[0].team[1]; // slot 1
@@ -269,7 +269,7 @@ describe('Swap: push patterns', () => {
     });
 });
 
-describe('Swap: move to a fixed slot', () => {
+describe('SWAP-1: Swap: move to a fixed slot', () => {
     it('moves targeted character to the fixed destination slot', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0]; // slot 0 — will be moved to slot 2
@@ -346,7 +346,7 @@ describe('Swap: move to a fixed slot', () => {
     });
 });
 
-describe('Swap across teams', () => {
+describe('SWAP-1: Swap across teams', () => {
     it('fizzles when its two cells are on different teams', () => {
         const state = createGameState(player1, player2);
         const { state: after, affected } = new Swap().solve(state, [{ playerIndex: 0, slot: 0 }, { playerIndex: 1, slot: 1 }], player1.team[0].id);

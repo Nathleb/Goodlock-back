@@ -25,7 +25,7 @@ const withCharacter = (s: GameState, pi: PlayerIndex, slot: number, patch: Parti
 let gs: GameState;
 beforeEach(() => { gs = createGameState(team(0, 'A'), team(1, 'B')); });
 
-describe('Damage with POWER', () => {
+describe('DMG-1, STAT-1: Damage with POWER', () => {
     it("adds the actor's POWER to the damage dealt", () => {
         const buffed = withCharacter(gs, 0, 2, { modifiers: [power(3)] });
 

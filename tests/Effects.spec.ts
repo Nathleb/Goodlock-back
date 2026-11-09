@@ -53,7 +53,7 @@ describe('applyAtPositions', () => {
     });
 });
 
-describe('Damage', () => {
+describe('DMG-1: Damage', () => {
     it('damages every occupant of the given cells, across both teams', () => {
         const { state, affected } = new Damage(5).solve(gs, [pos(1, 0), pos(1, 1), pos(0, 2)], actorId());
         expect(at(state, 1, 0).hp).toBe(15);
@@ -97,7 +97,7 @@ describe('Damage', () => {
     });
 });
 
-describe('an empty cell', () => {
+describe('TGT-4: an empty cell', () => {
     // 4 characters on slots 0..3, slot 4 empty, as after team preview.
     const holed = (): GameState => {
         const four = (pi: PlayerIndex, prefix: string) => createPlayer([0, 1, 2, 3].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `${prefix}${i}`, maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
@@ -140,13 +140,13 @@ describe('an empty cell', () => {
         expect(state.players[0].team.map(c => c.position.slot)).toEqual([1, 2, 3, 4]);
     });
 
-    it('Swap fizzles when both cells are empty', () => {
+    it('SWAP-1: Swap fizzles when both cells are empty', () => {
         const s = holed();
         expect(new Swap().solve(s, [pos(0, 4), pos(0, 4)], occupant(s, 0, 0)!.id)).toEqual({ state: s, affected: [] });
     });
 });
 
-describe('Heal', () => {
+describe('HEAL-1: Heal', () => {
     it('heals occupants up to maxHp', () => {
         const hurt = withHp(gs, 0, 1, 10);
         const { state } = new Heal(15).solve(hurt, [pos(0, 1)], actorId());
@@ -178,7 +178,7 @@ describe('Heal', () => {
     });
 });
 
-describe('Shield', () => {
+describe('SHIELD-1: Shield', () => {
     it('adds shield to every occupant', () => {
         const { state } = new Shield(4).solve(gs, [pos(0, 0), pos(0, 4)], actorId());
         expect(at(state, 0, 0).shield).toBe(4);
@@ -202,7 +202,7 @@ describe('Shield', () => {
     });
 });
 
-describe('Swap', () => {
+describe('SWAP-1: Swap', () => {
     it('exchanges the occupants of 2 cells on the same team and keeps slots consistent', () => {
         const a = at(gs, 1, 1).id, b = at(gs, 1, 3).id;
         const { state, affected } = new Swap().solve(gs, [pos(1, 1), pos(1, 3)], actorId());

@@ -91,7 +91,7 @@ describe('handleConnect', () => {
     });
 });
 
-describe('handleConnect — eviction', () => {
+describe('ACC-2: handleConnect — eviction', () => {
     it('kicks the evicted socket with sessionEvicted', () => {
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION, evictedSocketId: 'old-sock' });
         coordinator.handleConnect(SOCKET, USER_ID);
@@ -113,7 +113,7 @@ describe('handleConnect — started game reconnect', () => {
     });
 });
 
-describe('handleConnect — reconnect before combat keeps secrets', () => {
+describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () => {
     const build = (t: ReturnType<typeof testTemplate>) => createCharacterFromTemplate(t);
     const deck = (p: string) => Array.from({ length: 6 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_P0 = ['a0', 'a1', 'a2', 'a3'] as CatalogId[];
@@ -199,7 +199,7 @@ describe('handleDisconnect', () => {
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
-    it('quits the room and notifies the remaining player on disconnect', () => {
+    it('ROOM-5: quits the room and notifies the remaining player on disconnect', () => {
         mockSession.getSession.mockReturnValue(SESSION_WITH_ROOM);
         mockRoom.getRoom.mockReturnValue(ROOM);
         mockRoom.quitRoom.mockReturnValue(ROOM);

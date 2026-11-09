@@ -53,20 +53,20 @@ describe('toDTOForViewer', () => {
         expect(dto.players[1].team[0].isFaceLocked).toBe(true);
     });
 
-    it('hides the opponent team entirely during PLACEMENT (picks stay secret until combat)', () => {
+    it('GAME-7: hides the opponent team entirely during PLACEMENT (picks stay secret until combat)', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.PLACEMENT, [false, false]), 0);
         expect(dto.players[0].team.map(c => c.id)).toEqual(['c00', 'c01']);
         expect(dto.players[1].team).toEqual([]);
         expect(JSON.stringify(dto)).not.toContain('c10');
     });
 
-    it('hides player 0 from viewer 1 during PLACEMENT', () => {
+    it('GAME-7: hides player 0 from viewer 1 during PLACEMENT', () => {
         const dto = GameStateMapper.toDTOForPlacement(gs(GamePhase.PLACEMENT, [false, false]), 1);
         expect(dto.players[0].team).toEqual([]);
         expect(dto.players[1].team).toHaveLength(2);
     });
 
-    it('reveals both teams from ROLL on', () => {
+    it('GAME-7: reveals both teams from ROLL on', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.ROLL, [false, false]), 0);
         expect(dto.players[1].team).toHaveLength(2);
     });
@@ -77,7 +77,7 @@ describe('toDTOForViewer', () => {
     });
 });
 
-describe('initiative in the public DTO', () => {
+describe('GAME-7: initiative in the public DTO', () => {
     const phases = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.ROLL, GamePhase.KEEP, GamePhase.RESOLVE, GamePhase.RESULT];
 
     it.each(phases)('is exposed to both viewers in %s', (phase) => {
@@ -92,7 +92,7 @@ describe('initiative in the public DTO', () => {
     });
 });
 
-describe('team selection view', () => {
+describe('GAME-7, CHAR-1: team selection view', () => {
     const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_1 = ['b0', 'b1', 'b2', 'b3', 'b4'] as CatalogId[];
     const selecting = (picks: SelectionState['picks'], ready: [boolean, boolean]): GameState => ({
@@ -124,7 +124,7 @@ describe('team selection view', () => {
     });
 });
 
-describe('resolveStepsToDTO', () => {
+describe('RES-2: resolveStepsToDTO', () => {
     it('maps the resolved cells of every effect, including fizzles', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
             characterId: asCharacter('x'),

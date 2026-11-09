@@ -26,7 +26,7 @@ let gs: GameState;
 beforeEach(() => { gs = createGameState(team(0, 'A'), team(1, 'B')); });
 const actorId = () => at(gs, 0, 2).id;
 
-describe('Damage with ARMOR', () => {
+describe('DMG-1, STAT-1: Damage with ARMOR', () => {
     it("subtracts the target's ARMOR from the damage taken", () => {
         const armored = withCharacter(gs, 1, 0, { modifiers: [stat('ARMOR', 3)] });
 

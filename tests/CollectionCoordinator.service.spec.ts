@@ -23,7 +23,7 @@ beforeEach(() => {
 
 afterEach(() => jest.restoreAllMocks());
 
-describe('getCollection', () => {
+describe('COLL-2: getCollection', () => {
     it('maps owned ids to full character DTOs', async () => {
         collection.listOwned.mockResolvedValue([{ characterId: id('c0'), acquiredAt: ACQUIRED }]);
 

@@ -30,7 +30,7 @@ let gs: GameState;
 beforeEach(() => { gs = createGameState(team(0, 'A'), team(1, 'B')); });
 const actorId = () => at(gs, 0, 2).id;
 
-describe('DIVINE_SHIELD', () => {
+describe('STATE-6, DMG-1: DIVINE_SHIELD', () => {
     it('nullifies a Damage hit and is consumed', () => {
         const protectedTarget = patch(gs, 1, 0, shielded());
 

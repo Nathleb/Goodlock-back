@@ -25,7 +25,7 @@ const root = (s: GameState, pi: PlayerIndex, slot: number, value = 1): GameState
     return { ...s, players };
 };
 
-describe('ROOT', () => {
+describe('STATE-5: ROOT', () => {
     it('makes a Swap fizzle when one of the two occupants is rooted', () => {
         const gs = root(createGameState(five(0, 'A'), five(1, 'B')), 0, 1);
         const rootedId = occupant(gs, 0, 1)!.id;

@@ -8,7 +8,7 @@ import { enemyAbs, allyAbs, enemyRel, allyRel } from "./helpers/targets";
 const p0s2: Position = { playerIndex: 0, slot: 2 };
 const p1s0: Position = { playerIndex: 1, slot: 0 };
 
-describe('resolveTargets', () => {
+describe('TGT-2, TGT-3: resolveTargets', () => {
     it('maps ALLY to the actor team and ENEMY to the other team', () => {
         expect(resolveTargets([allyAbs(3)], p0s2)).toEqual([{ playerIndex: 0, slot: 3 }]);
         expect(resolveTargets([enemyAbs(3)], p0s2)).toEqual([{ playerIndex: 1, slot: 3 }]);
@@ -56,7 +56,7 @@ describe('resolveTargets', () => {
     });
 });
 
-describe('validateEffectTargets', () => {
+describe('TGT-2: validateEffectTargets', () => {
     it('accepts valid groups', () => {
         expect(validateEffectTargets('Damage', [enemyAbs(0, 1, 2), allyRel(0)])).toEqual([]);
         expect(validateEffectTargets('Heal', [allyRel(-4, 4)])).toEqual([]);
@@ -105,7 +105,7 @@ describe('validateEffectTargets', () => {
     });
 });
 
-describe('resolveTargets — upper edge', () => {
+describe('TGT-3: resolveTargets — upper edge', () => {
     it('drops relative cells past the last slot', () => {
         expect(resolveTargets([enemyRel(0, 1)], { playerIndex: 0, slot: 4 })).toEqual([{ playerIndex: 1, slot: 4 }]);
     });

@@ -3,7 +3,7 @@ import { RoomMapper } from '@application/mappers/RoomMapper';
 import { Room } from '@domain/types/Room.type';
 import { CatalogId } from '@shared/branded.types';
 
-describe('RoomMapper', () => {
+describe('ROOM-3: RoomMapper', () => {
     it("says who has chosen a deck, without revealing the deck", () => {
         const room: Room = {
             roomId: asRoom('r1'), ownerId: P0, playersId: [P0, P1], isStarted: false,
