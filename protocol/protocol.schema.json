@@ -114,13 +114,9 @@
         "rollsLeft": {
           "type": "number"
         },
-        "playersReady": {
-          "type": "array",
-          "items": {
-            "type": "boolean"
-          },
-          "minItems": 2,
-          "maxItems": 2
+        "myReady": {
+          "type": "boolean",
+          "description": "Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's (GAME-9), and absent from what is sent to both players."
         },
         "players": {
           "type": "array",
@@ -171,7 +167,6 @@
         "currentRound",
         "initiativePlayerIndex",
         "rollsLeft",
-        "playersReady",
         "players"
       ],
       "additionalProperties": false
@@ -443,13 +438,9 @@
         "rollsLeft": {
           "type": "number"
         },
-        "playersReady": {
-          "type": "array",
-          "items": {
-            "type": "boolean"
-          },
-          "minItems": 2,
-          "maxItems": 2
+        "myReady": {
+          "type": "boolean",
+          "description": "Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's (GAME-9), and absent from what is sent to both players."
         },
         "players": {
           "type": "array",
@@ -501,7 +492,6 @@
         "initiativePlayerIndex",
         "phase",
         "players",
-        "playersReady",
         "rollsLeft"
       ]
     },

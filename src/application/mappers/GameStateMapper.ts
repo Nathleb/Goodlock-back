@@ -13,25 +13,26 @@ import { STATE_AXES } from '@domain/types/State.type';
 import { CatalogMapper } from './CatalogMapper';
 
 export class GameStateMapper {
+    /** What both players may see: never who has confirmed (GAME-9). */
     static toDTO(gameState: GameState): GameStateDTO {
         return {
             phase: gameState.phase,
             currentRound: gameState.currentRound,
             initiativePlayerIndex: gameState.initiativePlayerIndex,
             rollsLeft: gameState.rollsLeft,
-            playersReady: [...gameState.playersReady] as [boolean, boolean],
             players: gameState.players.map(GameStateMapper.playerToDTO) as [PlayerGameStateDTO, PlayerGameStateDTO],
         };
     }
 
     /** PLACEMENT: the opponent's picks stay secret until combat, so their team is sent empty. */
     static toDTOForPlacement(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
-        return GameStateMapper.hideOpponentTeam(GameStateMapper.toDTO(gameState), viewerIndex);
+        return GameStateMapper.withOwnConfirmation(
+            GameStateMapper.hideOpponentTeam(GameStateMapper.toDTO(gameState), viewerIndex), gameState, viewerIndex);
     }
 
     /** SELECTION: both decks are revealed; only the viewer's own pick is included. */
     static toDTOForSelection(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
-        const dto = GameStateMapper.hideOpponentTeam(GameStateMapper.toDTO(gameState), viewerIndex);
+        const dto = GameStateMapper.toDTOForPlacement(gameState, viewerIndex);
         const selection = gameState.selection;
         if (!selection) return dto;
         const myPicks = selection.picks[viewerIndex];
@@ -51,6 +52,11 @@ export class GameStateMapper {
         return { ...dto, players };
     }
 
+    /** The viewer learns whether they themselves have confirmed, never whether the opponent has (GAME-9). */
+    private static withOwnConfirmation(dto: GameStateDTO, gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
+        return { ...dto, myReady: gameState.playersReady[viewerIndex] };
+    }
+
     static toDTOForViewer(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
         if (gameState.phase === GamePhase.SELECTION) {
             return GameStateMapper.toDTOForSelection(gameState, viewerIndex);
@@ -67,7 +73,7 @@ export class GameStateMapper {
         }));
         const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
         players[enemyIndex] = { ...players[enemyIndex], team: enemyTeam };
-        return { ...dto, players };
+        return GameStateMapper.withOwnConfirmation({ ...dto, players }, gameState, viewerIndex);
     }
 
     static resolveStepsToDTO(steps: ResolveStep[]): ResolveStepDTO[] {

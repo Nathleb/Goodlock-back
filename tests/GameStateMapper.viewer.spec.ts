@@ -77,6 +77,33 @@ describe('toDTOForViewer', () => {
     });
 });
 
+describe('GAME-9: no ready indicator', () => {
+    const confirmPhases = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP];
+
+    it.each(confirmPhases)('GAME-9: in %s, each viewer learns only their own confirmation', (phase) => {
+        const state = gs(phase, [false, true]);
+        const forViewer0 = GameStateMapper.toDTOForViewer(state, 0);
+        const forViewer1 = GameStateMapper.toDTOForViewer(state, 1);
+
+        expect(forViewer0.myReady).toBe(false);
+        expect(forViewer1.myReady).toBe(true);
+        expect(forViewer0).not.toHaveProperty('playersReady');
+        expect(forViewer1).not.toHaveProperty('playersReady');
+    });
+
+    it('GAME-9: the placement echo carries only the viewer\'s own confirmation', () => {
+        const dto = GameStateMapper.toDTOForPlacement(gs(GamePhase.PLACEMENT, [true, false]), 0);
+        expect(dto.myReady).toBe(true);
+        expect(dto).not.toHaveProperty('playersReady');
+    });
+
+    it('GAME-9: the room-wide DTO tells nobody who confirmed', () => {
+        const dto = GameStateMapper.toDTO(gs(GamePhase.KEEP, [true, false]));
+        expect(dto).not.toHaveProperty('playersReady');
+        expect(dto).not.toHaveProperty('myReady');
+    });
+});
+
 describe('GAME-7: initiative in the public DTO', () => {
     const phases = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.ROLL, GamePhase.KEEP, GamePhase.RESOLVE, GamePhase.RESULT];
 

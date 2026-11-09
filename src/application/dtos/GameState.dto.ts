@@ -52,7 +52,11 @@ export type GameStateDTO = {
     /** Player index that wins exact ties in the resolution order this round. Public in every phase. */
     initiativePlayerIndex: PlayerIndex;
     rollsLeft: number;
-    playersReady: [boolean, boolean];
+    /**
+     * Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's
+     * (GAME-9), and absent from what is sent to both players.
+     */
+    myReady?: boolean;
     players: [PlayerGameStateDTO, PlayerGameStateDTO];
     /** SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's). */
     selection?: SelectionViewDTO;
