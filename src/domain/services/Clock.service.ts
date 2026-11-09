@@ -48,6 +48,12 @@ export function setConnected(gs: GameState, playerIndex: PlayerIndex, connected:
     return withClocks(settled, clocks);
 }
 
+/** KEEP-4: each player gains the increment when both have confirmed a Keep. */
+export function addIncrement(gs: GameState): GameState {
+    const clocks = gs.clocks.map(clock => ({ ...clock, remainingMs: clock.remainingMs + INCREMENT_MS })) as [PlayerClock, PlayerClock];
+    return withClocks(gs, clocks);
+}
+
 export type Expiry = {
     readonly at: number;
     readonly loser: PlayerIndex;

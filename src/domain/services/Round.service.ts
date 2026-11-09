@@ -28,7 +28,13 @@ export function checkMatchEnd(gameState: GameState, author: PlayerIndex): GameSt
     const lost = gameState.players.map(hasLost);
     if (!lost[0] && !lost[1]) return gameState;
     const loser = lost[0] && lost[1] ? author : lost[0] ? 0 : 1;
-    return { ...gameState, winner: (1 - loser) as PlayerIndex };
+    return { ...gameState, winner: (1 - loser) as PlayerIndex, endReason: 'elimination' };
+}
+
+/** AWAY-1: a player concedes, at any time during the match, and loses at once. */
+export function concede(gameState: GameState, playerIndex: PlayerIndex): GameState {
+    if (gameState.winner !== undefined) return gameState;
+    return { ...gameState, winner: (1 - playerIndex) as PlayerIndex, endReason: 'concede' };
 }
 
 /** The winner of a finished match, null while it goes on. There is no draw (END-1). */

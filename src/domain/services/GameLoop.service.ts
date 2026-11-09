@@ -11,7 +11,7 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
 import { roll1D } from "../utils/Random.utils";
-import { createClocks } from "./Clock.service";
+import { addIncrement, createClocks } from "./Clock.service";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
 
@@ -138,8 +138,10 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): Result<Gam
     return checkPhase(gs, GamePhase.KEEP)
         .andThen(g => checkNotReady(g, playerIndex))
         .map(g => {
-            const updated = markPlayerReady(g, playerIndex);
-            if (!areBothReady(updated)) return updated;
+            const marked = markPlayerReady(g, playerIndex);
+            if (!areBothReady(marked)) return marked;
+            // KEEP-4: each player gains the increment when both have confirmed.
+            const updated = addIncrement(marked);
 
             if (updated.rollsLeft === 0) {
                 return resetReady(beginResolvePhase(updated));

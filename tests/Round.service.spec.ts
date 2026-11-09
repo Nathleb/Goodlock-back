@@ -5,7 +5,7 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { gainShield, loseHp } from "@domain/services/Character.service";
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
-import { endOfRound, checkWinner, checkMatchEnd } from "@domain/services/Round.service";
+import { endOfRound, checkWinner, checkMatchEnd, concede } from "@domain/services/Round.service";
 import { Player } from "@domain/types/Player.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
@@ -123,6 +123,22 @@ describe('checkWinner', () => {
     it.each([0, 1] as const)('END-2: when both players have 2 dead characters, the author loses (author: player %i)', (author) => {
         const ended = checkMatchEnd(createGameState(withTwoFallen(0), withTwoFallen(1)), author);
         expect(checkWinner(ended)).toBe(1 - author);
+    });
+
+    it('END-3: a match won by 2 dead characters says so', () => {
+        const ended = checkMatchEnd(createGameState(withTwoFallen(0), createPlayer(alive4(), 1)), 0);
+        expect(ended.endReason).toBe('elimination');
+    });
+
+    it.each([0, 1] as const)('AWAY-1: player %i concedes, the other wins and the match says it was a concession', (conceder) => {
+        const ended = concede(createGameState(createPlayer(alive4(), 0), createPlayer(alive4(), 1)), conceder);
+        expect(checkWinner(ended)).toBe(1 - conceder);
+        expect(ended.endReason).toBe('concede');
+    });
+
+    it('AWAY-1: a concession after the match is decided changes nothing', () => {
+        const decided = checkMatchEnd(createGameState(withTwoFallen(0), createPlayer(alive4(), 1)), 0);
+        expect(concede(decided, 1)).toBe(decided);
     });
 
     it('END-1: a decided winner does not change', () => {

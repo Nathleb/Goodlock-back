@@ -2,9 +2,11 @@ import { createGameState } from './helpers/gameState';
 import { createPlayer } from '@domain/services/Player.service';
 import { createSelectionState } from '@domain/services/GameLoop.service';
 import {
-    createClocks, isClockRunning, settleClocks, setConnected, nextExpiry, expireClocks,
-    INITIAL_CLOCK_MS, RECONNECTION_MS,
+    createClocks, isClockRunning, settleClocks, setConnected, nextExpiry, expireClocks, addIncrement,
+    INITIAL_CLOCK_MS, RECONNECTION_MS, INCREMENT_MS,
 } from '@domain/services/Clock.service';
+import { confirmKeep } from '@domain/services/GameLoop.service';
+import { unwrap } from './helpers/result';
 import GamePhase from '@domain/types/GamePhase.type';
 import GameState from '@domain/types/GameState.type';
 import { PlayerIndex } from '@domain/types/Position.type';
@@ -177,5 +179,28 @@ describe('CLOCK-3, AWAY-3: a player whose clock or reconnection time reaches 0 l
     it('does not change a decided match', () => {
         const decided = { ...at(GamePhase.KEEP), winner: 0 as PlayerIndex, endReason: 'elimination' as const };
         expect(expireClocks(decided, T0 + 20 * 60 * SECOND)).toBe(decided);
+    });
+});
+
+describe('KEEP-4: each player gains the increment when both have confirmed a Keep', () => {
+    const keepWith = (ready: [boolean, boolean], rollsLeft: number): GameState => ({ ...at(GamePhase.KEEP, ready), rollsLeft });
+
+    it('adds 10 seconds to both clocks', () => {
+        expect(INCREMENT_MS).toBe(10_000);
+        const gs = addIncrement(at(GamePhase.KEEP));
+        expect(gs.clocks.map(c => c.remainingMs)).toEqual([610_000, 610_000]);
+    });
+
+    it('is granted by confirmKeep when the second player confirms, whether a Roll or Resolve follows', () => {
+        for (const rollsLeft of [2, 1, 0]) {
+            const first = unwrap(confirmKeep(keepWith([false, false], rollsLeft), 0));
+            expect(first.clocks.map(c => c.remainingMs)).toEqual([600_000, 600_000]);
+            const second = unwrap(confirmKeep(first, 1));
+            expect(second.clocks.map(c => c.remainingMs)).toEqual([610_000, 610_000]);
+        }
+    });
+
+    it('does not touch the reconnection time', () => {
+        expect(addIncrement(at(GamePhase.KEEP)).clocks.map(c => c.reconnectionMs)).toEqual([180_000, 180_000]);
     });
 });
