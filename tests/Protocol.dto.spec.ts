@@ -6,7 +6,7 @@ describe('ServerEvents', () => {
         const error: ServerEvents['error'] = { code: 'NOT_CONNECTED', message: 'Not connected' };
         const started: ServerEvents['sessionStarted'] = { sessionId: 's1' };
         const evicted: ServerEvents['sessionEvicted'] = { reason: 'signed-in-elsewhere' };
-        const gameOver: ServerEvents['gameOver'] = { winner: 'draw', reason: 'forfeit' };
+        const gameOver: ServerEvents['gameOver'] = { winner: 1, reason: 'forfeit' };
         const presence: ServerEvents['presenceChanged'] = { playerIndex: 0, connected: false, claimInMs: 5000 };
 
         expect([error, started, evicted, gameOver, presence]).toHaveLength(5);

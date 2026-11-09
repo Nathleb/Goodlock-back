@@ -197,12 +197,21 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/CharacterDTO"
-          }
+          },
+          "description": "The characters on the board."
+        },
+        "fallen": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CharacterDTO"
+          },
+          "description": "The characters who died and left the board, in order of death, with 0 HP."
         }
       },
       "required": [
         "playerIndex",
-        "team"
+        "team",
+        "fallen"
       ],
       "additionalProperties": false
     },
@@ -600,14 +609,10 @@
       "type": "object",
       "properties": {
         "winner": {
-          "type": [
-            "number",
-            "string"
-          ],
+          "type": "number",
           "enum": [
             0,
-            1,
-            "draw"
+            1
           ]
         },
         "reason": {
