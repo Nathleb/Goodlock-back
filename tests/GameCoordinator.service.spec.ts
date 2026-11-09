@@ -435,12 +435,14 @@ describe('GAME-7: PLACEMENT emissions hide the opponent', () => {
 describe('confirmKeep', () => {
     beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(keepGs)));
 
-    it('echoes the confirming player\'s own ready state to their socket when first to confirm', () => {
+    it('GAME-9: echoes only the confirming player\'s own ready state to their socket when first to confirm', () => {
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(
-            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ playersReady: [true, false] }),
+            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ myReady: true }),
         );
+        const echo = mockWs.emitToSocket.mock.calls.find(c => c[0] === SOCKET_0 && c[1] === 'gameStateUpdated')?.[2];
+        expect(echo).not.toHaveProperty('playersReady');
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
