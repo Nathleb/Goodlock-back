@@ -70,6 +70,16 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
         });
     }
 
+    closeRoom(roomId: RoomId): Room | undefined {
+        const room = this.rooms.get(roomId);
+        if (!room) return undefined;
+        this.rooms.delete(roomId);
+        for (const [playerId, mappedRoomId] of this.playerToRoom.entries()) {
+            if (mappedRoomId === roomId) this.playerToRoom.delete(playerId);
+        }
+        return room;
+    }
+
     getRoom(roomId: RoomId): Room | undefined {
         return this.rooms.get(roomId);
     }

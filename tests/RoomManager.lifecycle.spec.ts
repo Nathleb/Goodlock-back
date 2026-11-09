@@ -187,3 +187,30 @@ describe('listOpenRooms', () => {
         expect(manager.listOpenRooms().map(r => r.roomId)).toEqual([open.roomId]);
     });
 });
+
+describe('ROOM-6: closeRoom', () => {
+    it('removes the room and returns it', () => {
+        const manager = new RoomManager();
+        const roomId = startedRoom(manager);
+
+        const closed = manager.closeRoom(roomId);
+
+        expect(closed?.roomId).toBe(roomId);
+        expect(manager.getRoom(roomId)).toBeUndefined();
+        expect(manager.listOpenRooms()).toEqual([]);
+    });
+
+    it('leaves the other rooms alone', () => {
+        const manager = new RoomManager();
+        const closing = startedRoom(manager);
+        const other = manager.createRoom(P2);
+
+        manager.closeRoom(closing);
+
+        expect(manager.getRoom(other.roomId)).toBeDefined();
+    });
+
+    it('answers undefined for an unknown room', () => {
+        expect(new RoomManager().closeRoom(asRoom('nope'))).toBeUndefined();
+    });
+});
