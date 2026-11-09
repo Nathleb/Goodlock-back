@@ -156,7 +156,7 @@ describe('AWAY-2: connectionChanged', () => {
 
         expect(reconnectionMs).toBe(180_000);
         const saved: GameState = mockRoom.updateGameState.mock.calls[0][1];
-        expect(saved.clocks[0]).toEqual({ remainingMs: 595_000, reconnectionMs: 180_000, connected: false });
+        expect(saved.clocks[0]).toEqual({ remainingMs: 595_000, reconnectionMs: 180_000, connected: false, publishedMs: 600_000 });
         expect(mockTimer.schedule).toHaveBeenCalled();
     });
 

@@ -5,7 +5,7 @@ import {
     createClocks, isClockRunning, settleClocks, setConnected, nextExpiry, expireClocks, addIncrement,
     INITIAL_CLOCK_MS, RECONNECTION_MS, INCREMENT_MS,
 } from '@domain/services/Clock.service';
-import { confirmKeep } from '@domain/services/GameLoop.service';
+import { confirmKeep, confirmPlacement } from '@domain/services/GameLoop.service';
 import { unwrap } from './helpers/result';
 import GamePhase from '@domain/types/GamePhase.type';
 import GameState from '@domain/types/GameState.type';
@@ -28,8 +28,8 @@ describe('CLOCK-1: the clocks', () => {
         expect(INITIAL_CLOCK_MS).toBe(10 * 60 * SECOND);
         expect(RECONNECTION_MS).toBe(3 * 60 * SECOND);
         expect(createClocks()).toEqual([
-            { remainingMs: 600_000, reconnectionMs: 180_000, connected: true },
-            { remainingMs: 600_000, reconnectionMs: 180_000, connected: true },
+            { remainingMs: 600_000, reconnectionMs: 180_000, connected: true, publishedMs: 600_000 },
+            { remainingMs: 600_000, reconnectionMs: 180_000, connected: true, publishedMs: 600_000 },
         ]);
     });
 });
@@ -93,14 +93,14 @@ describe('AWAY-2: reconnection time runs while a player is disconnected, and is 
     it('runs together with the clock when it runs', () => {
         const gs = setConnected(at(GamePhase.KEEP), 0, false, T0);
         const settled = settleClocks(gs, T0 + 7 * SECOND);
-        expect(settled.clocks[0]).toEqual({ remainingMs: 593_000, reconnectionMs: 173_000, connected: false });
+        expect(settled.clocks[0]).toEqual({ remainingMs: 593_000, reconnectionMs: 173_000, connected: false, publishedMs: 600_000 });
         expect(settled.clocks[1].reconnectionMs).toBe(180_000);
     });
 
     it('runs alone when the clock is paused or stopped', () => {
         const gs = setConnected(at(GamePhase.KEEP, [true, false]), 0, false, T0);
         const settled = settleClocks(gs, T0 + 7 * SECOND);
-        expect(settled.clocks[0]).toEqual({ remainingMs: 600_000, reconnectionMs: 173_000, connected: false });
+        expect(settled.clocks[0]).toEqual({ remainingMs: 600_000, reconnectionMs: 173_000, connected: false, publishedMs: 600_000 });
         expect(settleClocks(setConnected(at(GamePhase.RESOLVE), 1, false, T0), T0 + 7 * SECOND).clocks[1].reconnectionMs).toBe(173_000);
     });
 
@@ -108,7 +108,7 @@ describe('AWAY-2: reconnection time runs while a player is disconnected, and is 
         let gs = setConnected(at(GamePhase.ROLL), 0, false, T0);
         gs = setConnected(gs, 0, true, T0 + 10 * SECOND);
         gs = settleClocks(gs, T0 + 60 * SECOND);
-        expect(gs.clocks[0]).toEqual({ remainingMs: 600_000, reconnectionMs: 170_000, connected: true });
+        expect(gs.clocks[0]).toEqual({ remainingMs: 600_000, reconnectionMs: 170_000, connected: true, publishedMs: 600_000 });
         gs = setConnected(gs, 0, false, T0 + 60 * SECOND);
         expect(settleClocks(gs, T0 + 70 * SECOND).clocks[0].reconnectionMs).toBe(160_000);
     });
@@ -179,6 +179,41 @@ describe('CLOCK-3, AWAY-3: a player whose clock or reconnection time reaches 0 l
     it('does not change a decided match', () => {
         const decided = { ...at(GamePhase.KEEP), winner: 0 as PlayerIndex, endReason: 'elimination' as const };
         expect(expireClocks(decided, T0 + 20 * 60 * SECOND)).toBe(decided);
+    });
+});
+
+describe('GAME-7: a clock is published to the opponent at the end of each decision phase, never during', () => {
+    const published = (gs: GameState) => gs.clocks.map(c => c.publishedMs);
+    const running = (phase: GamePhase, remaining: [number, number]): GameState => {
+        const [c0, c1] = createClocks();
+        return { ...at(phase), clocks: [{ ...c0, remainingMs: remaining[0] }, { ...c1, remainingMs: remaining[1] }] };
+    };
+
+    it('starts equal to the thinking time', () => {
+        expect(published(at(GamePhase.SELECTION))).toEqual([600_000, 600_000]);
+    });
+
+    it('does not follow the clock while players decide, even when settled', () => {
+        const settled = settleClocks(at(GamePhase.KEEP), T0 + 30 * SECOND);
+        expect(settled.clocks.map(c => c.remainingMs)).toEqual([570_000, 570_000]);
+        expect(published(settled)).toEqual([600_000, 600_000]);
+    });
+
+    it('does not change when only one player has confirmed', () => {
+        const first = unwrap(confirmKeep(running(GamePhase.KEEP, [500_000, 480_000]), 0));
+        expect(published(first)).toEqual([600_000, 600_000]);
+    });
+
+    it('is updated when both have confirmed a Keep, increment included', () => {
+        const first = unwrap(confirmKeep(running(GamePhase.KEEP, [500_000, 480_000]), 0));
+        const second = unwrap(confirmKeep(first, 1));
+        expect(published(second)).toEqual([510_000, 490_000]);
+    });
+
+    it('is updated when both have confirmed the Placement', () => {
+        const first = unwrap(confirmPlacement(running(GamePhase.PLACEMENT, [550_000, 540_000]), 0));
+        expect(published(first)).toEqual([600_000, 600_000]);
+        expect(published(unwrap(confirmPlacement(first, 1)))).toEqual([550_000, 540_000]);
     });
 });
 

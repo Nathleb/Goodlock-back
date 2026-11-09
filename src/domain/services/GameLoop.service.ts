@@ -11,7 +11,7 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
 import { roll1D } from "../utils/Random.utils";
-import { addIncrement, createClocks } from "./Clock.service";
+import { addIncrement, createClocks, publishClocks } from "./Clock.service";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
 
@@ -27,8 +27,9 @@ function unmarkPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     return { ...gs, playersReady: ready };
 }
 
+/** A decision phase ends: nobody is confirmed any more, and the clocks are published (GAME-7). */
 function resetReady(gs: GameState): GameState {
-    return { ...gs, playersReady: [false, false] };
+    return publishClocks({ ...gs, playersReady: [false, false] });
 }
 
 function areBothReady(gs: GameState): boolean {

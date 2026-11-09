@@ -317,35 +317,50 @@ describe('DEAD-1, GAME-7: the fallen in the DTO', () => {
 });
 
 describe('CLOCK-1, CLOCK-2, GAME-7, GAME-9: the clocks in the DTO', () => {
-    it('carries both clocks: thinking time, reconnection time, who is connected', () => {
-        const base = gs(GamePhase.KEEP, [false, false]);
-        const state: GameState = { ...base, clocks: [{ remainingMs: 500_000, reconnectionMs: 120_000, connected: false }, { remainingMs: 600_000, reconnectionMs: 180_000, connected: true }] };
+    // Player 0 has 500 s left but the last published value is 600 s; player 1 has 480 s left, published 560 s.
+    const withClocks = (phase: GamePhase, ready: [boolean, boolean]): GameState => ({
+        ...gs(phase, ready),
+        clocks: [
+            { remainingMs: 500_000, reconnectionMs: 120_000, connected: false, publishedMs: 600_000 },
+            { remainingMs: 480_000, reconnectionMs: 180_000, connected: true, publishedMs: 560_000 },
+        ],
+    });
 
-        const dto = GameStateMapper.toDTO(state);
+    it('carries, for both players, the clocks as published at the end of the last decision phase', () => {
+        const dto = GameStateMapper.toDTO(withClocks(GamePhase.KEEP, [false, false]));
 
         expect(dto.clocks).toEqual([
-            { remainingMs: 500_000, reconnectionMs: 120_000, connected: false, running: true },
-            { remainingMs: 600_000, reconnectionMs: 180_000, connected: true, running: true },
+            { remainingMs: 600_000, reconnectionMs: 120_000, connected: false, running: true },
+            { remainingMs: 560_000, reconnectionMs: 180_000, connected: true, running: true },
         ]);
     });
 
     it.each([GamePhase.ROLL, GamePhase.RESOLVE])('says the clocks are stopped in %s', (phase) => {
-        expect(GameStateMapper.toDTO(gs(phase, [false, false])).clocks.map(c => c.running)).toEqual([false, false]);
+        expect(GameStateMapper.toDTO(withClocks(phase, [false, false])).clocks.map(c => c.running)).toEqual([false, false]);
     });
 
     it('does not tell who has confirmed in what both players see: both clocks read as running', () => {
-        expect(GameStateMapper.toDTO(gs(GamePhase.KEEP, [true, false])).clocks.map(c => c.running)).toEqual([true, true]);
+        expect(GameStateMapper.toDTO(withClocks(GamePhase.KEEP, [true, false])).clocks.map(c => c.running)).toEqual([true, true]);
     });
 
-    it("pauses the viewer's own clock once they confirmed, and never shows the opponent's confirmation", () => {
-        const confirmedByViewer = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [true, false]), 0);
-        expect(confirmedByViewer.clocks.map(c => c.running)).toEqual([false, true]);
+    it("gives the viewer their own clock as it stands, paused once they confirmed", () => {
+        const own = GameStateMapper.toDTOForViewer(withClocks(GamePhase.KEEP, [true, false]), 0).clocks[0];
+        expect(own).toEqual({ remainingMs: 500_000, reconnectionMs: 120_000, connected: false, running: false });
 
-        const confirmedByOpponent = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [false, true]), 0);
-        expect(confirmedByOpponent.clocks.map(c => c.running)).toEqual([true, true]);
+        const ownRunning = GameStateMapper.toDTOForViewer(withClocks(GamePhase.KEEP, [false, false]), 1).clocks[1];
+        expect(ownRunning).toEqual({ remainingMs: 480_000, reconnectionMs: 180_000, connected: true, running: true });
+    });
+
+    it("shows the opponent's clock as last published, frozen, whatever happens during the phase", () => {
+        const view = (ready: [boolean, boolean]) => GameStateMapper.toDTOForViewer(withClocks(GamePhase.KEEP, ready), 0).clocks[1];
+
+        expect(view([false, false])).toEqual({ remainingMs: 560_000, reconnectionMs: 180_000, connected: true, running: false });
+        expect(view([false, true])).toEqual(view([false, false]));
     });
 
     it.each([GamePhase.SELECTION, GamePhase.PLACEMENT])('does the same in %s', (phase) => {
-        expect(GameStateMapper.toDTOForViewer(gs(phase, [false, true]), 1).clocks.map(c => c.running)).toEqual([true, false]);
+        const dto = GameStateMapper.toDTOForViewer(withClocks(phase, [false, true]), 1);
+        expect(dto.clocks[0]).toEqual({ remainingMs: 600_000, reconnectionMs: 120_000, connected: false, running: false });
+        expect(dto.clocks[1]).toEqual({ remainingMs: 480_000, reconnectionMs: 180_000, connected: true, running: false });
     });
 });

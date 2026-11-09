@@ -211,7 +211,7 @@
         "connected"
       ],
       "additionalProperties": false,
-      "description": "The time of a player. `running` says whether the clock counts down now; the client counts from the moment it receives it."
+      "description": "The time of a player. A client counts down only its own clock, from the moment it receives the state, while `running` is true. The opponent's `remainingMs` is the value published at the end of the last decision phase: it changes only when the next phase ends, never during one (GAME-7, GAME-9)."
     },
     "PlayerGameStateDTO": {
       "type": "object",

@@ -12,7 +12,7 @@ export const INCREMENT_MS = 10_000;
 const CLOCK_PHASES: readonly GamePhase[] = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP];
 
 export function createClocks(): [PlayerClock, PlayerClock] {
-    const fresh = (): PlayerClock => ({ remainingMs: INITIAL_CLOCK_MS, reconnectionMs: RECONNECTION_MS, connected: true });
+    const fresh = (): PlayerClock => ({ remainingMs: INITIAL_CLOCK_MS, reconnectionMs: RECONNECTION_MS, connected: true, publishedMs: INITIAL_CLOCK_MS });
     return [fresh(), fresh()];
 }
 
@@ -46,6 +46,11 @@ export function setConnected(gs: GameState, playerIndex: PlayerIndex, connected:
     const clocks = [...settled.clocks] as [PlayerClock, PlayerClock];
     clocks[playerIndex] = { ...clocks[playerIndex], connected };
     return withClocks(settled, clocks);
+}
+
+/** GAME-7: the end of a decision phase shows both thinking times to the opponent. */
+export function publishClocks(gs: GameState): GameState {
+    return withClocks(gs, gs.clocks.map(clock => ({ ...clock, publishedMs: clock.remainingMs })) as [PlayerClock, PlayerClock]);
 }
 
 /** KEEP-4: each player gains the increment when both have confirmed a Keep. */

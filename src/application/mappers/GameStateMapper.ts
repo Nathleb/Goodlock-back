@@ -55,18 +55,26 @@ export class GameStateMapper {
     }
 
     /**
-     * Both clocks, read as if nobody had confirmed: a paused clock would tell that the opponent has
-     * confirmed (GAME-9). The viewer's own clock is corrected in `withOwnConfirmation`.
+     * Both clocks as published at the end of the last decision phase (GAME-7), read as if nobody had
+     * confirmed: neither a live value nor a paused clock may tell that a player has confirmed (GAME-9).
+     * The viewer's own clock is corrected in `withOwnConfirmation`.
      */
     private static clocksToDTO(gameState: GameState): [PlayerClockDTO, PlayerClockDTO] {
         const unconfirmed: GameState = { ...gameState, playersReady: [false, false] };
-        return gameState.clocks.map((clock, i) => ({ ...clock, running: isClockRunning(unconfirmed, i as PlayerIndex) })) as [PlayerClockDTO, PlayerClockDTO];
+        return gameState.clocks.map((clock, i) => ({
+            remainingMs: clock.publishedMs,
+            reconnectionMs: clock.reconnectionMs,
+            connected: clock.connected,
+            running: isClockRunning(unconfirmed, i as PlayerIndex),
+        })) as [PlayerClockDTO, PlayerClockDTO];
     }
 
     /** The viewer learns whether they themselves have confirmed, never whether the opponent has (GAME-9). */
     private static withOwnConfirmation(dto: GameStateDTO, gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
+        // The viewer's own clock is live. The opponent's stays as published and never runs in the viewer's eyes.
         const clocks = [...dto.clocks] as [PlayerClockDTO, PlayerClockDTO];
-        clocks[viewerIndex] = { ...clocks[viewerIndex], running: isClockRunning(gameState, viewerIndex) };
+        clocks[viewerIndex] = { ...clocks[viewerIndex], remainingMs: gameState.clocks[viewerIndex].remainingMs, running: isClockRunning(gameState, viewerIndex) };
+        clocks[1 - viewerIndex] = { ...clocks[1 - viewerIndex], running: false };
         return { ...dto, clocks, myReady: gameState.playersReady[viewerIndex] };
     }
 

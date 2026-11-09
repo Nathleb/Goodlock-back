@@ -28,6 +28,6 @@ Rules implemented (rules reference `../Goodlock-specs/GAME-DESIGN.md`, `META.md`
 - After `gameOver` the room is closed: both sessions leave it and the room is deleted (ROOM-6); the sweeper and its interval go away.
 - Removed: `claimVictory`, `Claim.service`, `ClaimConfig` and its env variables, `afkClaimInMs`, `phaseStartedAt`, `Room.presence`, `RoomPort.setPresence`, the `CLAIM_NOT_ALLOWED` code.
 
-## Open point for the user (not decided here)
+## Decision: the opponent's clock moves at the end of a decision phase only
 
-CLOCK-2 pauses a player's clock when they confirm; GAME-7 makes both clocks public; GAME-9 says a player never learns whether the opponent confirmed. A visible, paused opponent clock reveals the confirmation. Until the user decides, the DTO carries both clocks and their running flag as the rules read; the one place to change is the clocks part of `GameStateMapper`.
+CLOCK-2 pauses a clock when its player confirms and GAME-7 shows both clocks, which would reveal a confirmation (GAME-9). The user decided: a player's clock is shown to the opponent only as of the end of each decision phase, never during one. `PlayerClock.publishedMs` holds that value (set by `publishClocks` when a decision phase ends, increment included). In what a player receives, their own clock is live; the opponent's `remainingMs` is the published value and `running` is false; clients count down only their own clock. What both players receive at once carries the published values. The reconnection time and who is connected stay live and public (GAME-7).

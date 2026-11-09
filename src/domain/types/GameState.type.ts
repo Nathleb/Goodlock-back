@@ -19,6 +19,11 @@ export type PlayerClock = {
     readonly remainingMs: number;
     readonly reconnectionMs: number;
     readonly connected: boolean;
+    /**
+     * The thinking time the opponent is shown: it is updated at the end of each decision phase, never
+     * during one (GAME-7), so the opponent cannot tell when a player confirmed.
+     */
+    readonly publishedMs: number;
 };
 
 type GameState = {
