@@ -97,7 +97,6 @@ export class GameCoordinatorService {
 
         // END-1: a match decided in the middle of Resolve ends here; the room closes with it (ROOM-6).
         if (next.winner !== undefined) { this.lifecycle.finish(roomId, next); return; }
-        this.roomPort.updateGameState(roomId, next);
         // POISON and REGEN act at the start of the next round, before the roll; the poison can end the match.
         next = upkeep(endOfRound(next));
         if (next.winner !== undefined) {

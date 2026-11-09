@@ -146,8 +146,9 @@ describe('CLOCK-3, AWAY-3: a player whose clock or reconnection time reaches 0 l
         expect(nextExpiry(gs)?.loser).toBe(0);
     });
 
-    it('has no expiry once the match is decided', () => {
+    it('has no expiry once the match is decided, even for a player who is away', () => {
         expect(nextExpiry({ ...at(GamePhase.KEEP), winner: 0 })).toBeNull();
+        expect(nextExpiry({ ...setConnected(at(GamePhase.KEEP), 1, false, T0), winner: 0 })).toBeNull();
     });
 
     it.each([0, 1] as const)('the opponent of player %i wins when their clock reaches 0, and the clock reads 0 then', (loser) => {

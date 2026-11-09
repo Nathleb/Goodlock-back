@@ -143,7 +143,8 @@ describe('winner', () => {
 
     it('END-1: a decided winner does not change', () => {
         const decided = { ...createGameState(withTwoFallen(0), createPlayer(alive4(), 1)), winner: 1 as const };
-        expect(checkMatchEnd({ ...decided, players: [decided.players[0], withTwoFallen(1)] }, 0)).toEqual(expect.objectContaining({ winner: 1 }));
+        // Both players now have 2 dead characters and player 1 is the author: without the rule the author would lose.
+        expect(checkMatchEnd({ ...decided, players: [decided.players[0], withTwoFallen(1)] }, 1)).toEqual(expect.objectContaining({ winner: 1 }));
     });
 });
 

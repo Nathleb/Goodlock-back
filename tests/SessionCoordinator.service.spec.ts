@@ -247,6 +247,19 @@ describe('handleDisconnect — started game', () => {
         expect(mockSession.disconnectSession).toHaveBeenCalledWith(SOCKET);
         expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
     });
+
+    it('CLOCK-3: a player whose clock had already run out loses, and no presence is announced', () => {
+        const late: GameState = { ...GS, clocks: [{ ...GS.clocks[0], remainingMs: 3000 }, GS.clocks[1]] };
+        mockSession.getSession.mockReturnValue(SESSION_WITH_ROOM);
+        mockRoom.getRoom.mockReturnValue({ ...STARTED_ROOM, gameState: late });
+        jest.spyOn(Date, 'now').mockReturnValue(GS.clockUpdatedAt + 10_000);
+
+        coordinator.handleDisconnect(SOCKET);
+
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 1, reason: 'clock' });
+        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'presenceChanged', expect.anything());
+        jest.restoreAllMocks();
+    });
 });
 
 describe('handleConnect — edges', () => {

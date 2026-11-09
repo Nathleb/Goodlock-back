@@ -45,6 +45,11 @@ describe('CharacterGenerationService', () => {
     expect(character.name).toBe("TestCharacter");
   });
 
+  it('ROLL-2: a new character has no die kept at a last Roll', () => {
+    const template = { ...JSON.parse(jsonTemplate), id: 'test-char' };
+    expect(createCharacterFromTemplate(template).keptAtLastRoll).toBe(false);
+  });
+
   it('gives each built character its own instance id', () => {
     const template = { ...JSON.parse(jsonTemplate), id: 'test-char' };
     const a = createCharacterFromTemplate(template);

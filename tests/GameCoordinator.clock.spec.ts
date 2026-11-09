@@ -131,6 +131,7 @@ describe('CLOCK-3: a player whose clock has run out loses at once', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 1, reason: 'clock' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
         expect(mockRoom.closeRoom).toHaveBeenCalledWith('room-1');
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET_1, 'error', expect.anything());
     });
 });
 

@@ -3,7 +3,7 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks } from "@domain/services/Room.service";
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks, hasFreeSeat } from "@domain/services/Room.service";
 import { unwrap, unwrapErr } from "./helpers/result";
 import { CatalogId } from "@shared/branded.types";
 import { createGameState } from "./helpers/gameState";
@@ -120,6 +120,21 @@ describe('ROOM-3: deck selection in the lobby', () => {
         expect(unwrapErr(selectedDecks(one)).code).toBe('DECKS_NOT_CHOSEN');
         const both = unwrap(selectDeckInRoom(one, P1, OTHER));
         expect(unwrap(selectedDecks(both))).toEqual([SIX, OTHER]);
+    });
+});
+
+describe('ROOM-1, ROOM-2: a room seats 2 players', () => {
+    it('has a free seat with 0 or 1 player and none with 2', () => {
+        const one = createRoom(P0);
+        expect(hasFreeSeat(one)).toBe(true);
+        expect(hasFreeSeat(unwrap(addPlayerToRoom(one, P1)))).toBe(false);
+        expect(hasFreeSeat({ ...one, playersId: [] })).toBe(true);
+    });
+
+    it('hands the room to the other player when the owner leaves, and keeps its owner when someone else leaves', () => {
+        const full = unwrap(addPlayerToRoom(createRoom(P0), P1));
+        expect(removePlayerFromRoom(full, P1)?.ownerId).toBe(P0);
+        expect(removePlayerFromRoom(full, P0)?.ownerId).toBe(P1);
     });
 });
 

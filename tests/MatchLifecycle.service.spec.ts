@@ -98,6 +98,16 @@ describe('CLOCK-3, AWAY-3, END-3: a player who runs out of time loses at once', 
     });
 });
 
+describe('END-1: settled leaves a decided match alone', () => {
+    it('does not announce the result twice', () => {
+        const decided = { ...keepGs(), winner: 0 as const, endReason: 'elimination' as const };
+
+        expect(lifecycle.settled(roomOf(decided), T0 + 5 * SECOND)).not.toBeNull();
+
+        expect(mockWs.emitToRoom).not.toHaveBeenCalled();
+    });
+});
+
 describe('ROOM-6: when the match ends, both players go back to the room browser', () => {
     it('announces the result, stops the timer, closes the room and takes both players out of it', () => {
         const order: string[] = [];
@@ -123,8 +133,10 @@ describe('ROOM-6: when the match ends, both players go back to the room browser'
         expect(mockWs.leaveRoom).toHaveBeenCalledTimes(1);
     });
 
-    it('refuses to finish a match nobody has won: that is a bug', () => {
+    it('refuses to finish a match nobody has won, or that says nothing of why: that is a bug', () => {
         expect(() => lifecycle.finish(ROOM_ID, keepGs())).toThrow('no winner');
+        expect(() => lifecycle.finish(ROOM_ID, { ...keepGs(), winner: 0 })).toThrow('no winner');
+        expect(() => lifecycle.finish(ROOM_ID, { ...keepGs(), endReason: 'concede' })).toThrow('no winner');
     });
 });
 

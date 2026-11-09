@@ -57,6 +57,19 @@ describe('END-1: the match ends as soon as a player loses', () => {
     });
 });
 
+describe('RES-2, DEAD-1: the killing blow in the log', () => {
+    it('names the character who died, not one who fell before', () => {
+        const p0 = teamOf(0, { 0: face(1, killing(enemyAbs(0))) });
+        const p1 = withFallen(teamOf(1), 1);
+
+        const { log } = run(p0, p1);
+
+        const step = log.find(s => s.characterId === p0.team[0].id)!;
+        expect(step.changes.map(c => c.characterId)).toEqual([p1.team[0].id]);
+        expect(step.changes[0].character.hp).toBe(0);
+    });
+});
+
 describe('END-2: deaths are checked after each effect', () => {
     it('the first player to have 2 dead characters loses', () => {
         const p0 = teamOf(0, { 0: face(1, killing(enemyAbs(0))) });

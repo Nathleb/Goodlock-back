@@ -130,9 +130,9 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             if (state.winner !== undefined) break;
         }
 
+        // An affected character is on the board or among the fallen: the effect that touched it just ran.
         const changes = [...affectedIds]
-            .map(id => findOnBoardOrFallen(state, id))
-            .filter((c): c is Character => c !== undefined)
+            .map(id => findOnBoardOrFallen(state, id) as Character)
             .map(c => ({ characterId: c.id, character: c }));
 
         log.push({ characterId, skipped: false, effects, changes });
