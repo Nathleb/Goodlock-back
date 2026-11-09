@@ -1,28 +1,26 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG, CATALOG_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { CatalogPort } from '@application/ports/CatalogPort';
 import { Session } from '@application/dtos/Session.dto';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
-import { GameStateDTO, GameStateUpdatePayload, GameOverDTO } from '@application/dtos/GameState.dto';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { Player } from '@domain/types/Player.type';
-import { ClaimConfig } from '@domain/types/Claim.type';
-import { checkPhase, checkNotReady, beginRollPhase, beginResultPhase } from '@domain/services/Phase.service';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
+import { checkPhase, checkNotReady, beginRollPhase } from '@domain/services/Phase.service';
 import { toErrorPayload } from '@application/errors/toErrorPayload';
 import { domainError, DomainError } from '@domain/errors/DomainError';
 import { invariant } from '@application/errors/invariant';
 import { Result, ok, err } from '@shared/result.type';
 import { placeTeam } from '@domain/services/Player.service';
 import { isRoomReady, resolvePlayerIndex, selectedDecks } from '@domain/services/Room.service';
-import { checkWinner, endOfRound } from '@domain/services/Round.service';
+import { endOfRound } from '@domain/services/Round.service';
 import { upkeep } from '@domain/services/Upkeep.service';
-import { evaluateClaim, computeAfkClaimInMs } from '@domain/services/Claim.service';
 import {
     confirmPlacement, performRoll,
     confirmKeep,
@@ -47,8 +45,8 @@ export class GameCoordinatorService {
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
-        @Inject(CLAIM_CONFIG) private readonly claimConfig: ClaimConfig,
         @Inject(CATALOG_PORT) private readonly catalogPort: CatalogPort,
+        private readonly lifecycle: MatchLifecycleService,
     ) {}
 
     private getContext(socketId: SocketId): Result<GameContext, DomainError> {
@@ -65,12 +63,19 @@ export class GameCoordinatorService {
     /**
      * Runs a game action for the acting player. Without a game context for the socket it reports
      * why the action is not available; anything the action throws (a bug) is reported as INTERNAL.
+     * The action starts from the game with its clocks settled to now (CLOCK-2), unless time has run
+     * out, in which case the match ends and the action is not played (CLOCK-3). Once the action is
+     * done, the server is set to wake up at the next moment time may run out.
      */
     private act(socketId: SocketId, action: (ctx: GameContext) => void): void {
         const context = this.getContext(socketId);
         if (context.isErr()) { this.emitFailure(socketId, context.error); return; }
         try {
-            action(context.value);
+            const { room } = context.value;
+            const settled = this.lifecycle.settled(room);
+            if (!settled) return;
+            action({ ...context.value, room: { ...room, gameState: settled } });
+            this.lifecycle.schedule(room.roomId);
         } catch (e: unknown) {
             this.emitFailure(socketId, e);
         }
@@ -81,44 +86,29 @@ export class GameCoordinatorService {
         this.wsPort.emitToSocket(socketId, 'error', toErrorPayload(error, this.logger));
     }
 
-    private withTimers(roomId: RoomId, dto: GameStateDTO, gs: GameState): GameStateUpdatePayload {
-        const room = this.roomPort.getRoom(roomId);
-        return {
-            ...dto,
-            afkClaimInMs: computeAfkClaimInMs(gs, room?.phaseStartedAt, Date.now(), this.claimConfig.afkLimitMs),
-        };
-    }
-
     private resolveRound(roomId: RoomId, gs: GameState): void {
         const { state: resolved, log } = invariant(performResolve(gs));
         let next = resolved;
-        const winner = checkWinner(next);
 
-        this.roomPort.updateGameState(roomId, next);
         this.wsPort.emitToRoom(roomId, 'roundResolved', {
             gameState: GameStateMapper.toDTO(next),
             resolveLog: GameStateMapper.resolveStepsToDTO(log),
         });
 
-        if (winner !== null) {
-            const payload: GameOverDTO = { winner, reason: 'elimination' };
-            this.wsPort.emitToRoom(roomId, 'gameOver', payload);
-            return;
-        }
+        // END-1: a match decided in the middle of Resolve ends here; the room closes with it (ROOM-6).
+        if (next.winner !== undefined) { this.lifecycle.finish(roomId, next); return; }
+        this.roomPort.updateGameState(roomId, next);
         // POISON and REGEN act at the start of the next round, before the roll; the poison can end the match.
         next = upkeep(endOfRound(next));
-        const upkeepWinner = checkWinner(next);
-        if (upkeepWinner !== null) {
-            this.roomPort.updateGameState(roomId, next);
+        if (next.winner !== undefined) {
             // Send the board the poison left, so the clients see what decided the match before the result.
-            this.wsPort.emitToRoom(roomId, 'gameStateUpdated', this.withTimers(roomId, GameStateMapper.toDTO(next), next));
-            const payload: GameOverDTO = { winner: upkeepWinner, reason: 'elimination' };
-            this.wsPort.emitToRoom(roomId, 'gameOver', payload);
+            this.wsPort.emitToRoom(roomId, 'gameStateUpdated', GameStateMapper.toDTO(next));
+            this.lifecycle.finish(roomId, next);
             return;
         }
         next = invariant(performRoll(beginRollPhase(next)));
         this.roomPort.updateGameState(roomId, next);
-        this.wsPort.emitToRoom(roomId, 'gameStateUpdated', this.withTimers(roomId, GameStateMapper.toDTO(next), next));
+        this.wsPort.emitToRoom(roomId, 'gameStateUpdated', GameStateMapper.toDTO(next));
     }
 
     private doConfirm(
@@ -141,12 +131,12 @@ export class GameCoordinatorService {
             }
             this.roomPort.updateGameState(room.roomId, confirmed);
             if (wasOtherReady) {
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(confirmed), confirmed));
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(confirmed));
             } else {
                 // First to confirm: echo the player's own view back to their socket
                 // so the client learns myReady=true and flips the button to WAITING.
                 // The opponent is not notified, keeping this confirm secret (GAME-9).
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForViewer(confirmed, playerIndex), confirmed));
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForViewer(confirmed, playerIndex));
             }
         } catch (e: unknown) {
             this.emitFailure(socketId, e);
@@ -176,7 +166,7 @@ export class GameCoordinatorService {
 
     private emitToViewer(socketId: SocketId, roomId: RoomId, gs: GameState, viewerIndex: PlayerIndex): void {
         const view = GameStateMapper.toDTOForViewer(gs, viewerIndex);
-        this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(roomId, view, gs));
+        this.wsPort.emitToSocket(socketId, 'gameStateUpdated', view);
     }
 
     startGame(socketId: SocketId): void {
@@ -203,6 +193,8 @@ export class GameCoordinatorService {
             const started = this.roomPort.startGame(room.roomId, gameState);
             if (started.isErr()) { this.emitFailure(socketId, started.error); return; }
             this.emitPerViewer(room.roomId, room.playersId, gameState);
+            // SEL-1: the clocks started with the match.
+            this.lifecycle.schedule(room.roomId);
         } catch (e: unknown) {
             this.emitFailure(socketId, e);
         }
@@ -252,7 +244,7 @@ export class GameCoordinatorService {
             // Echo the persisted layout back to the actor only: the client is
             // prop-controlled and would otherwise snap the drag back. The
             // opponent is not notified, so the arrangement stays secret.
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(updatedGs, playerIndex), updatedGs));
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(updatedGs, playerIndex));
         });
     }
 
@@ -266,10 +258,10 @@ export class GameCoordinatorService {
             if (wasOtherReady) {
                 gs = invariant(performRoll(gs));
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(gs), gs));
+                this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
             } else {
                 this.roomPort.updateGameState(room.roomId, gs);
-                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(gs, playerIndex), gs));
+                this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(gs, playerIndex));
             }
         });
     }
@@ -302,7 +294,7 @@ export class GameCoordinatorService {
             if (cancelled.isErr()) { this.emitFailure(socketId, cancelled.error); return; }
             if (cancelled.value === room.gameState) return;
             this.roomPort.updateGameState(room.roomId, cancelled.value);
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForPlacement(cancelled.value, playerIndex), cancelled.value));
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForPlacement(cancelled.value, playerIndex));
         });
     }
 
@@ -314,20 +306,8 @@ export class GameCoordinatorService {
         });
     }
 
-    claimVictory(socketId: SocketId): void {
-        this.act(socketId, ({ room, playerIndex }) => {
-            const opponentIndex = (1 - playerIndex) as PlayerIndex;
-            const opponentPresence = room.presence?.[opponentIndex];
-            if (!opponentPresence) { this.emitFailure(socketId, domainError('ACTION_NOT_AVAILABLE', 'Action not available')); return; }
-
-            const verdict = evaluateClaim(
-                room.gameState, playerIndex, opponentPresence, room.phaseStartedAt, Date.now(), this.claimConfig,
-            );
-            if (verdict.isErr()) { this.emitFailure(socketId, verdict.error); return; }
-
-            this.roomPort.updateGameState(room.roomId, beginResultPhase(room.gameState));
-            const payload: GameOverDTO = { winner: playerIndex, reason: verdict.value };
-            this.wsPort.emitToRoom(room.roomId, 'gameOver', payload);
-        });
+    /** AWAY-1: the player concedes at any time during the match and loses at once. */
+    concede(socketId: SocketId): void {
+        this.act(socketId, ({ room, playerIndex }) => this.lifecycle.concede(room.roomId, playerIndex));
     }
 }

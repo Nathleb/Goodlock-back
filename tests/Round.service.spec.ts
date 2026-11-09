@@ -5,7 +5,7 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { gainShield, loseHp } from "@domain/services/Character.service";
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
-import { endOfRound, checkWinner, checkMatchEnd, concede } from "@domain/services/Round.service";
+import { endOfRound, checkMatchEnd, concede } from "@domain/services/Round.service";
 import { Player } from "@domain/types/Player.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
@@ -93,7 +93,7 @@ describe('Round.service', () => {
     });
 });
 
-describe('checkWinner', () => {
+describe('winner', () => {
     const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
     const dead = () => loseHp(makeChar(), 100);
     const alive4 = () => [makeChar(), makeChar(), makeChar(), makeChar()];
@@ -102,17 +102,17 @@ describe('checkWinner', () => {
     it('should return null when neither player has lost', () => {
         const p1 = createPlayer(alive4(), 0);
         const p2 = createPlayer(alive4(), 1);
-        expect(checkWinner(createGameState(p1, p2))).toBeNull();
+        expect(createGameState(p1, p2).winner).toBeUndefined();
     });
 
     it('GAME-4: checkMatchEnd makes player 1 win when player 0 has 2 dead characters', () => {
         const ended = checkMatchEnd(createGameState(withTwoFallen(0), createPlayer(alive4(), 1)), 0);
-        expect(checkWinner(ended)).toBe(1);
+        expect(ended.winner).toBe(1);
     });
 
     it('GAME-4: checkMatchEnd makes player 0 win when player 1 has 2 dead characters', () => {
         const ended = checkMatchEnd(createGameState(createPlayer(alive4(), 0), withTwoFallen(1)), 1);
-        expect(checkWinner(ended)).toBe(0);
+        expect(ended.winner).toBe(0);
     });
 
     it('GAME-4: checkMatchEnd decides nothing while nobody has 2 dead characters', () => {
@@ -122,7 +122,7 @@ describe('checkWinner', () => {
 
     it.each([0, 1] as const)('END-2: when both players have 2 dead characters, the author loses (author: player %i)', (author) => {
         const ended = checkMatchEnd(createGameState(withTwoFallen(0), withTwoFallen(1)), author);
-        expect(checkWinner(ended)).toBe(1 - author);
+        expect(ended.winner).toBe(1 - author);
     });
 
     it('END-3: a match won by 2 dead characters says so', () => {
@@ -132,7 +132,7 @@ describe('checkWinner', () => {
 
     it.each([0, 1] as const)('AWAY-1: player %i concedes, the other wins and the match says it was a concession', (conceder) => {
         const ended = concede(createGameState(createPlayer(alive4(), 0), createPlayer(alive4(), 1)), conceder);
-        expect(checkWinner(ended)).toBe(1 - conceder);
+        expect(ended.winner).toBe(1 - conceder);
         expect(ended.endReason).toBe('concede');
     });
 

@@ -14,7 +14,7 @@ export function createGameState(player1: Player, player2: Player, initiativePlay
         playersReady: [false, false],
         priorityQueue: createPriorityQueue(),
         clocks: createClocks(),
-        clockUpdatedAt: 0,
+        clockUpdatedAt: Date.now(),
         players: [player1, player2],
     };
 }

@@ -5,7 +5,8 @@ import DieFace from '@domain/types/DieFace.type';
 import { Player } from '@domain/types/Player.type';
 import { ResolveStep } from '@domain/types/PriorityQueue.type';
 import { PlayerIndex } from '@domain/types/Position.type';
-import { GameStateDTO, PlayerGameStateDTO, CharacterDTO, ResolveStepDTO } from '@application/dtos/GameState.dto';
+import { isClockRunning } from '@domain/services/Clock.service';
+import { GameStateDTO, PlayerClockDTO, PlayerGameStateDTO, CharacterDTO, ResolveStepDTO } from '@application/dtos/GameState.dto';
 import { DieFaceDTO } from '@application/dtos/DieFace.dto';
 import { netStat, stateValue } from '@domain/services/Character.service';
 import { STAT_NAMES } from '@domain/types/Modifier.type';
@@ -20,6 +21,7 @@ export class GameStateMapper {
             currentRound: gameState.currentRound,
             initiativePlayerIndex: gameState.initiativePlayerIndex,
             rollsLeft: gameState.rollsLeft,
+            clocks: GameStateMapper.clocksToDTO(gameState),
             players: gameState.players.map(GameStateMapper.playerToDTO) as [PlayerGameStateDTO, PlayerGameStateDTO],
         };
     }
@@ -52,9 +54,20 @@ export class GameStateMapper {
         return { ...dto, players };
     }
 
+    /**
+     * Both clocks, read as if nobody had confirmed: a paused clock would tell that the opponent has
+     * confirmed (GAME-9). The viewer's own clock is corrected in `withOwnConfirmation`.
+     */
+    private static clocksToDTO(gameState: GameState): [PlayerClockDTO, PlayerClockDTO] {
+        const unconfirmed: GameState = { ...gameState, playersReady: [false, false] };
+        return gameState.clocks.map((clock, i) => ({ ...clock, running: isClockRunning(unconfirmed, i as PlayerIndex) })) as [PlayerClockDTO, PlayerClockDTO];
+    }
+
     /** The viewer learns whether they themselves have confirmed, never whether the opponent has (GAME-9). */
     private static withOwnConfirmation(dto: GameStateDTO, gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {
-        return { ...dto, myReady: gameState.playersReady[viewerIndex] };
+        const clocks = [...dto.clocks] as [PlayerClockDTO, PlayerClockDTO];
+        clocks[viewerIndex] = { ...clocks[viewerIndex], running: isClockRunning(gameState, viewerIndex) };
+        return { ...dto, clocks, myReady: gameState.playersReady[viewerIndex] };
     }
 
     static toDTOForViewer(gameState: GameState, viewerIndex: PlayerIndex): GameStateDTO {

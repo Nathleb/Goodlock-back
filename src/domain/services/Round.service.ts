@@ -36,8 +36,3 @@ export function concede(gameState: GameState, playerIndex: PlayerIndex): GameSta
     if (gameState.winner !== undefined) return gameState;
     return { ...gameState, winner: (1 - playerIndex) as PlayerIndex, endReason: 'concede' };
 }
-
-/** The winner of a finished match, null while it goes on. There is no draw (END-1). */
-export function checkWinner(gameState: GameState): PlayerIndex | null {
-    return gameState.winner ?? null;
-}

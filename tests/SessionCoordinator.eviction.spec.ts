@@ -1,4 +1,6 @@
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
+import { NodeMatchTimer } from '@infrastructure/adapters/timers/node-match-timer';
 import { createClocks } from '@domain/services/Clock.service';
 import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
@@ -15,7 +17,7 @@ const NEW_SOCKET = 'tablet-socket' as SocketId;
 const OPPONENT_SOCKET = 'opponent-socket' as SocketId;
 
 const placement: GameState = {
-    phase: GamePhase.PLACEMENT, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0,
+    phase: GamePhase.PLACEMENT, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], clocks: createClocks(), clockUpdatedAt: Date.now(),
     players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }],
 };
 
@@ -23,7 +25,7 @@ function setUp() {
     const sessions = new SessionManager();
     const rooms = new RoomManager();
     const ws: jest.Mocked<WebSocketPort> = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
-    const coordinator = new SessionCoordinatorService(sessions, rooms, ws, { graceMs: 60_000, afkLimitMs: 120_000 });
+    const coordinator = new SessionCoordinatorService(sessions, rooms, ws, new MatchLifecycleService(rooms, sessions, ws, new NodeMatchTimer()));
 
     coordinator.handleConnect(OLD_SOCKET, 'player' as UserId);
     coordinator.handleConnect(OPPONENT_SOCKET, 'opponent' as UserId);

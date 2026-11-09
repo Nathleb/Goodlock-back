@@ -315,3 +315,37 @@ describe('DEAD-1, GAME-7: the fallen in the DTO', () => {
         expect(dto.players[1].fallen).toEqual([]);
     });
 });
+
+describe('CLOCK-1, CLOCK-2, GAME-7, GAME-9: the clocks in the DTO', () => {
+    it('carries both clocks: thinking time, reconnection time, who is connected', () => {
+        const base = gs(GamePhase.KEEP, [false, false]);
+        const state: GameState = { ...base, clocks: [{ remainingMs: 500_000, reconnectionMs: 120_000, connected: false }, { remainingMs: 600_000, reconnectionMs: 180_000, connected: true }] };
+
+        const dto = GameStateMapper.toDTO(state);
+
+        expect(dto.clocks).toEqual([
+            { remainingMs: 500_000, reconnectionMs: 120_000, connected: false, running: true },
+            { remainingMs: 600_000, reconnectionMs: 180_000, connected: true, running: true },
+        ]);
+    });
+
+    it.each([GamePhase.ROLL, GamePhase.RESOLVE])('says the clocks are stopped in %s', (phase) => {
+        expect(GameStateMapper.toDTO(gs(phase, [false, false])).clocks.map(c => c.running)).toEqual([false, false]);
+    });
+
+    it('does not tell who has confirmed in what both players see: both clocks read as running', () => {
+        expect(GameStateMapper.toDTO(gs(GamePhase.KEEP, [true, false])).clocks.map(c => c.running)).toEqual([true, true]);
+    });
+
+    it("pauses the viewer's own clock once they confirmed, and never shows the opponent's confirmation", () => {
+        const confirmedByViewer = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [true, false]), 0);
+        expect(confirmedByViewer.clocks.map(c => c.running)).toEqual([false, true]);
+
+        const confirmedByOpponent = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [false, true]), 0);
+        expect(confirmedByOpponent.clocks.map(c => c.running)).toEqual([true, true]);
+    });
+
+    it.each([GamePhase.SELECTION, GamePhase.PLACEMENT])('does the same in %s', (phase) => {
+        expect(GameStateMapper.toDTOForViewer(gs(phase, [false, true]), 1).clocks.map(c => c.running)).toEqual([true, false]);
+    });
+});

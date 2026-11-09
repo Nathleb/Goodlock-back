@@ -15,5 +15,4 @@ export interface RoomPort {
     closeRoom(roomId: RoomId): Room | undefined;
     listOpenRooms(): Room[];
     setDeckSelection(roomId: RoomId, playerId: SessionId, characterIds: readonly CatalogId[]): Result<Room, DomainError>;
-    setPresence(roomId: RoomId, playerIndex: number, connected: boolean, now: number): Room | undefined;
 }

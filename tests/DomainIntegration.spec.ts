@@ -9,7 +9,7 @@ import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
 import { beginPlacementPhase } from "@domain/services/Phase.service";
-import { endOfRound, checkWinner, checkMatchEnd } from "@domain/services/Round.service";
+import { endOfRound, checkMatchEnd } from "@domain/services/Round.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
 } from "@domain/services/GameLoop.service";
@@ -418,18 +418,18 @@ describe('Domain integration — Full-team effects', () => {
 describe('Domain integration — Win conditions', () => {
     const killDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyRel(0)] }]);
 
-    it('checkWinner returns 0 when player 1 loses 2 or more characters', () => {
+    it('END-1: the winner is 0 when player 1 loses 2 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(killDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
-        expect(checkWinner(state)).toBe(0);
+        expect(state.winner).toBe(0);
     });
 
-    it('checkWinner returns 1 when player 0 loses 2 or more characters', () => {
+    it('END-1: the winner is 1 when player 0 loses 2 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(killDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
-        expect(checkWinner(state)).toBe(1);
+        expect(state.winner).toBe(1);
     });
 
     it('END-2: there is no draw: when both teams have exactly 2 dead characters, the author loses', () => {
@@ -445,16 +445,16 @@ describe('Domain integration — Win conditions', () => {
             ...gameState,
             players: [killTwo(gameState.players[0]), killTwo(gameState.players[1])],
         };
-        expect(checkWinner(checkMatchEnd(stateWithDeadChars, 0))).toBe(1);
+        expect(checkMatchEnd(stateWithDeadChars, 0).winner).toBe(1);
     });
 
-    it('checkWinner returns null when only 1 character has died', () => {
+    it('END-1: nobody has won when only 1 character has died', () => {
         const dmgDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
         expect(state.players[1].fallen).toHaveLength(1);
-        expect(checkWinner(state)).toBeNull();
+        expect(state.winner).toBeUndefined();
     });
 });
 

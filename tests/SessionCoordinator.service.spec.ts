@@ -1,7 +1,8 @@
 import { P0, P1, asSession, asRoom } from './helpers/ids';
-import { createClocks } from '@domain/services/Clock.service';
+import { createClocks, setConnected } from '@domain/services/Clock.service';
 import { Test } from '@nestjs/testing';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
@@ -27,7 +28,7 @@ const GS: GameState = {
     initiativePlayerIndex: 0,
     rollsLeft: 2,
     playersReady: [false, false],
-    priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0,
+    priorityQueue: [], clocks: createClocks(), clockUpdatedAt: Date.now(),
     players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }],
 };
 
@@ -38,12 +39,11 @@ const STARTED_ROOM: Room = {
     isStarted: true,
     gameState: GS,
     playerOrder: [P0, P1],
-    presence: [{ connected: true, disconnectedAt: null }, { connected: true, disconnectedAt: null }],
-    phaseStartedAt: 0,
 };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
-const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), listOpenRooms: jest.fn(), setPresence: jest.fn() };
+const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), listOpenRooms: jest.fn(), closeRoom: jest.fn() };
+const mockTimer = { schedule: jest.fn(), cancel: jest.fn() };
 const mockWs = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
 let coordinator: SessionCoordinatorService;
@@ -56,17 +56,19 @@ beforeEach(async () => {
             { provide: SESSION_PORT, useValue: mockSession },
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
-            { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
+            { provide: MATCH_TIMER_PORT, useValue: mockTimer },
+            MatchLifecycleService,
         ],
     }).compile();
     coordinator = module.get(SessionCoordinatorService);
 });
 
+const savedClock = (playerIndex: number) => mockRoom.updateGameState.mock.calls.at(-1)[1].clocks[playerIndex];
+
 describe('handleConnect', () => {
     it('tells the client its session id first, so it can find its seat in room.players', () => {
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
         mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
-        mockRoom.setPresence.mockReturnValue(STARTED_ROOM);
         coordinator.handleConnect(SOCKET, USER_ID);
         expect(mockWs.emitToSocket.mock.calls[0]).toEqual([SOCKET, 'sessionStarted', { sessionId: P0 }]);
     });
@@ -102,15 +104,27 @@ describe('ACC-2: handleConnect — eviction', () => {
 });
 
 describe('handleConnect — started game reconnect', () => {
-    it('marks presence connected, notifies the room, and sends a viewer snapshot with afkClaimInMs', () => {
+    it('AWAY-2: marks the player connected, tells the room their reconnection time, and sends a viewer snapshot with the clocks', () => {
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
         mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
-        mockRoom.setPresence.mockReturnValue(STARTED_ROOM);
         coordinator.handleConnect(SOCKET, USER_ID);
-        expect(mockRoom.setPresence).toHaveBeenCalledWith('room-1', 0, true, expect.any(Number));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'presenceChanged', { playerIndex: 0, connected: true, claimInMs: null });
+        expect(savedClock(0).connected).toBe(true);
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'presenceChanged', { playerIndex: 0, connected: true, reconnectionMs: 180_000 });
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'gameStateUpdated',
-            expect.objectContaining({ afkClaimInMs: expect.any(Number) }));
+            expect.objectContaining({ clocks: expect.any(Array) }));
+    });
+
+    it('AWAY-3: a player who comes back after their reconnection time ran out finds the match lost, and no room', () => {
+        const away = setConnected({ ...GS, playersReady: [true, true] }, 0, false, GS.clockUpdatedAt);
+        mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
+        mockRoom.getRoom.mockReturnValue({ ...STARTED_ROOM, gameState: away });
+        jest.spyOn(Date, 'now').mockReturnValue(GS.clockUpdatedAt + 200_000);
+
+        coordinator.handleConnect(SOCKET, USER_ID);
+
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 1, reason: 'reconnection' });
+        expect(mockWs.emitToSocket).not.toHaveBeenCalledWith(SOCKET, 'roomUpdated', expect.anything());
+        jest.restoreAllMocks();
     });
 });
 
@@ -123,14 +137,13 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
         const room: Room = { ...STARTED_ROOM, gameState, deckSelections: { p0: [], p1: [] } };
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
         mockRoom.getRoom.mockReturnValue(room);
-        mockRoom.setPresence.mockReturnValue(room);
         coordinator.handleConnect(SOCKET, USER_ID);
         return mockWs.emitToSocket.mock.calls.find(c => c[1] === 'gameStateUpdated')?.[2];
     };
 
     it("during SELECTION, the snapshot has the player's own pick and never the opponent's", () => {
         // Only the opponent (player 1) has picked; the reconnecting player is player 0.
-        const selecting = unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], 0), 1, PICK_P1, build));
+        const selecting = unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], Date.now()), 1, PICK_P1, build));
 
         const snapshot = reconnectInto(selecting);
 
@@ -142,7 +155,7 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
     });
 
     it('during PLACEMENT, the snapshot hides the opponent team', () => {
-        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], 0), 1, PICK_P1, build)), 0, PICK_P0, build));
+        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], Date.now()), 1, PICK_P1, build)), 0, PICK_P0, build));
 
         const snapshot = reconnectInto(placing);
 
@@ -153,7 +166,7 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
     });
 
     it('GAME-9, ROLL-2: during KEEP, the snapshot shows the opponent\'s dice kept at the last Roll, not their confirmed choice', () => {
-        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], 0), 1, PICK_P1, build)), 0, PICK_P0, build));
+        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], Date.now()), 1, PICK_P1, build)), 0, PICK_P0, build));
         // The first die is kept for the next Roll; the second was kept at the last Roll.
         const lockFirst = (team: readonly Character[]) => team.map((c, i) => ({ ...c, isFaceLocked: i === 0, keptAtLastRoll: i === 1 }));
         const keeping: GameState = {
@@ -229,8 +242,8 @@ describe('handleDisconnect — started game', () => {
         mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
         coordinator.handleDisconnect(SOCKET);
         expect(mockRoom.quitRoom).not.toHaveBeenCalled();
-        expect(mockRoom.setPresence).toHaveBeenCalledWith('room-1', 0, false, expect.any(Number));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'presenceChanged', { playerIndex: 0, connected: false, claimInMs: 60_000 });
+        expect(savedClock(0).connected).toBe(false);
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'presenceChanged', { playerIndex: 0, connected: false, reconnectionMs: 180_000 });
         expect(mockSession.disconnectSession).toHaveBeenCalledWith(SOCKET);
         expect(mockSession.setSessionRoom).not.toHaveBeenCalled();
     });
@@ -258,7 +271,7 @@ describe('handleConnect — edges', () => {
 
         coordinator.handleConnect(SOCKET, USER_ID);
 
-        expect(mockRoom.setPresence).not.toHaveBeenCalled();
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
         expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'presenceChanged', expect.anything());
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET, 'roomUpdated', expect.objectContaining({ roomId: 'room-1' }));
     });
@@ -269,14 +282,14 @@ describe('handleConnect — edges', () => {
 
         coordinator.handleConnect(SOCKET, USER_ID);
 
-        expect(mockRoom.setPresence).not.toHaveBeenCalled();
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
     });
 
-    it('sends the room as it is after the presence update', () => {
-        const updated: Room = { ...STARTED_ROOM, ownerId: P1 };
+    it('sends the room as it is stored after the player is back', () => {
+        let stored: Room = STARTED_ROOM;
         mockSession.createOrReconnectSession.mockReturnValue({ session: SESSION_WITH_ROOM, evictedSocketId: null });
-        mockRoom.getRoom.mockReturnValue(STARTED_ROOM);
-        mockRoom.setPresence.mockReturnValue(updated);
+        mockRoom.getRoom.mockImplementation(() => stored);
+        mockRoom.updateGameState.mockImplementation((_id: string, gameState: GameState) => { stored = { ...stored, gameState, ownerId: P1 }; });
 
         coordinator.handleConnect(SOCKET, USER_ID);
 
@@ -300,7 +313,7 @@ describe('handleDisconnect — edges', () => {
 
         coordinator.handleDisconnect(SOCKET);
 
-        expect(mockRoom.setPresence).toHaveBeenCalledWith('room-1', 0, false, expect.any(Number));
+        expect(savedClock(0).connected).toBe(false);
         expect(mockRoom.quitRoom).not.toHaveBeenCalled();
         expect(mockWs.leaveRoom).toHaveBeenCalledWith(SOCKET, 'room-1');
     });
@@ -311,7 +324,7 @@ describe('handleDisconnect — edges', () => {
 
         coordinator.handleDisconnect(SOCKET);
 
-        expect(mockRoom.setPresence).not.toHaveBeenCalled();
+        expect(mockRoom.updateGameState).not.toHaveBeenCalled();
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 });

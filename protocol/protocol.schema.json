@@ -12,7 +12,7 @@
           "$ref": "#/definitions/RoomDTO"
         },
         "gameStateUpdated": {
-          "$ref": "#/definitions/GameStateUpdatePayload"
+          "$ref": "#/definitions/GameStateDTO"
         },
         "roundResolved": {
           "$ref": "#/definitions/RoundResolvedDTO"
@@ -114,6 +114,15 @@
         "rollsLeft": {
           "type": "number"
         },
+        "clocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlayerClockDTO"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Public in every phase (GAME-7). `running` never tells whether the opponent has confirmed (GAME-9)."
+        },
         "myReady": {
           "type": "boolean",
           "description": "Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's (GAME-9), and absent from what is sent to both players."
@@ -167,6 +176,7 @@
         "currentRound",
         "initiativePlayerIndex",
         "rollsLeft",
+        "clocks",
         "players"
       ],
       "additionalProperties": false
@@ -177,6 +187,31 @@
         0,
         1
       ]
+    },
+    "PlayerClockDTO": {
+      "type": "object",
+      "properties": {
+        "remainingMs": {
+          "type": "number"
+        },
+        "reconnectionMs": {
+          "type": "number"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "connected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "remainingMs",
+        "reconnectionMs",
+        "running",
+        "connected"
+      ],
+      "additionalProperties": false,
+      "description": "The time of a player. `running` says whether the clock counts down now; the client counts from the moment it receives it."
     },
     "PlayerGameStateDTO": {
       "type": "object",
@@ -424,87 +459,6 @@
       "additionalProperties": false,
       "description": "A catalog character as the client sees it: identity, stats and the full die with targeting."
     },
-    "GameStateUpdatePayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "afkClaimInMs": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "description": "Remaining ms until an AFK claim becomes valid against the non-ready player; null when not applicable. Computed server-side at emit time."
-        },
-        "phase": {
-          "type": "string"
-        },
-        "currentRound": {
-          "type": "number"
-        },
-        "initiativePlayerIndex": {
-          "$ref": "#/definitions/PlayerIndex",
-          "description": "Player index that wins exact ties in the resolution order this round. Public in every phase."
-        },
-        "rollsLeft": {
-          "type": "number"
-        },
-        "myReady": {
-          "type": "boolean",
-          "description": "Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's (GAME-9), and absent from what is sent to both players."
-        },
-        "players": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PlayerGameStateDTO"
-          },
-          "minItems": 2,
-          "maxItems": 2
-        },
-        "selection": {
-          "type": "object",
-          "properties": {
-            "decks": {
-              "type": "array",
-              "items": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/CatalogCharacterDTO"
-                }
-              },
-              "minItems": 2,
-              "maxItems": 2
-            },
-            "myPicks": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "required": [
-            "decks",
-            "myPicks"
-          ],
-          "additionalProperties": false,
-          "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
-        }
-      },
-      "required": [
-        "afkClaimInMs",
-        "currentRound",
-        "initiativePlayerIndex",
-        "phase",
-        "players",
-        "rollsLeft"
-      ]
-    },
     "RoundResolvedDTO": {
       "type": "object",
       "properties": {
@@ -607,13 +561,7 @@
           ]
         },
         "reason": {
-          "type": "string",
-          "enum": [
-            "elimination",
-            "forfeit",
-            "afk",
-            "concede"
-          ]
+          "$ref": "#/definitions/EndReason"
         }
       },
       "required": [
@@ -621,6 +569,16 @@
         "reason"
       ],
       "additionalProperties": false
+    },
+    "EndReason": {
+      "type": "string",
+      "enum": [
+        "elimination",
+        "clock",
+        "reconnection",
+        "concede"
+      ],
+      "description": "Why a match ended (END-3)."
     },
     "PresenceChangedDTO": {
       "type": "object",
@@ -635,18 +593,15 @@
         "connected": {
           "type": "boolean"
         },
-        "claimInMs": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "description": "Remaining ms until a forfeit claim becomes valid; null when connected."
+        "reconnectionMs": {
+          "type": "number",
+          "description": "Reconnection time the player has left (AWAY-2)."
         }
       },
       "required": [
         "playerIndex",
         "connected",
-        "claimInMs"
+        "reconnectionMs"
       ],
       "additionalProperties": false
     },
