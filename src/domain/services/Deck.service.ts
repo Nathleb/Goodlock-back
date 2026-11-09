@@ -2,7 +2,7 @@ import { CatalogId } from "@shared/branded.types";
 
 /** A deck is the pool a player brings; before each match they keep TEAM_SIZE of these (slice C). */
 export const DECK_SIZE = 6;
-export const MAX_DECKS_PER_USER = 5;
+export const MAX_DECKS_PER_USER = 50;
 /** Characters each player keeps from their deck for a match. */
 export const TEAM_SIZE = 4;
 

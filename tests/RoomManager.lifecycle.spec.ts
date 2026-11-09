@@ -1,5 +1,5 @@
 import { RoomId } from '@shared/branded.types';
-import { P0, P1, P2, asRoom } from './helpers/ids';
+import { P0, P1, P2, asRoom, asSession } from './helpers/ids';
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
@@ -174,11 +174,15 @@ describe('sweepAbandonedRooms — thresholds', () => {
 });
 
 describe('listOpenRooms', () => {
-    it('lists the rooms not started yet and leaves the started ones out', () => {
+    it('ROOM-1: lists a room not started with a free seat, leaves out a full lobby room and a started room, even one a player left', () => {
         const manager = new RoomManager();
-        const lobby = manager.createRoom(P2);
-        startedRoom(manager);
+        const open = manager.createRoom(P2);
+        const full = manager.createRoom(asSession('p3'));
+        unwrap(manager.joinRoom(asSession('p4'), full.roomId));
+        const started = startedRoom(manager);
+        manager.quitRoom(P1);
+        expect(manager.getRoom(started)!.playersId).toEqual([P0]);
 
-        expect(manager.listOpenRooms().map(r => r.roomId)).toEqual([lobby.roomId]);
+        expect(manager.listOpenRooms().map(r => r.roomId)).toEqual([open.roomId]);
     });
 });
