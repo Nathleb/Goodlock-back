@@ -79,10 +79,11 @@ describe('DECK-1: create', () => {
         await expect(coordinator.create(ALICE, save(name))).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('refuses a sixth deck', async () => {
-        for (let i = 0; i < 5; i++) await coordinator.create(ALICE, save(`D${i}`));
+    it('DECK-2: accepts a 50th deck and refuses a 51st', async () => {
+        for (let i = 0; i < 50; i++) await coordinator.create(ALICE, save(`D${i}`));
+        expect(await decks.countByUser(ALICE)).toBe(50);
         await expect(coordinator.create(ALICE, save('Too many'))).rejects.toBeInstanceOf(ConflictException);
-        expect(await decks.countByUser(ALICE)).toBe(5);
+        expect(await decks.countByUser(ALICE)).toBe(50);
     });
 });
 
@@ -179,9 +180,9 @@ describe('bounds', () => {
 });
 
 describe('refusal messages', () => {
-    it('says how many decks a user may have', async () => {
-        for (let i = 0; i < 5; i++) await coordinator.create(ALICE, save(`D${i}`));
-        await expect(coordinator.create(ALICE, save('Too many'))).rejects.toThrow('You can have at most 5 decks');
+    it('DECK-2: says how many decks a user may have', async () => {
+        for (let i = 0; i < 50; i++) await coordinator.create(ALICE, save(`D${i}`));
+        await expect(coordinator.create(ALICE, save('Too many'))).rejects.toThrow('You can have at most 50 decks');
     });
 
     it('DECK-2: says the last deck cannot be deleted', async () => {
