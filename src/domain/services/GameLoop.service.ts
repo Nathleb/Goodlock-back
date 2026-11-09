@@ -3,7 +3,7 @@ import GamePhase from "../types/GamePhase.type";
 import { PlayerIndex } from "../types/Position.type";
 import { Player } from "../types/Player.type";
 import { checkPhase, checkNotReady, beginPlacementPhase, beginRollPhase, beginKeepPhase, beginResolvePhase, beginResultPhase } from "./Phase.service";
-import { rollDiceForTurn, allDiceLocked, createPlayer } from "./Player.service";
+import { rollDiceForTurn, createPlayer } from "./Player.service";
 import { ResolveStep } from "../types/PriorityQueue.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog, createPriorityQueue } from "./PriorityQueue.service";
 import { TEAM_SIZE } from "./Deck.service";
@@ -137,8 +137,7 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): Result<Gam
             const updated = markPlayerReady(g, playerIndex);
             if (!areBothReady(updated)) return updated;
 
-            const bothLocked = allDiceLocked(updated.players[0]) && allDiceLocked(updated.players[1]);
-            if (updated.rollsLeft === 0 || bothLocked) {
+            if (updated.rollsLeft === 0) {
                 return resetReady(beginResolvePhase(updated));
             }
 

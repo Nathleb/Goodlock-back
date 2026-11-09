@@ -134,16 +134,20 @@ describe('confirmKeep', () => {
         expect(result.rollsLeft).toBe(1);
     });
 
-    it('skips rerolls and transitions to RESOLVE when all dice are locked', () => {
-        const inKeep = lockAllPlayers(beginKeepPhase(gs)); // rollsLeft: 2 but all locked
-        const after0 = unwrap(confirmKeep(inKeep, 0));
-        const result = unwrap(confirmKeep(after0, 1));
-        expect(result.phase).toBe(GamePhase.RESOLVE);
+    it('ROLL-4: with every die kept, both Keeps still lead to another Roll, and Resolve only follows the third Roll', () => {
+        const inKeep = lockAllPlayers(beginKeepPhase(gs)); // first Roll done, rollsLeft: 2, every die kept
+        const afterFirstKeep = unwrap(confirmKeep(unwrap(confirmKeep(inKeep, 0)), 1));
+        expect(afterFirstKeep.phase).toBe(GamePhase.KEEP);
+        expect(afterFirstKeep.rollsLeft).toBe(1);
+        expect(afterFirstKeep.players.map(p => p.team.map(c => c.face)))
+            .toEqual(inKeep.players.map(p => p.team.map(c => c.face)));
+        const afterSecondKeep = unwrap(confirmKeep(unwrap(confirmKeep(afterFirstKeep, 0)), 1));
+        expect(afterSecondKeep.phase).toBe(GamePhase.RESOLVE);
     });
 
     it('ROLL-1: does not reroll locked dice', () => {
         const inKeep = beginKeepPhase(gs);
-        // Lock slot 0 for player 0 only (not the whole team, so no skip-to-RESOLVE)
+        // Lock slot 0 for player 0 only 
         const withOneLock = {
             ...inKeep,
             players: [
