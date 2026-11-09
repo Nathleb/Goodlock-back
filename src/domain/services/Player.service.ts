@@ -14,10 +14,6 @@ export function unlockAllDice(player: Player): Player {
     return { ...player, team: player.team.map(c => ({ ...c, isFaceLocked: false })) };
 }
 
-export function allDiceLocked(player: Player): boolean {
-    return player.team.every(char => char.isFaceLocked);
-}
-
 /** Dead characters that lose the match (out of TEAM_SIZE). */
 const LOSS_DEATHS = 2;
 

@@ -40,8 +40,8 @@ function makeTeam(die: DieFn, playerIndex: 0 | 1, maxHp = 50) {
 
 /**
  * Advance PLACEMENT → ROLL → KEEP → RESOLVE.
- * Locks all dice after performRoll so confirmKeep takes the bothLocked path
- * and skips directly to RESOLVE without a re-roll.
+ * Locks all dice after the first Roll and confirms both Keeps until Resolve
+ * (the round plays all three Rolls, ROLL-4).
  */
 function advanceToResolve(gameState: GameState): GameState {
     let state = unwrap(confirmPlacement(gameState, 0));
@@ -54,8 +54,10 @@ function advanceToResolve(gameState: GameState): GameState {
             team: player.team.map(char => ({ ...char, isFaceLocked: true })),
         })) as unknown as typeof state.players,
     };
-    state = unwrap(confirmKeep(state, 0));
-    state = unwrap(confirmKeep(state, 1));
+    while (state.phase === GamePhase.KEEP) {
+        state = unwrap(confirmKeep(state, 0));
+        state = unwrap(confirmKeep(state, 1));
+    }
     return state;
 }
 
