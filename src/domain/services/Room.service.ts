@@ -5,6 +5,8 @@ import { CatalogId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '../errors/DomainError';
 import { Result, ok, err } from '@shared/result.type';
 
+const ROOM_CAPACITY = 2;
+
 const CONNECTED: PlayerPresence = { connected: true, disconnectedAt: null };
 
 export function createRoom(ownerId: SessionId): Room {
@@ -17,13 +19,17 @@ export function createRoom(ownerId: SessionId): Room {
 }
 
 export function addPlayerToRoom(room: Room, playerId: SessionId): Result<Room, DomainError> {
-    if (room.playersId.length >= 2) return err(domainError('ROOM_FULL', 'Room is full'));
+    if (room.playersId.length >= ROOM_CAPACITY) return err(domainError('ROOM_FULL', 'Room is full'));
     if (room.isStarted) return err(domainError('GAME_ALREADY_STARTED', 'Game already started'));
     return ok({ ...room, playersId: [...room.playersId, playerId] });
 }
 
+export function hasFreeSeat(room: Room): boolean {
+    return room.playersId.length < ROOM_CAPACITY;
+}
+
 export function isRoomReady(room: Room): boolean {
-    return room.playersId.length === 2 && !room.isStarted;
+    return room.playersId.length === ROOM_CAPACITY && !room.isStarted;
 }
 
 export function startRoom(room: Room, gameState: GameState): Result<Room, DomainError> {
