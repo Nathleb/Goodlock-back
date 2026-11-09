@@ -1,4 +1,5 @@
 import { RoomId } from '@shared/branded.types';
+import { createClocks } from '@domain/services/Clock.service';
 import { P0, P1, P2, asRoom, asSession } from './helpers/ids';
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import GameState from '@domain/types/GameState.type';
@@ -7,7 +8,7 @@ import { CatalogId } from '@shared/branded.types';
 import { unwrap, unwrapErr } from './helpers/result';
 
 function gs(phase: GamePhase, rollsLeft: number): GameState {
-    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft, playersReady: [false, false], priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0, players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] };
 }
 
 function startedRoom(manager: RoomManager): RoomId {

@@ -1,4 +1,5 @@
 import { P0, P1, asSession, asRoom } from './helpers/ids';
+import { createClocks } from '@domain/services/Clock.service';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
@@ -26,7 +27,7 @@ const GS: GameState = {
     initiativePlayerIndex: 0,
     rollsLeft: 2,
     playersReady: [false, false],
-    priorityQueue: [],
+    priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0,
     players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }],
 };
 
@@ -129,7 +130,7 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
 
     it("during SELECTION, the snapshot has the player's own pick and never the opponent's", () => {
         // Only the opponent (player 1) has picked; the reconnecting player is player 0.
-        const selecting = unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build));
+        const selecting = unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], 0), 1, PICK_P1, build));
 
         const snapshot = reconnectInto(selecting);
 
@@ -141,7 +142,7 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
     });
 
     it('during PLACEMENT, the snapshot hides the opponent team', () => {
-        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build)), 0, PICK_P0, build));
+        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], 0), 1, PICK_P1, build)), 0, PICK_P0, build));
 
         const snapshot = reconnectInto(placing);
 
@@ -152,7 +153,7 @@ describe('GAME-7: handleConnect — reconnect before combat keeps secrets', () =
     });
 
     it('GAME-9, ROLL-2: during KEEP, the snapshot shows the opponent\'s dice kept at the last Roll, not their confirmed choice', () => {
-        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')]), 1, PICK_P1, build)), 0, PICK_P0, build));
+        const placing = unwrap(confirmSelection(unwrap(confirmSelection(createSelectionState([deck('a'), deck('b')], 0), 1, PICK_P1, build)), 0, PICK_P0, build));
         // The first die is kept for the next Roll; the second was kept at the last Roll.
         const lockFirst = (team: readonly Character[]) => team.map((c, i) => ({ ...c, isFaceLocked: i === 0, keptAtLastRoll: i === 1 }));
         const keeping: GameState = {

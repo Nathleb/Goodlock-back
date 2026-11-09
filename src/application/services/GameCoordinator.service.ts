@@ -198,7 +198,7 @@ export class GameCoordinatorService {
             if (decks.isErr()) { this.emitFailure(socketId, decks.error); return; }
 
             const [deck0, deck1] = decks.value;
-            const gameState = createSelectionState([this.templatesFor(deck0), this.templatesFor(deck1)]);
+            const gameState = createSelectionState([this.templatesFor(deck0), this.templatesFor(deck1)], Date.now());
 
             const started = this.roomPort.startGame(room.roomId, gameState);
             if (started.isErr()) { this.emitFailure(socketId, started.error); return; }

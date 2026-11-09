@@ -11,6 +11,16 @@ export type SelectionState = {
     readonly picks: readonly [readonly CatalogId[] | null, readonly CatalogId[] | null];
 };
 
+/** Why a match ended (END-3). */
+export type EndReason = 'elimination' | 'clock' | 'reconnection' | 'concede';
+
+/** The time of a player (CLOCK-1): thinking time, reconnection time, and whether they are connected (AWAY-2). */
+export type PlayerClock = {
+    readonly remainingMs: number;
+    readonly reconnectionMs: number;
+    readonly connected: boolean;
+};
+
 type GameState = {
     readonly phase: GamePhase;
     readonly currentRound: number;
@@ -22,6 +32,12 @@ type GameState = {
     readonly players: readonly [Player, Player];
     /** The winner, once a player has lost (END-1). Absent while the match goes on. */
     readonly winner?: PlayerIndex;
+    /** Why the match ended; set with `winner`. */
+    readonly endReason?: EndReason;
+    /** Indexed by player. Settled by `settleClocks` up to `clockUpdatedAt`. */
+    readonly clocks: readonly [PlayerClock, PlayerClock];
+    /** Epoch ms of the last settling of the clocks. */
+    readonly clockUpdatedAt: number;
     /** Present only during SELECTION. */
     readonly selection?: SelectionState;
 };

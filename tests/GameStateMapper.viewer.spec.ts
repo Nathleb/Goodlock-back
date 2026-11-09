@@ -1,4 +1,5 @@
 import { asCharacter } from './helpers/ids';
+import { createClocks } from '@domain/services/Clock.service';
 import { TEST_CATALOG_ID, testTemplate } from './helpers/catalog';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import { GameStateDTO } from '@application/dtos/GameState.dto';
@@ -30,7 +31,7 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
         playerIndex: pi,
         team: [char(`c${pi}0`, pi, 0, true), char(`c${pi}1`, pi, 1, false)],
     });
-    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 1, playersReady, priorityQueue: [], players: [team(0), team(1)] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 1, playersReady, priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0, players: [team(0), team(1)] };
 }
 
 describe('toDTOForViewer', () => {
@@ -149,7 +150,7 @@ describe('GAME-7, CHAR-1: team selection view', () => {
     const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_1 = ['b0', 'b1', 'b2', 'b3', 'b4'] as CatalogId[];
     const selecting = (picks: SelectionState['picks'], ready: [boolean, boolean]): GameState => ({
-        ...createSelectionState([deck('a'), deck('b')]),
+        ...createSelectionState([deck('a'), deck('b')], 0),
         playersReady: ready,
         selection: { decks: [deck('a'), deck('b')], picks },
     });

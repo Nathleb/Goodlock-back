@@ -230,7 +230,7 @@ describe('SEL-2, GAME-7: team selection', () => {
     const fresh = () => createSelectionState([
         DECK_P0.map(id => catalog.get(id)!),
         DECK_P1.map(id => catalog.get(id)!),
-    ]);
+    ], 0);
     const lastState = (): GameState => mockRoom.updateGameState.mock.calls.at(-1)[1];
     const sentTo = (socket: string) => mockWs.emitToSocket.mock.calls.filter(c => c[0] === socket && c[1] === 'gameStateUpdated').map(c => c[2]);
 
@@ -727,7 +727,7 @@ describe('startGame guards', () => {
 
 describe('confirmSelection guards', () => {
     it('refuses ids that are not strings, saying what it expects', () => {
-        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)])), playerOrder: [P0, P1] });
+        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], 0)), playerOrder: [P0, P1] });
         coordinator.confirmSelection(SOCKET_0, ['c0', 'c1', 'c2', 3] as unknown as string[]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'characterIds must be an array of catalog ids' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
@@ -736,7 +736,7 @@ describe('confirmSelection guards', () => {
     it('seats the PLACEMENT views by playerOrder, not by playersId', () => {
         const PICK_P0 = ['c5', 'c0', 'c1', 'c2'] as CatalogId[];
         const PICK_P1 = ['c9', 'c8', 'c7', 'c6'] as CatalogId[];
-        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)]);
+        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], 0);
         const p1Picked = unwrap(confirmSelection(fresh, 1, PICK_P1, t => createCharacterFromTemplate(t)));
         // playersId lists the seats the other way round: only playerOrder says who holds seat 0.
         mockRoom.getRoom.mockReturnValue({ ...makeRoom(p1Picked), playersId: [P1, P0], playerOrder: [P0, P1] });

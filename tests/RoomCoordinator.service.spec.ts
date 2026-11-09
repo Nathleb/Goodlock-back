@@ -1,4 +1,5 @@
 import { P0, P1, asRoom, asSession } from './helpers/ids';
+import { createClocks } from '@domain/services/Clock.service';
 import { Test } from '@nestjs/testing';
 import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
@@ -217,7 +218,7 @@ describe('guards and edges', () => {
 
     const STARTED: Room = {
         ...ROOM, isStarted: true, playerOrder: [P0, P1],
-        gameState: { phase: GamePhase.KEEP, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] },
+        gameState: { phase: GamePhase.KEEP, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0, players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] },
     };
 
     it('a socket without a session gets no answer at all, not even an error', () => {

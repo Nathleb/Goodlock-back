@@ -18,7 +18,7 @@ const PICK_0 = ids('a5', 'a0', 'a1', 'a2');
 const PICK_1 = ids('b0', 'b1', 'b2', 'b3');
 
 let gs: GameState;
-beforeEach(() => { gs = createSelectionState([DECK_0, DECK_1]); });
+beforeEach(() => { gs = createSelectionState([DECK_0, DECK_1], 0); });
 
 describe('createSelectionState', () => {
     it('GAME-1, CHAR-1: starts in SELECTION with both decks revealed, no picks and empty teams', () => {

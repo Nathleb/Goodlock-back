@@ -1,4 +1,5 @@
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
+import { createClocks } from '@domain/services/Clock.service';
 import { SessionManager } from '@infrastructure/adapters/managers/session.manager';
 import { RoomManager } from '@infrastructure/adapters/managers/room.manager';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
@@ -14,7 +15,7 @@ const NEW_SOCKET = 'tablet-socket' as SocketId;
 const OPPONENT_SOCKET = 'opponent-socket' as SocketId;
 
 const placement: GameState = {
-    phase: GamePhase.PLACEMENT, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [],
+    phase: GamePhase.PLACEMENT, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0,
     players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }],
 };
 

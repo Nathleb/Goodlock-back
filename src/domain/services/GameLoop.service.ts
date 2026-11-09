@@ -11,6 +11,7 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
 import { roll1D } from "../utils/Random.utils";
+import { createClocks } from "./Clock.service";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
 
@@ -42,8 +43,11 @@ function rerollBothPlayers(gs: GameState): GameState {
     return { ...gs, players };
 }
 
-export function createSelectionState(decks: readonly [readonly CharacterTemplate[], readonly CharacterTemplate[]]): GameState {
+/** SEL-1: the initiative token is drawn and both clocks start. */
+export function createSelectionState(decks: readonly [readonly CharacterTemplate[], readonly CharacterTemplate[]], now: number): GameState {
     return {
+        clocks: createClocks(),
+        clockUpdatedAt: now,
         phase: GamePhase.SELECTION,
         currentRound: 0,
         initiativePlayerIndex: roll1D(2) as PlayerIndex,

@@ -240,11 +240,11 @@ describe('SEL-1, PRIO-3: initiative at game init', () => {
 
     it('gives the initiative to player 0 when the draw falls on the lower half', () => {
         jest.spyOn(Math, 'random').mockReturnValue(0.2);
-        expect(createSelectionState([[], []]).initiativePlayerIndex).toBe(0);
+        expect(createSelectionState([[], []], 0).initiativePlayerIndex).toBe(0);
     });
 
     it('gives the initiative to player 1 when the draw falls on the upper half', () => {
         jest.spyOn(Math, 'random').mockReturnValue(0.7);
-        expect(createSelectionState([[], []]).initiativePlayerIndex).toBe(1);
+        expect(createSelectionState([[], []], 0).initiativePlayerIndex).toBe(1);
     });
 });
