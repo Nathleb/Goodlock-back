@@ -78,7 +78,7 @@ function makeTeamWith(playerIndex: 0 | 1, dies: Partial<Record<SlotIndex, DieFn>
 // ─── Phase flow ───────────────────────────────────────────────────────────────
 
 describe('Domain integration — Phase flow', () => {
-    it('PLACEMENT → ROLL → KEEP → RESOLVE → RESULT completes without error', () => {
+    it('GAME-6: PLACEMENT → ROLL → KEEP → RESOLVE → RESULT completes without error', () => {
         const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeamWith(1, { 0: dmgDie }), 1));
 

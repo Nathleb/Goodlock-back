@@ -20,7 +20,7 @@ describe('the roster', () => {
         });
     });
 
-    it('gives every die six faces, with the blank faces of the design', () => {
+    it('GAME-3: gives every die six faces, with the blank faces of the design', () => {
         const blanks = Object.fromEntries(roster.map(c => [c.id, (c.baseDieInstructions as Face[]).filter(f => f.effects.length === 0).length]));
         expect(roster.every(c => c.baseDieInstructions.length === 6)).toBe(true);
         expect(blanks).toEqual({ garran: 1, kesh: 1, morrow: 0, tobin: 0, vespera: 1, ysolde: 0 });

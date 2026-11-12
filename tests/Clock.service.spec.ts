@@ -43,12 +43,12 @@ describe('SEL-1: the clocks start with the match', () => {
 });
 
 describe('CLOCK-2: a clock runs in the phases where the player acts, and pauses when they confirm', () => {
-    it.each([GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP])('runs in %s', (phase) => {
+    it.each([GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP])('SEL-3, PLACE-3, KEEP-3: runs in %s', (phase) => {
         expect(isClockRunning(at(phase), 0)).toBe(true);
         expect(isClockRunning(at(phase), 1)).toBe(true);
     });
 
-    it.each([GamePhase.ROLL, GamePhase.RESOLVE, GamePhase.RESULT])('is stopped in %s', (phase) => {
+    it.each([GamePhase.ROLL, GamePhase.RESOLVE, GamePhase.RESULT])('UPK-2, ROLL-3, RES-3, EOR-2: is stopped in %s', (phase) => {
         expect(isClockRunning(at(phase), 0)).toBe(false);
     });
 

@@ -99,7 +99,7 @@ describe('STATE-7: upkeep', () => {
     });
 });
 
-describe('UPK-1, END-2: the start-of-round effects apply one character at a time, in the order of the resolution', () => {
+describe('UPK-1, UPK-3, END-2: the start-of-round effects apply one character at a time, in the order of the resolution', () => {
     // Each player has already lost one character and has one poisoned character on its last life: whose dies first decides.
     const lastLives = (speeds: [number, number], initiative: PlayerIndex = 0, hastedPlayer1 = false): GameState => {
         const fallen = (s: GameState, pi: PlayerIndex): GameState => {
