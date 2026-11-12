@@ -60,7 +60,7 @@ Facts that the code does not make obvious:
 
 ## Reference docs
 
-Read only when relevant, they are not loaded automatically: `../Goodlock-specs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates), `docs/GLOSSARY.md` (game terms to code names), `docs/ROADMAP.md` (the only backlog and the direction to v1.0), `docs/SCALING.md` (before any decision on shared state or several instances).
+Read only when relevant, they are not loaded automatically: `../Goodlock-specs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates), `docs/GLOSSARY.md` (game terms to code names), `../Goodlock-specs/SCALING.md` (before any decision on shared state or several instances).
 
 ## Workflow (Goodlock specifics)
 
@@ -131,7 +131,7 @@ The client is the sibling repo `../Goodlock-app` (Flutter + Flame). There is no 
 
 ## Guardrails
 
-- Migrations: Released: no (flip to yes at v1.0, see docs/ROADMAP.md). While not released, the data is disposable and the schema history is not precious. Prefer adding a new migration, but squashing or rewriting migrations and resetting the dev DB is acceptable when the user asks. Once the game is released, never edit an applied migration. Never hand-edit the generated Prisma client.
+- Migrations: Released: no (flip to yes at v1.0). While not released, the data is disposable and the schema history is not precious. Prefer adding a new migration, but squashing or rewriting migrations and resetting the dev DB is acceptable when the user asks. Once the game is released, never edit an applied migration. Never hand-edit the generated Prisma client.
 - Environment: the tests mock Prisma and need no database. Running the app needs the local Postgres (`docker-compose.yml`) and a `.env` (template: `.env.example`); do not commit `.env`.
 
 ## Conventions for this codebase
