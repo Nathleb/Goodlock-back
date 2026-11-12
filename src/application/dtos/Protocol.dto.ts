@@ -1,4 +1,4 @@
-import { GameOverDTO, GameStateDTO, GameStateUpdatePayload, PresenceChangedDTO, ResolveStepDTO } from './GameState.dto';
+import { GameOverDTO, GameStateDTO, PresenceChangedDTO, ResolveStepDTO } from './GameState.dto';
 import { ErrorPayload } from './Error.dto';
 import { RoomDTO } from './Room.dto';
 
@@ -18,7 +18,7 @@ export type SessionEvictedDTO = { reason: 'signed-in-elsewhere' };
 export type ServerEvents = {
     roomCreated: RoomDTO;
     roomUpdated: RoomDTO;
-    gameStateUpdated: GameStateUpdatePayload;
+    gameStateUpdated: GameStateDTO;
     roundResolved: RoundResolvedDTO;
     gameOver: GameOverDTO;
     presenceChanged: PresenceChangedDTO;

@@ -4,10 +4,9 @@ import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomMapper } from '@application/mappers/RoomMapper';
-import GamePhase from '@domain/types/GamePhase.type';
-import { beginResultPhase } from '@domain/services/Phase.service';
+import { PlayerIndex } from '@domain/types/Position.type';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
-import { GameOverDTO } from '@application/dtos/GameState.dto';
 import { DeckCoordinatorService } from '@application/services/DeckCoordinator.service';
 import { DeckId, SocketId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
@@ -24,6 +23,7 @@ export class RoomCoordinatorService {
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
         private readonly decks: DeckCoordinatorService,
+        private readonly lifecycle: MatchLifecycleService,
     ) {}
 
     /** A Result error or a thrown value, as the `error { code, message }` event. */
@@ -33,16 +33,10 @@ export class RoomCoordinatorService {
 
     private leaveCurrentRoom(socketId: SocketId, sessionId: SessionId, roomId: RoomId): void {
         const room = this.roomPort.getRoom(roomId);
-        if (room?.isStarted && room.gameState && room.gameState.phase !== GamePhase.RESULT) {
+        if (room?.isStarted && room.gameState) {
+            // AWAY-1: leaving a match in progress is a concession.
             const quitterIndex = resolvePlayerIndex(room, sessionId);
-            if (quitterIndex !== -1) {
-                const winner = (1 - quitterIndex) as 0 | 1;
-                this.roomPort.updateGameState(roomId, beginResultPhase(room.gameState));
-                // Mark the quitter gone so the janitor's "all players disconnected" rule can fire.
-                this.roomPort.setPresence(roomId, quitterIndex, false, Date.now());
-                const payload: GameOverDTO = { winner, reason: 'concede' };
-                this.wsPort.emitToRoom(roomId, 'gameOver', payload);
-            }
+            if (quitterIndex !== -1) this.lifecycle.concede(roomId, quitterIndex as PlayerIndex);
         }
         const updatedRoom = this.roomPort.quitRoom(sessionId);
         this.sessionPort.setSessionRoom(socketId, undefined);

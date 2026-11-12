@@ -139,9 +139,9 @@ export class SessionGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         this.gameCoordinator.confirmKeep(socketIdOf(client), data.lockedCharacterIds);
     }
 
-    @SubscribeMessage('claimVictory')
-    handleClaimVictory(@ConnectedSocket() client: Socket): void {
-        this.gameCoordinator.claimVictory(socketIdOf(client));
+    @SubscribeMessage('concede')
+    handleConcede(@ConnectedSocket() client: Socket): void {
+        this.gameCoordinator.concede(socketIdOf(client));
     }
 
     @SubscribeMessage('cancelPlacement')

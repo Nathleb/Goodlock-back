@@ -1,5 +1,6 @@
 import GameState from "@domain/types/GameState.type";
 import GamePhase from "@domain/types/GamePhase.type";
+import { createClocks } from "@domain/services/Clock.service";
 import { createPriorityQueue } from "@domain/services/PriorityQueue.service";
 import { Player } from "@domain/types/Player.type";
 import { PlayerIndex } from "@domain/types/Position.type";
@@ -12,6 +13,8 @@ export function createGameState(player1: Player, player2: Player, initiativePlay
         rollsLeft: 2,
         playersReady: [false, false],
         priorityQueue: createPriorityQueue(),
+        clocks: createClocks(),
+        clockUpdatedAt: Date.now(),
         players: [player1, player2],
     };
 }

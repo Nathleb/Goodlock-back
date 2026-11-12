@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
-import { claimConfigFromEnv } from '@infrastructure/config/claim.config';
+import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
+import { NodeMatchTimer } from '@infrastructure/adapters/timers/node-match-timer';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
@@ -35,18 +36,11 @@ import { DeckController } from '@infrastructure/adapters/http/DeckController';
     controllers: [RoomController, CollectionController, DeckController],
     providers: [
         { provide: APP_GUARD, useClass: ThrottlerGuard },
-        {
-            provide: CLAIM_CONFIG,
-            inject: [ConfigService],
-            useFactory: (config: ConfigService) =>
-                claimConfigFromEnv({
-                    CLAIM_GRACE_MS: config.get<string>('CLAIM_GRACE_MS'),
-                    CLAIM_AFK_LIMIT_MS: config.get<string>('CLAIM_AFK_LIMIT_MS'),
-                }),
-        },
         { provide: ROOM_PORT, useClass: RoomManager },
         { provide: SESSION_PORT, useClass: SessionManager },
         { provide: WEBSOCKET_PORT, useClass: WebSocketService },
+        { provide: MATCH_TIMER_PORT, useClass: NodeMatchTimer },
+        MatchLifecycleService,
         SharedWebSocketService,
         RoomCoordinatorService,
         SessionCoordinatorService,

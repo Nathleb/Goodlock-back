@@ -1,4 +1,5 @@
 import { asCharacter } from './helpers/ids';
+import { createClocks } from '@domain/services/Clock.service';
 import { TEST_CATALOG_ID, testTemplate } from './helpers/catalog';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import { GameStateDTO } from '@application/dtos/GameState.dto';
@@ -30,7 +31,7 @@ function gs(phase: GamePhase, playersReady: [boolean, boolean]): GameState {
         playerIndex: pi,
         team: [char(`c${pi}0`, pi, 0, true), char(`c${pi}1`, pi, 1, false)],
     });
-    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 1, playersReady, priorityQueue: [], players: [team(0), team(1)] };
+    return { phase, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 1, playersReady, priorityQueue: [], clocks: createClocks(), clockUpdatedAt: 0, players: [team(0), team(1)] };
 }
 
 describe('toDTOForViewer', () => {
@@ -149,7 +150,7 @@ describe('GAME-7, CHAR-1: team selection view', () => {
     const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_1 = ['b0', 'b1', 'b2', 'b3', 'b4'] as CatalogId[];
     const selecting = (picks: SelectionState['picks'], ready: [boolean, boolean]): GameState => ({
-        ...createSelectionState([deck('a'), deck('b')]),
+        ...createSelectionState([deck('a'), deck('b')], 0),
         playersReady: ready,
         selection: { decks: [deck('a'), deck('b')], picks },
     });
@@ -312,5 +313,54 @@ describe('DEAD-1, GAME-7: the fallen in the DTO', () => {
     it('stays hidden with the opponent team before the first round', () => {
         const dto = GameStateMapper.toDTOForViewer(withFallen(GamePhase.PLACEMENT), 0);
         expect(dto.players[1].fallen).toEqual([]);
+    });
+});
+
+describe('CLOCK-1, CLOCK-2, CLOCK-4, GAME-7, GAME-9: the clocks in the DTO', () => {
+    // Player 0 has 500 s left but the last published value is 600 s; player 1 has 480 s left, published 560 s.
+    const withClocks = (phase: GamePhase, ready: [boolean, boolean]): GameState => ({
+        ...gs(phase, ready),
+        clocks: [
+            { remainingMs: 500_000, reconnectionMs: 120_000, connected: false, publishedMs: 600_000 },
+            { remainingMs: 480_000, reconnectionMs: 180_000, connected: true, publishedMs: 560_000 },
+        ],
+    });
+
+    it('carries, for both players, the clocks as published at the end of the last decision phase', () => {
+        const dto = GameStateMapper.toDTO(withClocks(GamePhase.KEEP, [false, false]));
+
+        expect(dto.clocks).toEqual([
+            { remainingMs: 600_000, reconnectionMs: 120_000, connected: false, running: true },
+            { remainingMs: 560_000, reconnectionMs: 180_000, connected: true, running: true },
+        ]);
+    });
+
+    it.each([GamePhase.ROLL, GamePhase.RESOLVE])('says the clocks are stopped in %s', (phase) => {
+        expect(GameStateMapper.toDTO(withClocks(phase, [false, false])).clocks.map(c => c.running)).toEqual([false, false]);
+    });
+
+    it('does not tell who has confirmed in what both players see: both clocks read as running', () => {
+        expect(GameStateMapper.toDTO(withClocks(GamePhase.KEEP, [true, false])).clocks.map(c => c.running)).toEqual([true, true]);
+    });
+
+    it("gives the viewer their own clock as it stands, paused once they confirmed", () => {
+        const own = GameStateMapper.toDTOForViewer(withClocks(GamePhase.KEEP, [true, false]), 0).clocks[0];
+        expect(own).toEqual({ remainingMs: 500_000, reconnectionMs: 120_000, connected: false, running: false });
+
+        const ownRunning = GameStateMapper.toDTOForViewer(withClocks(GamePhase.KEEP, [false, false]), 1).clocks[1];
+        expect(ownRunning).toEqual({ remainingMs: 480_000, reconnectionMs: 180_000, connected: true, running: true });
+    });
+
+    it("shows the opponent's clock as last published, frozen, whatever happens during the phase", () => {
+        const view = (ready: [boolean, boolean]) => GameStateMapper.toDTOForViewer(withClocks(GamePhase.KEEP, ready), 0).clocks[1];
+
+        expect(view([false, false])).toEqual({ remainingMs: 560_000, reconnectionMs: 180_000, connected: true, running: false });
+        expect(view([false, true])).toEqual(view([false, false]));
+    });
+
+    it.each([GamePhase.SELECTION, GamePhase.PLACEMENT])('does the same in %s', (phase) => {
+        const dto = GameStateMapper.toDTOForViewer(withClocks(phase, [false, true]), 1);
+        expect(dto.clocks[0]).toEqual({ remainingMs: 600_000, reconnectionMs: 120_000, connected: false, running: false });
+        expect(dto.clocks[1]).toEqual({ remainingMs: 480_000, reconnectionMs: 180_000, connected: true, running: false });
     });
 });

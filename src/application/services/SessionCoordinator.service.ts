@@ -1,16 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { RoomMapper } from '@application/mappers/RoomMapper';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
-import { PresenceChangedDTO, GameStateUpdatePayload } from '@application/dtos/GameState.dto';
+import { PresenceChangedDTO } from '@application/dtos/GameState.dto';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { UserId, SocketId } from '@shared/branded.types';
 import { PlayerIndex } from '@domain/types/Position.type';
-import { ClaimConfig } from '@domain/types/Claim.type';
 import { resolvePlayerIndex } from '@domain/services/Room.service';
-import { computeAfkClaimInMs } from '@domain/services/Claim.service';
 
 @Injectable()
 export class SessionCoordinatorService {
@@ -18,7 +17,7 @@ export class SessionCoordinatorService {
         @Inject(SESSION_PORT) private readonly sessionPort: SessionPort,
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
-        @Inject(CLAIM_CONFIG) private readonly claimConfig: ClaimConfig,
+        private readonly lifecycle: MatchLifecycleService,
     ) {}
 
     handleConnect(socketId: SocketId, userId: UserId): void {
@@ -36,18 +35,17 @@ export class SessionCoordinatorService {
 
         const playerIndex = resolvePlayerIndex(room, session.sessionId);
         if (room.isStarted && playerIndex !== -1) {
-            room = this.roomPort.setPresence(room.roomId, playerIndex, true, Date.now()) ?? room;
-            const presence: PresenceChangedDTO = { playerIndex: playerIndex as PlayerIndex, connected: true, claimInMs: null };
+            // AWAY-2: the player is back, their reconnection time stops. A match that ended meanwhile has no room left.
+            const reconnectionMs = this.lifecycle.connectionChanged(room.roomId, playerIndex as PlayerIndex, true);
+            if (reconnectionMs === null) return;
+            room = this.roomPort.getRoom(room.roomId) ?? room;
+            const presence: PresenceChangedDTO = { playerIndex: playerIndex as PlayerIndex, connected: true, reconnectionMs };
             this.wsPort.emitToRoom(room.roomId, 'presenceChanged', presence);
         }
 
         this.wsPort.emitToSocket(socketId, 'roomUpdated', RoomMapper.toDTO(room));
         if (room.gameState && playerIndex !== -1) {
-            const snapshot: GameStateUpdatePayload = {
-                ...GameStateMapper.toDTOForViewer(room.gameState, playerIndex as PlayerIndex),
-                afkClaimInMs: computeAfkClaimInMs(room.gameState, room.phaseStartedAt, Date.now(), this.claimConfig.afkLimitMs),
-            };
-            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', snapshot);
+            this.wsPort.emitToSocket(socketId, 'gameStateUpdated', GameStateMapper.toDTOForViewer(room.gameState, playerIndex as PlayerIndex));
         }
     }
 
@@ -59,13 +57,12 @@ export class SessionCoordinatorService {
             if (room?.isStarted) {
                 const playerIndex = resolvePlayerIndex(room, session.sessionId);
                 if (playerIndex !== -1) {
-                    this.roomPort.setPresence(room.roomId, playerIndex, false, Date.now());
-                    const presence: PresenceChangedDTO = {
-                        playerIndex: playerIndex as PlayerIndex,
-                        connected: false,
-                        claimInMs: this.claimConfig.graceMs,
-                    };
-                    this.wsPort.emitToRoom(room.roomId, 'presenceChanged', presence);
+                    // AWAY-2: the player keeps their seat, their reconnection time runs.
+                    const reconnectionMs = this.lifecycle.connectionChanged(room.roomId, playerIndex as PlayerIndex, false);
+                    if (reconnectionMs !== null) {
+                        const presence: PresenceChangedDTO = { playerIndex: playerIndex as PlayerIndex, connected: false, reconnectionMs };
+                        this.wsPort.emitToRoom(room.roomId, 'presenceChanged', presence);
+                    }
                 }
                 this.wsPort.leaveRoom(socketId, session.roomId);
             } else {

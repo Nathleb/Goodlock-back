@@ -4,7 +4,6 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
-import { checkWinner } from "@domain/services/Round.service";
 import { BaseDieInstructions, EffectEntry } from "@domain/types/BaseDieInstructions.type";
 import DieFace from "@domain/types/DieFace.type";
 import { Player } from "@domain/types/Player.type";
@@ -44,7 +43,7 @@ describe('END-1: the match ends as soon as a player loses', () => {
         expect(cell(state, 0, 0)?.hp).toBe(20);
         expect(log).toHaveLength(1);
         expect(log[0].effects).toHaveLength(2);
-        expect(checkWinner(state)).toBe(0);
+        expect(state.winner).toBe(0);
     });
 
     it('does not decide anything while nobody has 2 dead characters', () => {
@@ -54,7 +53,20 @@ describe('END-1: the match ends as soon as a player loses', () => {
 
         expect(state.players[1].fallen).toHaveLength(1);
         expect(log).toHaveLength(10);
-        expect(checkWinner(state)).toBeNull();
+        expect(state.winner).toBeUndefined();
+    });
+});
+
+describe('RES-2, DEAD-1: the killing blow in the log', () => {
+    it('names the character who died, not one who fell before', () => {
+        const p0 = teamOf(0, { 0: face(1, killing(enemyAbs(0))) });
+        const p1 = withFallen(teamOf(1), 1);
+
+        const { log } = run(p0, p1);
+
+        const step = log.find(s => s.characterId === p0.team[0].id)!;
+        expect(step.changes.map(c => c.characterId)).toEqual([p1.team[0].id]);
+        expect(step.changes[0].character.hp).toBe(0);
     });
 });
 
@@ -65,7 +77,7 @@ describe('END-2: deaths are checked after each effect', () => {
 
         const { state } = run(p0, p1);
 
-        expect(checkWinner(state)).toBe(0);
+        expect(state.winner).toBe(0);
     });
 
     it('a player whose own effect gives them their second death loses before the rest of the face applies', () => {
@@ -78,7 +90,7 @@ describe('END-2: deaths are checked after each effect', () => {
 
         const { state } = run(p0, teamOf(1));
 
-        expect(checkWinner(state)).toBe(1);
+        expect(state.winner).toBe(1);
         expect(cell(state, 1, 0)?.hp).toBe(20);
     });
 
@@ -92,7 +104,7 @@ describe('END-2: deaths are checked after each effect', () => {
 
         expect(state.players[0].fallen).toHaveLength(2);
         expect(state.players[1].fallen).toHaveLength(2);
-        expect(checkWinner(state)).toBe(1 - author);
+        expect(state.winner).toBe(1 - author);
     });
 
     it('there is no draw: the winner is a player', () => {
@@ -100,6 +112,6 @@ describe('END-2: deaths are checked after each effect', () => {
 
         const { state } = run(withFallen(teamOf(0, { 0: bothDie }), 1), withFallen(teamOf(1), 1));
 
-        expect([0, 1]).toContain(checkWinner(state));
+        expect([0, 1]).toContain(state.winner);
     });
 });

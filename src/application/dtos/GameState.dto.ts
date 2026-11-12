@@ -1,6 +1,7 @@
 import { CatalogCharacterDTO } from './Catalog.dto';
 import { DieFaceDTO } from './DieFace.dto';
 import { PlayerIndex } from '@domain/types/Position.type';
+import { EndReason } from '@domain/types/GameState.type';
 
 type StatInstanceDTO = { stat: string; value: number; roundsLeft: number };
 
@@ -53,12 +54,26 @@ export type ResolveStepDTO = {
     changes: ResolveChangeDTO[];
 };
 
+/**
+ * The time of a player. A client counts down only its own clock, from the moment it receives the state,
+ * while `running` is true. The opponent's `remainingMs` is the value published at the end of the last
+ * decision phase: it changes only when the next phase ends, never during one (GAME-7, GAME-9).
+ */
+export type PlayerClockDTO = {
+    remainingMs: number;
+    reconnectionMs: number;
+    running: boolean;
+    connected: boolean;
+};
+
 export type GameStateDTO = {
     phase: string;
     currentRound: number;
     /** Player index that wins exact ties in the resolution order this round. Public in every phase. */
     initiativePlayerIndex: PlayerIndex;
     rollsLeft: number;
+    /** Public in every phase (GAME-7). `running` never tells whether the opponent has confirmed (GAME-9). */
+    clocks: [PlayerClockDTO, PlayerClockDTO];
     /**
      * Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's
      * (GAME-9), and absent from what is sent to both players.
@@ -74,19 +89,14 @@ type SelectionViewDTO = {
     myPicks: string[] | null;
 };
 
-export type GameStateUpdatePayload = GameStateDTO & {
-    /** Remaining ms until an AFK claim becomes valid against the non-ready player; null when not applicable. Computed server-side at emit time. */
-    afkClaimInMs: number | null;
-};
-
 export type PresenceChangedDTO = {
     playerIndex: 0 | 1;
     connected: boolean;
-    /** Remaining ms until a forfeit claim becomes valid; null when connected. */
-    claimInMs: number | null;
+    /** Reconnection time the player has left (AWAY-2). */
+    reconnectionMs: number;
 };
 
 export type GameOverDTO = {
-    winner: 0 | 1;
-    reason: 'elimination' | 'forfeit' | 'afk' | 'concede';
+    winner: 0 | 1 | 'draw';
+    reason: EndReason;
 };

@@ -1,6 +1,8 @@
 import { P0, P1, asRoom, asSession } from './helpers/ids';
+import { createClocks } from '@domain/services/Clock.service';
 import { Test } from '@nestjs/testing';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
@@ -20,7 +22,7 @@ const ROOM: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1],
 const OLD_ROOM: Room = { roomId: asRoom('old-room'), ownerId: P0, playersId: [P0], isStarted: false };
 
 const mockSession = { getSession: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
-const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setDeckSelection: jest.fn() };
+const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setDeckSelection: jest.fn(), closeRoom: jest.fn() };
 const mockDecks = { getOwnDeckCharacterIds: jest.fn() };
 const mockWs = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn() };
 
@@ -35,6 +37,8 @@ beforeEach(async () => {
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: DeckCoordinatorService, useValue: mockDecks },
+            { provide: MATCH_TIMER_PORT, useValue: { schedule: jest.fn(), cancel: jest.fn() } },
+            MatchLifecycleService,
         ],
     }).compile();
     coordinator = module.get(RoomCoordinatorService);
@@ -217,7 +221,7 @@ describe('guards and edges', () => {
 
     const STARTED: Room = {
         ...ROOM, isStarted: true, playerOrder: [P0, P1],
-        gameState: { phase: GamePhase.KEEP, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] },
+        gameState: { phase: GamePhase.KEEP, currentRound: 1, initiativePlayerIndex: 0, rollsLeft: 2, playersReady: [false, false], priorityQueue: [], clocks: createClocks(), clockUpdatedAt: Date.now(), players: [{ playerIndex: 0, team: [] }, { playerIndex: 1, team: [] }] },
     };
 
     it('a socket without a session gets no answer at all, not even an error', () => {

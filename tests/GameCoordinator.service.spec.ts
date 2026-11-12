@@ -5,7 +5,8 @@ import { Logger } from '@nestjs/common';
 import { unwrap } from './helpers/result';
 import { ok, err } from '@shared/result.type';
 import { domainError } from '@domain/errors/DomainError';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CLAIM_CONFIG } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
 import { Room } from '@domain/types/Room.type';
@@ -74,7 +75,8 @@ const singlePlayerRoom: Room = { ...lobbyRoom, playersId: [P0] };
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockSession = { getSession: jest.fn(), getSessionById: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
-const mockRoom    = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), setPresence: jest.fn(), listOpenRooms: jest.fn() };
+const mockRoom    = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), closeRoom: jest.fn(), listOpenRooms: jest.fn() };
+const mockTimer   = { schedule: jest.fn(), cancel: jest.fn() };
 const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
 let coordinator: GameCoordinatorService;
@@ -90,7 +92,8 @@ beforeEach(async () => {
             { provide: ROOM_PORT, useValue: mockRoom },
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: CATALOG_PORT, useValue: catalog },
-            { provide: CLAIM_CONFIG, useValue: { graceMs: 60_000, afkLimitMs: 120_000 } },
+            { provide: MATCH_TIMER_PORT, useValue: mockTimer },
+            MatchLifecycleService,
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);
@@ -230,7 +233,7 @@ describe('SEL-2, GAME-7: team selection', () => {
     const fresh = () => createSelectionState([
         DECK_P0.map(id => catalog.get(id)!),
         DECK_P1.map(id => catalog.get(id)!),
-    ]);
+    ], Date.now());
     const lastState = (): GameState => mockRoom.updateGameState.mock.calls.at(-1)[1];
     const sentTo = (socket: string) => mockWs.emitToSocket.mock.calls.filter(c => c[0] === socket && c[1] === 'gameStateUpdated').map(c => c[2]);
 
@@ -558,15 +561,14 @@ describe('confirmKeep', () => {
             expect(lastEmittedState().phase).toBe(GamePhase.RESULT);
         });
 
-        it('saves the post-upkeep state when the poison ends the match, for a client that reconnects', () => {
+        it('ROOM-6: closes the room when the poison ends the match, after the board it left was sent', () => {
             const doomed = edit(fall(keepGs, 0, 0), 0, 0, { hp: 5, states: poisoned });
             mockRoom.getRoom.mockReturnValue(makeRoom(resolving(doomed)));
 
             coordinator.confirmKeep(SOCKET_0, []);
 
-            const saved = mockRoom.updateGameState.mock.calls[mockRoom.updateGameState.mock.calls.length - 1][1];
-            expect(saved.phase).toBe(GamePhase.RESULT);
-            expect(saved.players[0].fallen).toHaveLength(2);
+            expect(lastEmittedState().players[0].fallen).toHaveLength(2);
+            expect(mockRoom.closeRoom).toHaveBeenCalledWith('room-1');
         });
 
         it('END-2: there is no draw when the poison kills both players second characters: the first one hurt, in the order of the resolution, loses', () => {
@@ -727,7 +729,7 @@ describe('startGame guards', () => {
 
 describe('confirmSelection guards', () => {
     it('refuses ids that are not strings, saying what it expects', () => {
-        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)])), playerOrder: [P0, P1] });
+        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], Date.now())), playerOrder: [P0, P1] });
         coordinator.confirmSelection(SOCKET_0, ['c0', 'c1', 'c2', 3] as unknown as string[]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'characterIds must be an array of catalog ids' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
@@ -736,7 +738,7 @@ describe('confirmSelection guards', () => {
     it('seats the PLACEMENT views by playerOrder, not by playersId', () => {
         const PICK_P0 = ['c5', 'c0', 'c1', 'c2'] as CatalogId[];
         const PICK_P1 = ['c9', 'c8', 'c7', 'c6'] as CatalogId[];
-        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)]);
+        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], Date.now());
         const p1Picked = unwrap(confirmSelection(fresh, 1, PICK_P1, t => createCharacterFromTemplate(t)));
         // playersId lists the seats the other way round: only playerOrder says who holds seat 0.
         mockRoom.getRoom.mockReturnValue({ ...makeRoom(p1Picked), playersId: [P1, P0], playerOrder: [P0, P1] });
@@ -753,9 +755,15 @@ describe('confirmSelection guards', () => {
 describe('a round that ends the match', () => {
     beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 0 })))));
 
-    it('saves the final board before announcing the winner', () => {
+    it('ROOM-6: closes the room once the winner is announced', () => {
+        const order: string[] = [];
+        mockWs.emitToRoom.mockImplementation((_room: string, event: string) => order.push(event));
+        mockRoom.closeRoom.mockImplementation(() => { order.push('closeRoom'); });
+
         coordinator.confirmKeep(SOCKET_0, []);
-        expect(mockRoom.updateGameState).toHaveBeenCalledTimes(1);
+
+        expect(order).toEqual(['roundResolved', 'gameOver', 'closeRoom']);
+        expect(mockRoom.closeRoom).toHaveBeenCalledWith('room-1');
     });
 
     it('starts no next round', () => {

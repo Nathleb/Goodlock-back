@@ -11,6 +11,7 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
 import { roll1D } from "../utils/Random.utils";
+import { addIncrement, createClocks, publishClocks } from "./Clock.service";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
 
@@ -26,8 +27,9 @@ function unmarkPlayerReady(gs: GameState, playerIndex: PlayerIndex): GameState {
     return { ...gs, playersReady: ready };
 }
 
+/** A decision phase ends: nobody is confirmed any more, and the clocks are published (GAME-7). */
 function resetReady(gs: GameState): GameState {
-    return { ...gs, playersReady: [false, false] };
+    return publishClocks({ ...gs, playersReady: [false, false] });
 }
 
 function areBothReady(gs: GameState): boolean {
@@ -42,8 +44,11 @@ function rerollBothPlayers(gs: GameState): GameState {
     return { ...gs, players };
 }
 
-export function createSelectionState(decks: readonly [readonly CharacterTemplate[], readonly CharacterTemplate[]]): GameState {
+/** SEL-1: the initiative token is drawn and both clocks start. */
+export function createSelectionState(decks: readonly [readonly CharacterTemplate[], readonly CharacterTemplate[]], now: number): GameState {
     return {
+        clocks: createClocks(),
+        clockUpdatedAt: now,
         phase: GamePhase.SELECTION,
         currentRound: 0,
         initiativePlayerIndex: roll1D(2) as PlayerIndex,
@@ -134,8 +139,10 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): Result<Gam
     return checkPhase(gs, GamePhase.KEEP)
         .andThen(g => checkNotReady(g, playerIndex))
         .map(g => {
-            const updated = markPlayerReady(g, playerIndex);
-            if (!areBothReady(updated)) return updated;
+            const marked = markPlayerReady(g, playerIndex);
+            if (!areBothReady(marked)) return marked;
+            // KEEP-4: each player gains the increment when both have confirmed.
+            const updated = addIncrement(marked);
 
             if (updated.rollsLeft === 0) {
                 return resetReady(beginResolvePhase(updated));

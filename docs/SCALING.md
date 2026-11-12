@@ -8,12 +8,11 @@ the input for the roadmap's open decision on scaling (Phase 4); nothing here is 
 
 | Concern | Where | Survives a second instance? |
 |---|---|---|
-| Rooms, live game state, presence, deck snapshots | `RoomManager` (in-memory `Map`) | **No** — each process has its own rooms |
+| Rooms, live game state (clocks and connection included), deck snapshots | `RoomManager` (in-memory `Map`) | **No** — each process has its own rooms |
 | Sessions (sessionId ↔ socketId, reconnect) | `SessionManager` (in-memory `Map`) | **No** |
 | Socket.io rooms and `emitToRoom` | Socket.io default in-memory adapter | **No** — only reaches sockets on the same process |
 | Rate limiting | `ThrottlerModule` default in-memory storage | Per instance only (limits multiply by N) |
-| Abandoned-room janitor | `setInterval` in `RoomManager` | Per instance (fine while rooms are per instance) |
-| AFK / forfeit claims | Evaluated lazily from timestamps at claim time | Yes — no timers to coordinate |
+| Match clocks and time-outs | One `setTimeout` per room in `NodeMatchTimer`, rescheduled by `MatchLifecycleService` after each action | **No** — the timer lives on the instance that holds the room; a shared store would need a shared scheduler |
 | Auth (users, refresh tokens) | Postgres via Prisma; stateless JWT | Yes |
 | Collection, decks | Postgres | Yes |
 | Character catalog | Loaded from `tmplt/` at boot, read-only | Yes — every instance loads the same build |

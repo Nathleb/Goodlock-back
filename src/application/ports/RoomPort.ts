@@ -11,7 +11,8 @@ export interface RoomPort {
     getRoom(roomId: RoomId): Room | undefined;
     startGame(roomId: RoomId, gameState: GameState): Result<Room, DomainError>;
     updateGameState(roomId: RoomId, gameState: GameState): void;
+    /** Removes a room and the seats of its players (ROOM-6). Returns the room as it was. */
+    closeRoom(roomId: RoomId): Room | undefined;
     listOpenRooms(): Room[];
     setDeckSelection(roomId: RoomId, playerId: SessionId, characterIds: readonly CatalogId[]): Result<Room, DomainError>;
-    setPresence(roomId: RoomId, playerIndex: number, connected: boolean, now: number): Room | undefined;
 }

@@ -3,10 +3,9 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel } from "./helpers/targets";
 import { SlotIndex } from "@domain/types/Position.type";
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks, setPresenceInRoom } from "@domain/services/Room.service";
+import { createRoom, addPlayerToRoom, removePlayerFromRoom, isRoomReady, startRoom, selectDeckInRoom, selectedDecks, hasFreeSeat } from "@domain/services/Room.service";
 import { unwrap, unwrapErr } from "./helpers/result";
 import { CatalogId } from "@shared/branded.types";
-import { Room } from "@domain/types/Room.type";
 import { createGameState } from "./helpers/gameState";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createPlayer } from "@domain/services/Player.service";
@@ -124,6 +123,21 @@ describe('ROOM-3: deck selection in the lobby', () => {
     });
 });
 
+describe('ROOM-1, ROOM-2: a room seats 2 players', () => {
+    it('has a free seat with 0 or 1 player and none with 2', () => {
+        const one = createRoom(P0);
+        expect(hasFreeSeat(one)).toBe(true);
+        expect(hasFreeSeat(unwrap(addPlayerToRoom(one, P1)))).toBe(false);
+        expect(hasFreeSeat({ ...one, playersId: [] })).toBe(true);
+    });
+
+    it('hands the room to the other player when the owner leaves, and keeps its owner when someone else leaves', () => {
+        const full = unwrap(addPlayerToRoom(createRoom(P0), P1));
+        expect(removePlayerFromRoom(full, P1)?.ownerId).toBe(P0);
+        expect(removePlayerFromRoom(full, P0)?.ownerId).toBe(P1);
+    });
+});
+
 describe('lobby edge cases', () => {
     const DECK = ['a', 'b', 'c', 'd', 'e', 'f'] as CatalogId[];
 
@@ -142,11 +156,5 @@ describe('lobby edge cases', () => {
         const lobby = unwrap(addPlayerToRoom(createRoom(P0), P1));
         expect(unwrapErr(selectDeckInRoom({ ...lobby, isStarted: true }, P0, DECK)).message).toBe('Game already started');
         expect(unwrapErr(selectDeckInRoom(lobby, asSession('stranger'), DECK)).message).toBe('Player is not in this room');
-    });
-
-    it('setPresenceInRoom updates the seat it is given, seat 0 included', () => {
-        const started = { ...unwrap(addPlayerToRoom(createRoom(P0), P1)), presence: [{ connected: true, disconnectedAt: null }, { connected: true, disconnectedAt: null }] as Room['presence'] };
-        expect(setPresenceInRoom(started, 0, false, 42).presence).toEqual([{ connected: false, disconnectedAt: 42 }, { connected: true, disconnectedAt: null }]);
-        expect(setPresenceInRoom(started, 2, false, 42)).toBe(started);
     });
 });

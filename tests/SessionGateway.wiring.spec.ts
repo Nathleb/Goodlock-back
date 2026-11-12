@@ -14,7 +14,7 @@ import { SESSION_PORT } from '@application/ports/tokens';
 // the JWT check of handleConnection are only exercised through a real connection.
 const session = { handleConnect: jest.fn(), handleDisconnect: jest.fn() };
 const room = { createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn() };
-const game = { startGame: jest.fn(), confirmPlacement: jest.fn(), claimVictory: jest.fn(), cancelPlacement: jest.fn(), cancelKeep: jest.fn() };
+const game = { startGame: jest.fn(), confirmPlacement: jest.fn(), concede: jest.fn(), cancelPlacement: jest.fn(), cancelKeep: jest.fn() };
 const jwt = {
     verify: (token: string) => {
         if (token !== 'valid-token') throw new Error('invalid signature');
@@ -110,7 +110,7 @@ describe('SessionGateway — event wiring', () => {
         ['quitRoom', room.quitRoom, undefined, []],
         ['startGame', game.startGame, undefined, []],
         ['confirmPlacement', game.confirmPlacement, undefined, []],
-        ['claimVictory', game.claimVictory, undefined, []],
+        ['concede', game.concede, undefined, []],
         ['cancelPlacement', game.cancelPlacement, undefined, []],
         ['cancelKeep', game.cancelKeep, undefined, []],
     ];

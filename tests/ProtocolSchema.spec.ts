@@ -33,9 +33,10 @@ describe('protocol schema', () => {
     });
 
     it('keeps null in nullable fields, whatever the app tsconfig says about strict null checks', () => {
-        const afk = definitions.GameStateUpdatePayload.properties.afkClaimInMs;
+        const selection = definitions.GameStateDTO.properties?.selection as SchemaDefinition;
+        const picks = selection.properties?.myPicks;
 
-        expect(JSON.stringify(afk)).toContain('"null"');
+        expect(JSON.stringify(picks)).toContain('"null"');
     });
 
     it('requires the error code the client branches on', () => {
