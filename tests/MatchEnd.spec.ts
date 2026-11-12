@@ -29,7 +29,7 @@ const killing = (...targets: ReturnType<typeof enemyAbs>[]): EffectEntry[] =>
     targets.map(t => ({ effect: EffectLabel.Damage, magnitude: 99, targets: [t] }));
 const cell = (s: GameState, pi: PlayerIndex, slot: number) => s.players[pi].team.find(c => c.position.slot === slot);
 
-describe('END-1: the match ends as soon as a player loses', () => {
+describe('END-1, RES-4: the match ends as soon as a player loses', () => {
     it('stops the resolution at the effect that gives the second death: the rest of the face and of the round is not played', () => {
         const killer = face(1, killing(enemyAbs(0), enemyAbs(1), enemyAbs(2)));
         const late = face(0, [{ effect: EffectLabel.Damage, magnitude: 9, targets: [enemyAbs(0)] }]);

@@ -485,7 +485,7 @@ describe('confirmKeep', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
     });
 
-    it('resolves the round when both confirm with rollsLeft = 0: roundResolved then next-round gameStateUpdated', () => {
+    it('EOR-3: resolves the round when both confirm with rollsLeft = 0: roundResolved then next-round gameStateUpdated', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.objectContaining({ resolveLog: expect.any(Array) }));

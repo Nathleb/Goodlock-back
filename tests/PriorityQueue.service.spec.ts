@@ -821,7 +821,7 @@ describe('PriorityQueueService', () => {
       expect(speed).toBe(1);
     });
 
-    it('a relative attack hits the enemy facing the actor', () => {
+    it('BOARD-1: a relative attack hits the enemy facing the actor', () => {
       const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
       const { state } = run(teamOf(0, { 2: hit }), teamOf(1));
       expect(hp(state, 1, 2)).toBe(15);
@@ -847,7 +847,7 @@ describe('PriorityQueueService', () => {
       expect(step).toMatchObject({ skipped: false, effects: [{ effect: EffectLabel.Damage, targets: [] }], changes: [] });
     });
 
-    it('relative cells follow an actor moved earlier in the round', () => {
+    it('SEQ-1: relative cells follow an actor moved earlier in the round', () => {
       // Fast ally at slot 0 swaps itself with the slow attacker at slot 2 → attacker now at slot 0.
       const moveAttacker = face(1, [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyAbs(0, 2)] }]);
       const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
@@ -867,7 +867,7 @@ describe('PriorityQueueService', () => {
       expect(hp(state, 1, 2)).toBe(15);
     });
 
-    it('effects of one face resolve in order: a self-move shifts the next effect', () => {
+    it('SEQ-1: effects of one face resolve in order: a self-move shifts the next effect', () => {
       const moveThenHit = face(0, [
         { effect: EffectLabel.Swap, magnitude: 0, targets: [allyRel(0), allyAbs(4)] },
         { effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] },

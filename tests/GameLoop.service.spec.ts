@@ -134,7 +134,7 @@ describe('confirmKeep', () => {
         expect(result.rollsLeft).toBe(1);
     });
 
-    it('ROLL-4: with every die kept, both Keeps still lead to another Roll, and Resolve only follows the third Roll', () => {
+    it('GAME-5, ROLL-4: with every die kept, both Keeps still lead to another Roll, and Resolve only follows the third Roll', () => {
         const inKeep = lockAllPlayers(beginKeepPhase(gs)); // first Roll done, rollsLeft: 2, every die kept
         const afterFirstKeep = unwrap(confirmKeep(unwrap(confirmKeep(inKeep, 0)), 1));
         expect(afterFirstKeep.phase).toBe(GamePhase.KEEP);
