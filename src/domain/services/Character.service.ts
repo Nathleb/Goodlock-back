@@ -17,7 +17,8 @@ function canRollDie(character: Character): boolean {
 }
 
 export function rollForTurn(character: Character): Character {
-    return canRollDie(character) ? rollDie(character) : character;
+    const rolled = canRollDie(character) ? rollDie(character) : character;
+    return updateCharacter(rolled, { keptAtLastRoll: character.isFaceLocked });
 }
 
 export function gainShield(character: Character, amount: number): Character {

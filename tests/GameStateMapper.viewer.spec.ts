@@ -1,6 +1,7 @@
 import { asCharacter } from './helpers/ids';
 import { TEST_CATALOG_ID, testTemplate } from './helpers/catalog';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
+import { GameStateDTO } from '@application/dtos/GameState.dto';
 import GameState, { SelectionState } from '@domain/types/GameState.type';
 import { createSelectionState } from '@domain/services/GameLoop.service';
 import { CatalogId } from '@shared/branded.types';
@@ -16,10 +17,10 @@ import { enemyRel } from './helpers/targets';
 
 const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 
-function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean): Character {
+function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean, keptAtLastRoll = false): Character {
     return {
         id: asCharacter(id), catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [], states: {},
-        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked,
+        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked, keptAtLastRoll,
         position: { playerIndex, slot: slot as SlotIndex },
     };
 }
@@ -38,19 +39,44 @@ describe('toDTOForViewer', () => {
         expect(dto.players.every(p => p.team.every(c => !('target' in c)))).toBe(true);
     });
 
-    it('masks opponent locks during KEEP when the opponent already confirmed', () => {
-        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [false, true]), 0);
-        expect(dto.players[1].team.every(c => c.isFaceLocked === false)).toBe(true);
+    // In each team, the first die is kept for the next Roll and the second was kept at the last Roll.
+    const keptDice = (phase: GamePhase, playersReady: [boolean, boolean]): GameState => {
+        const team = (pi: PlayerIndex): Player => ({
+            playerIndex: pi,
+            team: [char(`c${pi}0`, pi, 0, true, false), char(`c${pi}1`, pi, 1, false, true)],
+        });
+        return { ...gs(phase, playersReady), players: [team(0), team(1)] };
+    };
+    const kept = (dto: GameStateDTO, pi: PlayerIndex) => dto.players[pi].team.map(c => c.isFaceLocked);
+
+    it.each([['has not confirmed', [false, false]], ['has confirmed', [false, true]]] as [string, [boolean, boolean]][])(
+        'GAME-9, ROLL-2: during KEEP, shows the opponent\'s dice kept at the last Roll, not their choice in this Keep (opponent %s)',
+        (_label, ready) => {
+            const dto = GameStateMapper.toDTOForViewer(keptDice(GamePhase.KEEP, ready), 0);
+            expect(kept(dto, 1)).toEqual([false, true]);
+        },
+    );
+
+    it('GAME-9: during KEEP, the viewer gets the same state whether the opponent has confirmed or not', () => {
+        const waiting = GameStateMapper.toDTOForViewer(keptDice(GamePhase.KEEP, [false, false]), 0);
+        const opponentConfirmed = GameStateMapper.toDTOForViewer(keptDice(GamePhase.KEEP, [false, true]), 0);
+        expect(opponentConfirmed).toEqual(waiting);
     });
 
-    it('shows opponent locks again once KEEP is over, even with the opponent still flagged ready', () => {
-        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.RESOLVE, [false, true]), 0);
-        expect(dto.players[1].team[0].isFaceLocked).toBe(true);
+    it('KEEP-1: during KEEP, the viewer sees their own dice as they last confirmed them', () => {
+        const dto = GameStateMapper.toDTOForViewer(keptDice(GamePhase.KEEP, [true, false]), 0);
+        expect(kept(dto, 0)).toEqual([true, false]);
     });
 
-    it('keeps opponent locks during KEEP when the opponent has not confirmed', () => {
-        const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [false, false]), 0);
-        expect(dto.players[1].team[0].isFaceLocked).toBe(true);
+    it('ROLL-2: once KEEP is over, shows the opponent\'s dice kept at the last Roll', () => {
+        const dto = GameStateMapper.toDTOForViewer(keptDice(GamePhase.RESOLVE, [false, false]), 0);
+        expect(kept(dto, 1)).toEqual([false, true]);
+    });
+
+    it('ROLL-2, GAME-9: the room-wide DTO shows the dice kept at the last Roll, never a choice in a Keep', () => {
+        const dto = GameStateMapper.toDTO(keptDice(GamePhase.KEEP, [true, true]));
+        expect(kept(dto, 0)).toEqual([false, true]);
+        expect(kept(dto, 1)).toEqual([false, true]);
     });
 
     it('GAME-7: hides the opponent team entirely during PLACEMENT (picks stay secret until combat)', () => {
@@ -74,6 +100,33 @@ describe('toDTOForViewer', () => {
     it('masks player 0 when the viewer is player 1', () => {
         const dto = GameStateMapper.toDTOForViewer(gs(GamePhase.KEEP, [true, false]), 1);
         expect(dto.players[0].team.every(c => c.isFaceLocked === false)).toBe(true);
+    });
+});
+
+describe('GAME-9: no ready indicator', () => {
+    const confirmPhases = [GamePhase.SELECTION, GamePhase.PLACEMENT, GamePhase.KEEP];
+
+    it.each(confirmPhases)('GAME-9: in %s, each viewer learns only their own confirmation', (phase) => {
+        const state = gs(phase, [false, true]);
+        const forViewer0 = GameStateMapper.toDTOForViewer(state, 0);
+        const forViewer1 = GameStateMapper.toDTOForViewer(state, 1);
+
+        expect(forViewer0.myReady).toBe(false);
+        expect(forViewer1.myReady).toBe(true);
+        expect(forViewer0).not.toHaveProperty('playersReady');
+        expect(forViewer1).not.toHaveProperty('playersReady');
+    });
+
+    it('GAME-9: the placement echo carries only the viewer\'s own confirmation', () => {
+        const dto = GameStateMapper.toDTOForPlacement(gs(GamePhase.PLACEMENT, [true, false]), 0);
+        expect(dto.myReady).toBe(true);
+        expect(dto).not.toHaveProperty('playersReady');
+    });
+
+    it('GAME-9: the room-wide DTO tells nobody who confirmed', () => {
+        const dto = GameStateMapper.toDTO(gs(GamePhase.KEEP, [true, false]));
+        expect(dto).not.toHaveProperty('playersReady');
+        expect(dto).not.toHaveProperty('myReady');
     });
 });
 
