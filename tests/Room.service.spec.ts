@@ -158,3 +158,13 @@ describe('lobby edge cases', () => {
         expect(unwrapErr(selectDeckInRoom(lobby, asSession('stranger'), DECK)).message).toBe('Player is not in this room');
     });
 });
+
+describe('CHAR-2, ROOM-3: both players may choose the same deck', () => {
+    it('stores the same deck for both players and starts with it', () => {
+        const sameDeck = ['a', 'b', 'c', 'd', 'e', 'f'] as CatalogId[];
+        const lobby = unwrap(addPlayerToRoom(createRoom(P0), P1));
+        const chosen = unwrap(selectDeckInRoom(unwrap(selectDeckInRoom(lobby, P0, sameDeck)), P1, sameDeck));
+
+        expect(unwrap(selectedDecks(chosen))).toEqual([sameDeck, sameDeck]);
+    });
+});
