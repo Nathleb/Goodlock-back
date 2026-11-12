@@ -35,8 +35,8 @@ type GameState = {
     readonly playersReady: readonly [boolean, boolean];
     readonly priorityQueue: PriorityQueue;
     readonly players: readonly [Player, Player];
-    /** The winner, once a player has lost (END-1). Absent while the match goes on. */
-    readonly winner?: PlayerIndex;
+    /** The winner, once a player has lost (END-1); 'draw' when both lose on time at the same instant. Absent while the match goes on. */
+    readonly winner?: PlayerIndex | 'draw';
     /** Why the match ended; set with `winner`. */
     readonly endReason?: EndReason;
     /** Indexed by player. Settled by `settleClocks` up to `clockUpdatedAt`. */

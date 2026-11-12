@@ -97,6 +97,6 @@ export type PresenceChangedDTO = {
 };
 
 export type GameOverDTO = {
-    winner: 0 | 1;
+    winner: 0 | 1 | 'draw';
     reason: EndReason;
 };

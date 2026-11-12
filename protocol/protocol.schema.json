@@ -554,10 +554,14 @@
       "type": "object",
       "properties": {
         "winner": {
-          "type": "number",
+          "type": [
+            "number",
+            "string"
+          ],
           "enum": [
             0,
-            1
+            1,
+            "draw"
           ]
         },
         "reason": {

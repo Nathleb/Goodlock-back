@@ -68,6 +68,15 @@ describe('CLOCK-3, AWAY-3, END-3: a player who runs out of time loses at once', 
         expect(mockWs.emitToRoom).toHaveBeenCalledWith(ROOM_ID, 'gameOver', { winner: 0, reason: 'reconnection' });
     });
 
+    it('END-3: announces a draw when both players run out of time together', () => {
+        mockRoom.getRoom.mockReturnValue(roomOf(keepGs()));
+        jest.setSystemTime(T0 + 600_000);
+
+        lifecycle.expire(ROOM_ID);
+
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith(ROOM_ID, 'gameOver', { winner: 'draw', reason: 'clock' });
+    });
+
     it('expire ends the match when the moment has come, and says why', () => {
         const gs = { ...keepGs(), clocks: [createClocks()[0], { ...createClocks()[1], remainingMs: 4000 }] as GameState['clocks'] };
         mockRoom.getRoom.mockReturnValue(roomOf(gs));
@@ -210,14 +219,15 @@ describe('CLOCK-3: schedule', () => {
     });
 
     it('the wake-up ends the match', () => {
-        mockRoom.getRoom.mockReturnValue(roomOf(keepGs()));
+        // Player 0 has confirmed: only player 1's clock runs out.
+        mockRoom.getRoom.mockReturnValue(roomOf({ ...keepGs(), playersReady: [true, false] }));
         lifecycle.schedule(ROOM_ID);
         const onExpire: () => void = mockTimer.schedule.mock.calls[0][2];
         jest.setSystemTime(T0 + 600_000);
 
         onExpire();
 
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith(ROOM_ID, 'gameOver', { winner: 1, reason: 'clock' });
+        expect(mockWs.emitToRoom).toHaveBeenCalledWith(ROOM_ID, 'gameOver', { winner: 0, reason: 'clock' });
     });
 
     it('cancels the timer when nothing runs', () => {

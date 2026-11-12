@@ -141,9 +141,8 @@ describe('CLOCK-3, AWAY-3: a player whose clock or reconnection time reaches 0 l
         expect(nextExpiry(gs)).toEqual({ at: T0 + 180_000, loser: 1, reason: 'reconnection' });
     });
 
-    it('goes to player 0 when both reach 0 at the same moment', () => {
-        const gs = at(GamePhase.KEEP);
-        expect(nextExpiry(gs)?.loser).toBe(0);
+    it('END-1: both clocks reaching 0 at the same moment make both players lose', () => {
+        expect(nextExpiry(at(GamePhase.KEEP))).toEqual({ at: T0 + 600_000, loser: 'both', reason: 'clock' });
     });
 
     it('has no expiry once the match is decided, even for a player who is away', () => {
@@ -174,7 +173,8 @@ describe('CLOCK-3, AWAY-3: a player whose clock or reconnection time reaches 0 l
     });
 
     it('decides at the very moment', () => {
-        expect(expireClocks(at(GamePhase.KEEP), T0 + 600_000).winner).toBe(1);
+        // Player 0 has confirmed: only player 1's clock runs out.
+        expect(expireClocks(at(GamePhase.KEEP, [true, false]), T0 + 600_000).winner).toBe(0);
     });
 
     it('does not change a decided match', () => {
@@ -238,5 +238,48 @@ describe('KEEP-4: each player gains the increment when both have confirmed a Kee
 
     it('does not touch the reconnection time', () => {
         expect(addIncrement(at(GamePhase.KEEP)).clocks.map(c => c.reconnectionMs)).toEqual([180_000, 180_000]);
+    });
+});
+
+describe('END-1, END-3: a simultaneous loss on time is a draw', () => {
+    const drawOf = (gs: GameState, now: number) => expireClocks(gs, now);
+
+    it('both clocks run out at the same instant: nobody wins, the match says clock', () => {
+        const ended = drawOf(at(GamePhase.KEEP), T0 + 600_000);
+        expect(ended.winner).toBe('draw');
+        expect(ended.endReason).toBe('clock');
+        expect(ended.clocks.map(c => c.remainingMs)).toEqual([0, 0]);
+    });
+
+    it('both reconnection times run out at the same instant: a draw, by reconnection time', () => {
+        const away = setConnected(setConnected(at(GamePhase.ROLL), 0, false, T0), 1, false, T0);
+        const ended = drawOf(away, T0 + 180_000);
+        expect(ended.winner).toBe('draw');
+        expect(ended.endReason).toBe('reconnection');
+    });
+
+    it('one player runs out of clock when the other runs out of reconnection time: a draw', () => {
+        const [c0, c1] = createClocks();
+        const base: GameState = { ...at(GamePhase.KEEP, [false, true]), clocks: [{ ...c0, remainingMs: 180_000 }, c1] };
+        const ended = drawOf(setConnected(base, 1, false, T0), T0 + 180_000);
+        expect(ended.winner).toBe('draw');
+        expect(ended.endReason).toBe('clock');
+    });
+
+    it('is not a draw when one runs out a moment before the other', () => {
+        const [c0, c1] = createClocks();
+        const gs: GameState = { ...at(GamePhase.KEEP), clocks: [{ ...c0, remainingMs: 1000 }, { ...c1, remainingMs: 1001 }] };
+        expect(drawOf(gs, T0 + 5 * SECOND).winner).toBe(1);
+    });
+
+    it('END-3: a player whose clock and reconnection time run out at the same instant loses on clock', () => {
+        const [c0, c1] = createClocks();
+        const base: GameState = { ...at(GamePhase.KEEP), clocks: [{ ...c0, remainingMs: 180_000 }, { ...c1, remainingMs: 590_000 }] };
+        const away = setConnected(base, 0, false, T0);
+
+        expect(nextExpiry(away)).toEqual({ at: T0 + 180_000, loser: 0, reason: 'clock' });
+        const ended = drawOf(away, T0 + 180_000);
+        expect(ended.winner).toBe(1);
+        expect(ended.endReason).toBe('clock');
     });
 });

@@ -61,7 +61,8 @@ export function addIncrement(gs: GameState): GameState {
 
 export type Expiry = {
     readonly at: number;
-    readonly loser: PlayerIndex;
+    /** 'both' when both players run out of time at the same instant (END-1: a draw). */
+    readonly loser: PlayerIndex | 'both';
     readonly reason: 'clock' | 'reconnection';
 };
 
@@ -74,14 +75,20 @@ export function nextExpiry(gs: GameState): Expiry | null {
         if (isClockRunning(gs, loser)) candidates.push({ at: gs.clockUpdatedAt + clock.remainingMs, loser, reason: 'clock' });
         if (!clock.connected) candidates.push({ at: gs.clockUpdatedAt + clock.reconnectionMs, loser, reason: 'reconnection' });
     });
-    // Same moment: player 0 comes first in the list, and the sort is stable.
-    return candidates.sort((a, b) => a.at - b.at)[0] ?? null;
+    const earliest = candidates.sort((a, b) => a.at - b.at)[0];
+    if (!earliest) return null;
+    const atThatMoment = candidates.filter(c => c.at === earliest.at);
+    // END-3: a player whose clock and reconnection time run out together loses on clock.
+    const reason = atThatMoment.some(c => c.reason === 'clock') ? 'clock' : 'reconnection';
+    const bothLose = new Set(atThatMoment.map(c => c.loser)).size === 2;
+    return { at: earliest.at, loser: bothLose ? 'both' : earliest.loser, reason };
 }
 
-/** CLOCK-3, AWAY-3: the player whose clock or reconnection time has reached 0 by `now` loses at once. */
+/** CLOCK-3, AWAY-3, END-1: the player whose clock or reconnection time has reached 0 by `now` loses at once; both at the same instant is a draw. */
 export function expireClocks(gs: GameState, now: number): GameState {
     const expiry = nextExpiry(gs);
     if (!expiry || expiry.at > now) return gs;
     const settled = settleClocks(gs, expiry.at);
-    return { ...settled, winner: (1 - expiry.loser) as PlayerIndex, endReason: expiry.reason };
+    const winner = expiry.loser === 'both' ? 'draw' : ((1 - expiry.loser) as PlayerIndex);
+    return { ...settled, winner, endReason: expiry.reason };
 }
