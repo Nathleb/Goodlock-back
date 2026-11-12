@@ -316,7 +316,7 @@ describe('DEAD-1, GAME-7: the fallen in the DTO', () => {
     });
 });
 
-describe('CLOCK-1, CLOCK-2, GAME-7, GAME-9: the clocks in the DTO', () => {
+describe('CLOCK-1, CLOCK-2, CLOCK-4, GAME-7, GAME-9: the clocks in the DTO', () => {
     // Player 0 has 500 s left but the last published value is 600 s; player 1 has 480 s left, published 560 s.
     const withClocks = (phase: GamePhase, ready: [boolean, boolean]): GameState => ({
         ...gs(phase, ready),

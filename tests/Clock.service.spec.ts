@@ -183,7 +183,7 @@ describe('CLOCK-3, AWAY-3: a player whose clock or reconnection time reaches 0 l
     });
 });
 
-describe('GAME-7: a clock is published to the opponent at the end of each decision phase, never during', () => {
+describe('CLOCK-4, GAME-7: a clock is published to the opponent at the end of each decision phase, never during', () => {
     const published = (gs: GameState) => gs.clocks.map(c => c.publishedMs);
     const running = (phase: GamePhase, remaining: [number, number]): GameState => {
         const [c0, c1] = createClocks();
