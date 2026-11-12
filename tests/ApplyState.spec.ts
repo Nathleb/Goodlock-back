@@ -18,7 +18,7 @@ let gs: GameState;
 beforeEach(() => { gs = { ...createGameState(team(0, 'A'), team(1, 'B')), currentRound: 3 }; });
 const actorId = () => at(gs, 0, 2).id;
 
-describe('ApplyState', () => {
+describe('STATE-1: ApplyState', () => {
     it('puts the signed duration on the state axis, stamped with the current round', () => {
         const { state, affected } = new ApplyState('HASTE', 3).solve(gs, [pos(0, 1)], actorId());
 
@@ -66,7 +66,7 @@ describe('ApplyState', () => {
         expect(at(state, 0, 1).states.STUN?.value).toBe(2);
     });
 
-    it('does nothing on an empty cell while the rest of the pattern applies', () => {
+    it('TGT-4: does nothing on an empty cell while the rest of the pattern applies', () => {
         const four = (pi: PlayerIndex, prefix: string) => createPlayer([0, 1, 2, 3].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `${prefix}${i}`, maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
         const holed = createGameState(four(0, 'A'), four(1, 'B'));
 

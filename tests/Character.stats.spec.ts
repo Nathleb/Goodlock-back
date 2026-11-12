@@ -10,7 +10,7 @@ const base = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 20,
 const instance = (value: number, stat: Modifier['stat'] = 'POWER'): Modifier => ({ stat, value, roundsLeft: 2, appliedRound: 0 });
 const withModifiers = (modifiers: readonly Modifier[]): Character => ({ ...base, modifiers });
 
-describe('netStat', () => {
+describe('STAT-2: netStat', () => {
     it('is 0 for a character with no instance', () => {
         expect(netStat(base, 'POWER')).toBe(0);
     });

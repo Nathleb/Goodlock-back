@@ -146,7 +146,7 @@ describe('startGame', () => {
         expect(mockRoom.startGame).not.toHaveBeenCalled();
     });
 
-    it('emits error when caller is not the room owner', () => {
+    it('ROOM-4: emits error when caller is not the room owner', () => {
         mockSession.getSession.mockReturnValue(SESSION_1);
         coordinator.startGame(SOCKET_1);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_1, 'error', { code: 'NOT_ROOM_OWNER', message: 'Only the room owner can start the game' });
@@ -198,7 +198,7 @@ describe('startGame', () => {
         expect(toP1.selection.myPicks).toBeNull();
     });
 
-    it('emits error until both players have chosen a deck', () => {
+    it('ROOM-4: emits error until both players have chosen a deck', () => {
         mockRoom.getRoom.mockReturnValue({ ...lobbyRoom, deckSelections: { p0: DECK_P0 } });
         coordinator.startGame(SOCKET_0);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'DECKS_NOT_CHOSEN', message: 'Both players must choose a deck' });
@@ -217,7 +217,7 @@ describe('startGame', () => {
 
 // ── team selection ───────────────────────────────────────────────────────────
 
-describe('team selection', () => {
+describe('SEL-2, GAME-7: team selection', () => {
     const PICK_P0 = ['c5', 'c0', 'c1', 'c2'];
     const PICK_P1 = ['c9', 'c8', 'c7', 'c6'];
     const selectingRoom = (gs: GameState): Room => ({ ...makeRoom(gs), playerOrder: [P0, P1] });
@@ -389,7 +389,7 @@ describe('confirmPlacement', () => {
 
 // ── PLACEMENT emissions stay secret ──────────────────────────────────────────
 
-describe('PLACEMENT emissions hide the opponent', () => {
+describe('GAME-7: PLACEMENT emissions hide the opponent', () => {
     const sentTo = (socket: SocketId) =>
         mockWs.emitToSocket.mock.calls.filter(c => c[0] === socket && c[1] === 'gameStateUpdated').map(c => c[2]);
     const teamIds = (pi: 0 | 1) => baseGs.players[pi].team.map(ch => ch.id);
@@ -605,7 +605,7 @@ describe('confirmKeep', () => {
 
 // ── double-confirm guards ────────────────────────────────────────────────────
 
-describe('double-confirm guards', () => {
+describe('GAME-8: double-confirm guards', () => {
     it('emits error on second confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.confirmPlacement(SOCKET_0);
@@ -621,7 +621,7 @@ describe('double-confirm guards', () => {
     });
 });
 
-describe('post-confirm mutation guards', () => {
+describe('GAME-8: post-confirm mutation guards', () => {
     it('emits error when rearrangeTeam called after confirmPlacement', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.rearrangeTeam(SOCKET_0, ['id0', 'id1', 'id2', 'id3', null]);
@@ -632,7 +632,7 @@ describe('post-confirm mutation guards', () => {
 
 });
 
-describe('cancelPlacement', () => {
+describe('GAME-8: cancelPlacement', () => {
     it('resets ready state and emits masked gameStateUpdated to socket when confirmed', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(baseGs)));
         coordinator.cancelPlacement(SOCKET_0);
@@ -655,7 +655,7 @@ describe('cancelPlacement', () => {
     });
 });
 
-describe('cancelKeep', () => {
+describe('GAME-8: cancelKeep', () => {
     it('resets ready state silently when confirmed', () => {
         mockRoom.getRoom.mockReturnValue(makeRoom(p0Ready(keepGs)));
         coordinator.cancelKeep(SOCKET_0);

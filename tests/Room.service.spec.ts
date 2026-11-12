@@ -24,7 +24,7 @@ const makeTeam = (pi: 0 | 1) => createPlayer([0,1,2,3,4].map(i => createCharacte
 const gameState = createGameState(makeTeam(0), makeTeam(1));
 
 describe('RoomService', () => {
-  it('should create a room with the owner as the first player', () => {
+  it('ROOM-2: should create a room with the owner as the first player', () => {
     const room = createRoom(asSession('player1'));
     expect(room.ownerId).toBe(asSession('player1'));
     expect(room.playersId).toContain(asSession('player1'));
@@ -38,7 +38,7 @@ describe('RoomService', () => {
     expect(updated.playersId.length).toBe(2);
   });
 
-  it('should return a ROOM_FULL error when adding a player to a full room', () => {
+  it('ROOM-2: should return a ROOM_FULL error when adding a player to a full room', () => {
     const room = createRoom(asSession('player1'));
     const full = unwrap(addPlayerToRoom(room, asSession('player2')));
     expect(unwrapErr(addPlayerToRoom(full, asSession('player3')))).toEqual({ code: 'ROOM_FULL', message: 'Room is full' });
@@ -54,7 +54,7 @@ describe('RoomService', () => {
     expect(removePlayerFromRoom(room, asSession('player1'))).toBeNull();
   });
 
-  it('should transfer ownership when the owner leaves', () => {
+  it('ROOM-2: should transfer ownership when the owner leaves', () => {
     const room = createRoom(asSession('player1'));
     const withTwo = unwrap(addPlayerToRoom(room, asSession('player2')));
     const updated = removePlayerFromRoom(withTwo, asSession('player1'));
@@ -87,7 +87,7 @@ describe('RoomService', () => {
   });
 });
 
-describe('deck selection in the lobby', () => {
+describe('ROOM-3: deck selection in the lobby', () => {
     const SIX = ['a', 'b', 'c', 'd', 'e', 'f'] as CatalogId[];
     const OTHER = ['h', 'i', 'j', 'k', 'l', 'm'] as CatalogId[];
     const lobby = () => unwrap(addPlayerToRoom(createRoom(P0), P1));

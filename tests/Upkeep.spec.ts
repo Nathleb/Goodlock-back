@@ -25,7 +25,7 @@ const vitality = (value: number) => ({ states: { VITALITY: { value, touchedRound
 let gs: GameState;
 beforeEach(() => { gs = createGameState(team(0, 'A'), team(1, 'B')); });
 
-describe('upkeep', () => {
+describe('STATE-7: upkeep', () => {
     it('POISON removes POISON_DAMAGE hit points', () => {
         const poisoned = patch(gs, 0, 1, vitality(-2));
 
@@ -90,7 +90,7 @@ describe('upkeep', () => {
     });
 });
 
-describe('upkeep timeline', () => {
+describe('STATE-2, STATE-7: upkeep timeline', () => {
     const nextRoundStart = (s: GameState) => upkeep(endOfRound(s));
     const applyAt = (s: GameState, state: 'POISON' | 'REGEN', duration: number) =>
         new ApplyState(state, duration).solve(s, [{ playerIndex: 0, slot: 1 }], s.players[0].team[0].id).state;

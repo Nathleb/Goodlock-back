@@ -50,7 +50,7 @@ describe('Phase transitions', () => {
     });
 });
 
-describe('placeTeam', () => {
+describe('GAME-2, PLACE-2: placeTeam', () => {
     // A team of 4 after team preview: slots 0..3, slot 4 empty.
     const player = createPlayer(team1.slice(0, 4), 0);
     const [a, b, c, d] = player.team.map(ch => ch.id);

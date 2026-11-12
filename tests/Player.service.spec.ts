@@ -27,17 +27,17 @@ describe('PlayerService', () => {
     expect(updatedPlayer.team[0].face).toBeDefined();
   });
 
-  it('should not have lost with no dead character', () => {
+  it('GAME-4: should not have lost with no dead character', () => {
     expect(hasLost(player)).toBe(false);
   });
 
-  it('should have lost when 2 of the 4 characters are dead', () => {
+  it('GAME-4: should have lost when 2 of the 4 characters are dead', () => {
     const dead = loseHp(makeChar(), 100);
     const team: Player = { playerIndex: 0, team: [dead, dead, makeChar(), makeChar()] };
     expect(hasLost(team)).toBe(true);
   });
 
-  it('should not have lost with only 1 dead character', () => {
+  it('GAME-4: should not have lost with only 1 dead character', () => {
     const dead = loseHp(makeChar(), 100);
     const team: Player = { playerIndex: 0, team: [dead, makeChar(), makeChar(), makeChar()] };
     expect(hasLost(team)).toBe(false);

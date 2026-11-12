@@ -31,7 +31,7 @@ const withHp = (s: GameState, pi: PlayerIndex, slot: number, hp: number): GameSt
 };
 const actorId = () => at(gs, 0, 2).id;
 
-describe('FixedDamage', () => {
+describe('DMG-3: FixedDamage', () => {
     it('lowers hp by the full magnitude and leaves the shield untouched', () => {
         const shielded = withShield(gs, 1, 0, 8);
 
@@ -59,7 +59,7 @@ describe('FixedDamage', () => {
         expect(at(state, 0, 2).shield).toBe(4);
     });
 
-    it('does nothing on an empty cell while the rest of the pattern applies', () => {
+    it('TGT-4: does nothing on an empty cell while the rest of the pattern applies', () => {
         const four = (pi: PlayerIndex, prefix: string) => createPlayer([0, 1, 2, 3].map(i => createCharacter({ catalogId: TEST_CATALOG_ID, name: `${prefix}${i}`, maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: pi, slot: i as SlotIndex } })), pi);
         const holed = createGameState(four(0, 'A'), four(1, 'B'));
         const { state, affected } = new FixedDamage(5).solve(holed, [pos(1, 4), pos(1, 3)], holed.players[0].team[0].id);

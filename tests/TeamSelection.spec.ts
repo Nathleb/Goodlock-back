@@ -21,7 +21,7 @@ let gs: GameState;
 beforeEach(() => { gs = createSelectionState([DECK_0, DECK_1]); });
 
 describe('createSelectionState', () => {
-    it('starts in SELECTION with both decks revealed, no picks and empty teams', () => {
+    it('GAME-1, CHAR-1: starts in SELECTION with both decks revealed, no picks and empty teams', () => {
         expect(TEAM_SIZE).toBe(4);
         expect(gs.phase).toBe(GamePhase.SELECTION);
         expect(gs.selection?.decks[0].map(t => t.id)).toEqual(DECK_0.map(t => t.id));
@@ -34,7 +34,7 @@ describe('createSelectionState', () => {
 });
 
 describe('confirmSelection', () => {
-    it('first confirm stores the pick and marks the player ready, nothing else', () => {
+    it('SEL-2: first confirm stores the pick and marks the player ready, nothing else', () => {
         const next = unwrap(confirmSelection(gs, 0, PICK_0, build));
         expect(next.phase).toBe(GamePhase.SELECTION);
         expect(next.playersReady).toEqual([true, false]);
@@ -42,7 +42,7 @@ describe('confirmSelection', () => {
         expect(next.players[0].team).toEqual([]);
     });
 
-    it('second confirm builds both teams in pick order and moves to PLACEMENT', () => {
+    it('SEL-4, PLACE-1: second confirm builds both teams in pick order and moves to PLACEMENT', () => {
         const next = unwrap(confirmSelection(unwrap(confirmSelection(gs, 0, PICK_0, build)), 1, PICK_1, build));
         expect(next.phase).toBe(GamePhase.PLACEMENT);
         expect(next.selection).toBeUndefined();
@@ -57,7 +57,7 @@ describe('confirmSelection', () => {
         expect(unwrapErr(confirmSelection({ ...gs, phase: GamePhase.PLACEMENT }, 0, PICK_0, build)).code).toBe('WRONG_PHASE');
     });
 
-    it('rejects a second confirm from the same player', () => {
+    it('GAME-8: rejects a second confirm from the same player', () => {
         const once = unwrap(confirmSelection(gs, 0, PICK_0, build));
         expect(unwrapErr(confirmSelection(once, 0, PICK_0, build))).toEqual({ code: 'ALREADY_CONFIRMED', message: 'Player has already confirmed' });
     });
@@ -81,7 +81,7 @@ describe('confirmSelection without a selection in progress', () => {
     });
 });
 
-describe('cancelSelection', () => {
+describe('GAME-8: cancelSelection', () => {
     it('un-readies the player and clears their pick', () => {
         const next = unwrap(cancelSelection(unwrap(confirmSelection(gs, 0, PICK_0, build)), 0));
         expect(next.playersReady).toEqual([false, false]);

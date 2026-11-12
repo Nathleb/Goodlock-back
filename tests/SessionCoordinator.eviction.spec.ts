@@ -37,7 +37,7 @@ function setUp() {
     return { sessions, rooms, ws, coordinator, roomId: room.roomId, sessionId: player.sessionId };
 }
 
-describe('a signed-in-elsewhere eviction during a match', () => {
+describe('ACC-2: a signed-in-elsewhere eviction during a match', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('kicks the old socket and keeps the player seated on the new one', () => {

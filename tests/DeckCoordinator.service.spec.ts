@@ -56,7 +56,7 @@ describe('list', () => {
     });
 });
 
-describe('create', () => {
+describe('DECK-1: create', () => {
     it('saves a valid deck with a trimmed name', async () => {
         const dto = await coordinator.create(ALICE, save('  Aggro  '));
         expect(dto.name).toBe('Aggro');
@@ -120,7 +120,7 @@ describe('delete', () => {
         expect((await coordinator.list(ALICE)).decks.map(d => d.name)).toEqual(['B']);
     });
 
-    it('refuses to delete the last deck', async () => {
+    it('DECK-2: refuses to delete the last deck', async () => {
         const { id } = await coordinator.create(ALICE, save('Only'));
         await expect(coordinator.delete(ALICE, id as DeckId)).rejects.toBeInstanceOf(ConflictException);
         expect(await decks.countByUser(ALICE)).toBe(1);
@@ -146,7 +146,7 @@ describe('getOwnDeckCharacterIds', () => {
     });
 });
 
-describe('ensureStarterDeck', () => {
+describe('DECK-3: ensureStarterDeck', () => {
     it('creates a starter deck from the first 6 catalog ids, sorted', async () => {
         await coordinator.ensureStarterDeck(ALICE);
         const { decks: list } = await coordinator.list(ALICE);
@@ -184,7 +184,7 @@ describe('refusal messages', () => {
         await expect(coordinator.create(ALICE, save('Too many'))).rejects.toThrow('You can have at most 5 decks');
     });
 
-    it('says the last deck cannot be deleted', async () => {
+    it('DECK-2: says the last deck cannot be deleted', async () => {
         const { id } = await coordinator.create(ALICE, save('Only'));
         await expect(coordinator.delete(ALICE, id as DeckId)).rejects.toThrow('You cannot delete your last deck');
     });

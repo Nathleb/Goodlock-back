@@ -145,7 +145,7 @@ describe('Domain integration — Single-target damage', () => {
 
 // ─── Shield absorption ────────────────────────────────────────────────────────
 
-describe('Domain integration — Shield absorption', () => {
+describe('DMG-1: Domain integration — Shield absorption', () => {
     const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
 
     it('shield absorbs part of the damage before HP is reduced', () => {
@@ -183,7 +183,7 @@ describe('Domain integration — Shield absorption', () => {
 
 // ─── Heal effects ─────────────────────────────────────────────────────────────
 
-describe('Domain integration — Heal effects', () => {
+describe('HEAL-1: Domain integration — Heal effects', () => {
     it('single-target heal increases damaged target HP', () => {
         const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.Heal, magnitude: 15, targets: [allyAbs(1)] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
@@ -227,7 +227,7 @@ describe('Domain integration — Heal effects', () => {
 
 // ─── Priority ordering ────────────────────────────────────────────────────────
 
-describe('Domain integration — Priority ordering', () => {
+describe('PRIO-1: Domain integration — Priority ordering', () => {
     it('higher-priority attacker kills target before lower-priority defender fires', () => {
         const highPrioDmgDie = uniformDie('HighPrio', 5, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
         const lowPrioDmgDie  = uniformDie('LowPrio',  1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
@@ -331,7 +331,7 @@ describe('Domain integration — Self-targeted effects', () => {
 
 // ─── cleave effects ───────────────────────────────────────────────────────────
 
-describe('Domain integration — cleave effects', () => {
+describe('TGT-2: Domain integration — cleave effects', () => {
     it('cleave damage around slot 2 hits slots 1, 2 and 3 only', () => {
         const cleaveDmgDie = uniformDie('cleave', 1, [{ effect: EffectLabel.Damage, magnitude: 8, targets: [enemyAbs(1, 2, 3)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
@@ -454,7 +454,7 @@ describe('Domain integration — Win conditions', () => {
 
 // ─── Round cleanup and multi-round ────────────────────────────────────────────
 
-describe('Domain integration — Round cleanup and multi-round', () => {
+describe('EOR-1: Domain integration — Round cleanup and multi-round', () => {
     it('endOfRound resets shields, unlocks dice, increments round, restores rollsLeft', () => {
         const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));

@@ -54,7 +54,7 @@ describe('confirmPlacement', () => {
         expect(result.playersReady[0]).toBe(false);
     });
 
-    it('transitions to ROLL and resets playersReady when both confirm', () => {
+    it('PLACE-4: transitions to ROLL and resets playersReady when both confirm', () => {
         const after0 = unwrap(confirmPlacement(gs, 0));
         const result = unwrap(confirmPlacement(after0, 1));
         expect(result.phase).toBe(GamePhase.ROLL);
@@ -117,7 +117,7 @@ describe('confirmKeep', () => {
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('transitions straight to RESOLVE when the final reroll exhausts rollsLeft (no dead keep round)', () => {
+    it('ROLL-4: transitions straight to RESOLVE when the final reroll exhausts rollsLeft (no dead keep round)', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
         const after0 = unwrap(confirmKeep(inKeep, 0));
         const result = unwrap(confirmKeep(after0, 1));
@@ -126,7 +126,7 @@ describe('confirmKeep', () => {
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('still rerolls when only one player has locked every die', () => {
+    it('ROLL-4: still rerolls when only one player has locked every die', () => {
         const kept = beginKeepPhase(gs);
         const p0Locked = { ...kept, players: [lockAllPlayers(kept).players[0], kept.players[1]] as typeof kept.players };
         const result = unwrap(confirmKeep(unwrap(confirmKeep(p0Locked, 0)), 1));
@@ -141,7 +141,7 @@ describe('confirmKeep', () => {
         expect(result.phase).toBe(GamePhase.RESOLVE);
     });
 
-    it('does not reroll locked dice', () => {
+    it('ROLL-1: does not reroll locked dice', () => {
         const inKeep = beginKeepPhase(gs);
         // Lock slot 0 for player 0 only (not the whole team, so no skip-to-RESOLVE)
         const withOneLock = {
@@ -190,7 +190,7 @@ describe('performResolve', () => {
     });
 });
 
-describe('cancelPlacement', () => {
+describe('GAME-8: cancelPlacement', () => {
     it('sets playersReady[i] to false when player was confirmed', () => {
         const confirmed = unwrap(confirmPlacement(gs, 0));
         expect(confirmed.playersReady[0]).toBe(true);
@@ -209,7 +209,7 @@ describe('cancelPlacement', () => {
     });
 });
 
-describe('cancelKeep', () => {
+describe('GAME-8: cancelKeep', () => {
     it('sets playersReady[i] to false when player was confirmed', () => {
         const inKeep = beginKeepPhase(gs);
         const confirmed = unwrap(confirmKeep(inKeep, 0));
@@ -231,7 +231,7 @@ describe('cancelKeep', () => {
 });
 
 
-describe('initiative at game init', () => {
+describe('SEL-1, PRIO-3: initiative at game init', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('gives the initiative to player 0 when the draw falls on the lower half', () => {

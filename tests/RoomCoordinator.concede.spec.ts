@@ -43,7 +43,7 @@ beforeEach(async () => {
     mockSession.getSession.mockReturnValue({ sessionId: P0, socketId: SOCKET, userId: 'u', roomId: asRoom('room-1') });
 });
 
-describe('quitRoom on a started game', () => {
+describe('AWAY-1: quitRoom on a started game', () => {
     it('emits gameOver concede for the opponent and marks the quitter disconnected', () => {
         mockRoom.getRoom.mockReturnValue(STARTED);
         mockRoom.quitRoom.mockReturnValue(STARTED);
@@ -69,7 +69,7 @@ describe('quitRoom on a started game', () => {
     });
 });
 
-describe('leaving a started game by another way', () => {
+describe('AWAY-1: leaving a started game by another way', () => {
     const NEW_ROOM: Room = { roomId: asRoom('room-2'), ownerId: P0, playersId: [P0], isStarted: false };
 
     beforeEach(() => {

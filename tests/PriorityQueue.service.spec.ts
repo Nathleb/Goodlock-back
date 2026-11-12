@@ -68,7 +68,7 @@ describe('PriorityQueueService', () => {
     expect(state.priorityQueue.length).toBe(0);
   });
 
-  it('should cancel effects from dead actors and mark them skipped in the log', () => {
+  it('RES-1: should cancel effects from dead actors and mark them skipped in the log', () => {
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
     const targetChar = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Target", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const deadActor = loseHp(actor, 100);
@@ -126,7 +126,7 @@ describe('PriorityQueueService', () => {
     expect(log[0].changes[0].character.hp).toBe(0);
   });
 
-  it('a face with no effects produces an empty-changes step (not skipped)', () => {
+  it('RES-2: a face with no effects produces an empty-changes step (not skipped)', () => {
     const noOpDie = generateFullDie([
       { description: "No-op", priority: 1, effects: [] },
       { description: "B", priority: 1, effects: [] },
@@ -155,7 +155,7 @@ describe('PriorityQueueService', () => {
     expect(log[0].changes).toHaveLength(0);
   });
 
-  it('a boundary push-left Swap at slot 0 fizzles into an empty-changes step (not skipped)', () => {
+  it('RES-2, TGT-3: a boundary push-left Swap at slot 0 fizzles into an empty-changes step (not skipped)', () => {
     const swapDie = generateFullDie([
       { description: "A",        priority: 1, effects: [] },
       { description: "B",        priority: 1, effects: [] },
@@ -324,7 +324,7 @@ describe('PriorityQueueService', () => {
     expect(log[0].changes[0].character.shield).toBe(5);
   });
 
-  describe('Pokemon-style ordering', () => {
+  describe('PRIO-1: Pokemon-style ordering', () => {
     const noop = (priority: number): DieFace => ({
       priority,
       effects: [],
@@ -388,7 +388,7 @@ describe('PriorityQueueService', () => {
       expect(log.map(s => s.characterId)).toEqual(['x', 'y']);
     });
 
-    describe('initiative breaks exact ties', () => {
+    describe('PRIO-2: initiative breaks exact ties', () => {
       afterEach(() => jest.restoreAllMocks());
 
       const tied = (initiative: PlayerIndex): GameState => ({
@@ -521,7 +521,7 @@ describe('PriorityQueueService', () => {
     });
   });
 
-  describe('stat changes inside the round', () => {
+  describe('STAT-4: stat changes inside the round', () => {
     const dieOfFace = (effects: EffectEntry[], priority = 0) =>
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
@@ -587,7 +587,7 @@ describe('PriorityQueueService', () => {
     });
   });
 
-  describe('STUN', () => {
+  describe('STATE-4: STUN', () => {
     const dieOfFace = (effects: EffectEntry[], priority = 0) =>
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
@@ -655,7 +655,7 @@ describe('PriorityQueueService', () => {
     });
   });
 
-  describe('SPEED states in the sort key', () => {
+  describe('PRIO-1: SPEED states in the sort key', () => {
     const dieOfFace = (effects: EffectEntry[], priority: number) =>
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, speedState = 0, priority = 0) => ({
@@ -700,7 +700,7 @@ describe('PriorityQueueService', () => {
     });
   });
 
-  describe('SPEED changing during the round', () => {
+  describe('PRIO-4: SPEED changing during the round', () => {
     const dieOfFace = (effects: EffectEntry[], priority: number) =>
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[] = [], priority = 0) =>
@@ -798,7 +798,7 @@ describe('PriorityQueueService', () => {
     });
   });
 
-  describe('auto-targeting at resolution time', () => {
+  describe('TGT-1: auto-targeting at resolution time', () => {
     const face = (priority: number, effects: EffectEntry[]) =>
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions)[0];
     const idle = face(0, []);

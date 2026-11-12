@@ -7,7 +7,7 @@ import Die from "@domain/types/Die.type";
 const EMPTY_DIE = Array.from({ length: 6 }, () => ({ description: '', priority: 0, effects: [] })) as unknown as Die;
 const base = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: 0, slot: 0 } });
 
-describe('states', () => {
+describe('STATE-1: states', () => {
     it('a new character has no state', () => {
         expect(base.states).toEqual({});
         for (const axis of STATE_AXES) expect(stateValue(base, axis)).toBe(0);

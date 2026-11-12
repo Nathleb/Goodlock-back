@@ -14,7 +14,7 @@ describe('createOrReconnectSession eviction reporting', () => {
         expect(evictedSocketId).toBeNull();
     });
 
-    it('reports the old socket when it is still live (duplicate login)', () => {
+    it('ACC-2: reports the old socket when it is still live (duplicate login)', () => {
         const manager = new SessionManager();
         manager.createOrReconnectSession(SOCK_A, USER);
         const { evictedSocketId } = manager.createOrReconnectSession(SOCK_B, USER);

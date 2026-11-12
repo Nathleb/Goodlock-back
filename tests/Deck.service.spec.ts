@@ -12,7 +12,7 @@ describe('deck rules', () => {
     });
 });
 
-describe('validateDeck', () => {
+describe('DECK-1: validateDeck', () => {
     it('accepts 6 distinct known, owned characters', () => {
         expect(validateDeck(SIX, everythingKnownAndOwned)).toEqual([]);
     });

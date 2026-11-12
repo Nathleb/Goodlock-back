@@ -20,14 +20,14 @@ const baseDieInstructions: BaseDieInstructions = [
 const die = generateFullDie(baseDieInstructions);
 
 describe('Round.service', () => {
-    it.each([[0, 1], [1, 0]] as const)('flips the initiative from %i to %i at end of round', (before, after) => {
+    it.each([[0, 1], [1, 0]] as const)('PRIO-3, EOR-1: flips the initiative from %i to %i at end of round', (before, after) => {
         const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const gameState = createGameState(createPlayer([makeChar()], 0), createPlayer([makeChar()], 1), before);
 
         expect(endOfRound(gameState).initiativePlayerIndex).toBe(after);
     });
 
-    it('should reset all shields to 0 at end of round', () => {
+    it('EOR-1: should reset all shields to 0 at end of round', () => {
         const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const charWithShield = gainShield(makeChar(), 20);
         const player1 = createPlayer([charWithShield, makeChar(), makeChar(), makeChar(), makeChar()], 0);
@@ -76,7 +76,7 @@ describe('Round.service', () => {
         expect(updated.rollsLeft).toBe(2);
     });
 
-    it('should unlock all dice', () => {
+    it('ROLL-1: should unlock all dice', () => {
         const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         let player1 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 0);
         let player2 = createPlayer([makeChar(), makeChar(), makeChar(), makeChar(), makeChar()], 1);
@@ -104,13 +104,13 @@ describe('checkWinner', () => {
         expect(checkWinner(createGameState(p1, p2))).toBeNull();
     });
 
-    it('should return 1 when player 0 has 2+ dead characters', () => {
+    it('GAME-4: should return 1 when player 0 has 2+ dead characters', () => {
         const p1 = createPlayer(dead2(), 0);
         const p2 = createPlayer(alive4(), 1);
         expect(checkWinner(createGameState(p1, p2))).toBe(1);
     });
 
-    it('should return 0 when player 1 has 2+ dead characters', () => {
+    it('GAME-4: should return 0 when player 1 has 2+ dead characters', () => {
         const p1 = createPlayer(alive4(), 0);
         const p2 = createPlayer(dead2(), 1);
         expect(checkWinner(createGameState(p1, p2))).toBe(0);
@@ -123,7 +123,7 @@ describe('checkWinner', () => {
     });
 });
 
-describe('Round.service stat ticking', () => {
+describe('STAT-5: Round.service stat ticking', () => {
     const instance = (value: number, roundsLeft: number, appliedRound: number) =>
         ({ stat: 'POWER' as const, value, roundsLeft, appliedRound });
     const stateWith = (round: number, modifiers: ReturnType<typeof instance>[]) => {
@@ -158,7 +158,7 @@ describe('Round.service stat ticking', () => {
     });
 });
 
-describe('Round.service ARMOR ticking', () => {
+describe('STAT-5: Round.service ARMOR ticking', () => {
     const armor = (value: number, roundsLeft: number, appliedRound: number) =>
         ({ stat: 'ARMOR' as const, value, roundsLeft, appliedRound });
     const stateWith = (round: number, modifiers: ReturnType<typeof armor>[]) => {
@@ -178,7 +178,7 @@ describe('Round.service ARMOR ticking', () => {
     });
 });
 
-describe('Round.service state ticking', () => {
+describe('STATE-2: Round.service state ticking', () => {
     const stateWith = (round: number, states: Parameters<typeof withStates>[0]) => withStates(states, round);
     function withStates(states: Record<string, { value: number; touchedRound: number }>, round: number) {
         const c = createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
