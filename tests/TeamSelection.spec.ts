@@ -111,3 +111,18 @@ describe('selection error messages', () => {
         expect(unwrapErr(confirmSelection(noSelection, 0, PICK_0, build))).toEqual({ code: 'NO_SELECTION', message: 'No selection in progress' });
     });
 });
+
+describe('CHAR-2: both players may field the same character', () => {
+    it('lets both players bring the same deck and keep the same characters, each as its own character', () => {
+        const sameDeck = createSelectionState([DECK_0, DECK_0], 0);
+
+        const first = unwrap(confirmSelection(sameDeck, 0, PICK_0, build));
+        const both = unwrap(confirmSelection(first, 1, PICK_0, build));
+
+        expect(both.phase).toBe(GamePhase.PLACEMENT);
+        const [team0, team1] = both.players.map(p => p.team);
+        expect(team0.map(c => c.catalogId)).toEqual(PICK_0);
+        expect(team1.map(c => c.catalogId)).toEqual(PICK_0);
+        expect(new Set([...team0, ...team1].map(c => c.id)).size).toBe(2 * TEAM_SIZE);
+    });
+});
