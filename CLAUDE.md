@@ -60,7 +60,7 @@ Facts that the code does not make obvious:
 
 ## Reference docs
 
-Read only when relevant, they are not loaded automatically: `../Goodlock-specs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates), `docs/GLOSSARY.md` (game terms to code names), `docs/SCALING.md` (before any decision on shared state or several instances).
+Read only when relevant, they are not loaded automatically: `../Goodlock-specs/GAME-DESIGN.md` (the rules reference: game rules, dice authoring principles, value scale; read the rules a change touches before any change to game mechanics or character templates), `docs/GLOSSARY.md` (game terms to code names), `../Goodlock-specs/SCALING.md` (before any decision on shared state or several instances).
 
 ## Workflow (Goodlock specifics)
 
