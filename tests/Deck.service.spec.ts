@@ -6,9 +6,9 @@ const SIX = ids('a', 'b', 'c', 'd', 'e', 'f');
 const everythingKnownAndOwned = { isKnown: () => true, isOwned: () => true };
 
 describe('deck rules', () => {
-    it('a deck holds 6 characters and a user has at most 5 decks', () => {
+    it('DECK-2: a deck holds 6 characters and a user has at most 50 decks', () => {
         expect(DECK_SIZE).toBe(6);
-        expect(MAX_DECKS_PER_USER).toBe(5);
+        expect(MAX_DECKS_PER_USER).toBe(50);
     });
 });
 

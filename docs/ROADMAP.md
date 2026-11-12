@@ -21,7 +21,7 @@ serve the phone experience, not the other way around.
   per-effect **auto-targeting** (no ASSIGN phase), **Pokémon-style resolution order** (face priority
   bracket, then base speed, then an alternating initiative token and slot). Character templates are untuned (balance comes from simulation).
 - **Collection → decks → match entry** (slices A/B/C, Oct 2026): catalog with stable ids loaded at
-  boot; `UserCharacter` ownership (grant-all for now); decks of **6**, max 5 per user, starter deck;
+  boot; `UserCharacter` ownership (grant-all for now); decks of **6**, max 50 per user, starter deck;
   in a room each player picks a deck, then **team preview**: both decks revealed, each secretly keeps
   **4**; the opponent's picks stay hidden until the first ROLL.
 - **Four of six** (Oct 19 2026): deck 6, keep 4, 5-cell board with one empty cell chosen at placement

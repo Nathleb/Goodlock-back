@@ -435,12 +435,14 @@ describe('GAME-7: PLACEMENT emissions hide the opponent', () => {
 describe('confirmKeep', () => {
     beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(keepGs)));
 
-    it('echoes the confirming player\'s own ready state to their socket when first to confirm', () => {
+    it('GAME-9: echoes only the confirming player\'s own ready state to their socket when first to confirm', () => {
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockRoom.updateGameState).toHaveBeenCalled();
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(
-            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ playersReady: [true, false] }),
+            SOCKET_0, 'gameStateUpdated', expect.objectContaining({ myReady: true }),
         );
+        const echo = mockWs.emitToSocket.mock.calls.find(c => c[0] === SOCKET_0 && c[1] === 'gameStateUpdated')?.[2];
+        expect(echo).not.toHaveProperty('playersReady');
         expect(mockWs.emitToRoom).not.toHaveBeenCalled();
     });
 
@@ -489,12 +491,13 @@ describe('confirmKeep', () => {
         expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP, rollsLeft: 2 }));
     });
 
-    it('resolves the round when both confirm with every die locked', () => {
+    it('ROLL-4: with every die kept, both confirming leads to another Roll, not to Resolve', () => {
         const allLocked = (p: Player): Player => ({ ...p, team: p.team.map(c => ({ ...c, isFaceLocked: true })) });
         const locked = { ...keepGs, players: [keepGs.players[0], allLocked(keepGs.players[1])] as [Player, Player] };
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready(locked)));
         coordinator.confirmKeep(SOCKET_0, keepGs.players[0].team.map(c => c.id));
-        expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
+        expect(mockWs.emitToRoom).not.toHaveBeenCalledWith('room-1', 'roundResolved', expect.anything());
+        expect(mockWs.emitToRoom).toHaveBeenLastCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP, rollsLeft: 1 }));
     });
 
     it('resolves then emits gameOver last when a winner is found', () => {

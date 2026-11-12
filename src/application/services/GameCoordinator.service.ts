@@ -143,10 +143,9 @@ export class GameCoordinatorService {
             if (wasOtherReady) {
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTO(confirmed), confirmed));
             } else {
-                // First to confirm: echo the player's own (opponent-masked) state
-                // back to their socket so the client learns playersReady[self]=true
-                // and flips the button to WAITING. The opponent is not notified,
-                // keeping this confirm secret.
+                // First to confirm: echo the player's own view back to their socket
+                // so the client learns myReady=true and flips the button to WAITING.
+                // The opponent is not notified, keeping this confirm secret (GAME-9).
                 this.wsPort.emitToSocket(socketId, 'gameStateUpdated', this.withTimers(room.roomId, GameStateMapper.toDTOForViewer(confirmed, playerIndex), confirmed));
             }
         } catch (e: unknown) {

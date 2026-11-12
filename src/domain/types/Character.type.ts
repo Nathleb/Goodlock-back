@@ -20,7 +20,10 @@ type Character = {
     readonly states: CharacterStates;
 
     readonly face: DieFace;
+    /** The die is kept: the next Roll leaves it alone. Set when its owner confirms a Keep, cleared at the end of the round. */
     readonly isFaceLocked: boolean;
+    /** Whether the die was kept at the last Roll (ROLL-2): what the opponent may see of it during a Keep (GAME-9). */
+    readonly keptAtLastRoll: boolean;
 };
 
 export default Character;

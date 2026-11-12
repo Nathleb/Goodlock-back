@@ -114,13 +114,9 @@
         "rollsLeft": {
           "type": "number"
         },
-        "playersReady": {
-          "type": "array",
-          "items": {
-            "type": "boolean"
-          },
-          "minItems": 2,
-          "maxItems": 2
+        "myReady": {
+          "type": "boolean",
+          "description": "Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's (GAME-9), and absent from what is sent to both players."
         },
         "players": {
           "type": "array",
@@ -171,7 +167,6 @@
         "currentRound",
         "initiativePlayerIndex",
         "rollsLeft",
-        "playersReady",
         "players"
       ],
       "additionalProperties": false
@@ -249,7 +244,8 @@
           "$ref": "#/definitions/DieFaceDTO"
         },
         "isFaceLocked": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether the die was kept at the last Roll (ROLL-2). In the state sent to one player only, their own dice show instead what they last confirmed in the current Keep (GAME-9)."
         },
         "position": {
           "type": "object",
@@ -452,13 +448,9 @@
         "rollsLeft": {
           "type": "number"
         },
-        "playersReady": {
-          "type": "array",
-          "items": {
-            "type": "boolean"
-          },
-          "minItems": 2,
-          "maxItems": 2
+        "myReady": {
+          "type": "boolean",
+          "description": "Per viewer only: whether the viewer has confirmed in the current phase. Never the opponent's (GAME-9), and absent from what is sent to both players."
         },
         "players": {
           "type": "array",
@@ -510,7 +502,6 @@
         "initiativePlayerIndex",
         "phase",
         "players",
-        "playersReady",
         "rollsLeft"
       ]
     },

@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { RoomPort } from '@application/ports/RoomPort';
 import { Room } from '@domain/types/Room.type';
 import GameState from '@domain/types/GameState.type';
-import { createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom, selectDeckInRoom } from '@domain/services/Room.service';
+import { hasFreeSeat, createRoom, addPlayerToRoom, removePlayerFromRoom, startRoom, setPresenceInRoom, selectDeckInRoom } from '@domain/services/Room.service';
 import { CatalogId, SessionId, RoomId } from '@shared/branded.types';
 import { DomainError, domainError } from '@domain/errors/DomainError';
 import { Result, err } from '@shared/result.type';
@@ -123,6 +123,6 @@ export class RoomManager implements RoomPort, OnModuleInit, OnModuleDestroy {
     }
 
     listOpenRooms(): Room[] {
-        return [...this.rooms.values()].filter(room => !room.isStarted);
+        return [...this.rooms.values()].filter(room => !room.isStarted && hasFreeSeat(room));
     }
 }
