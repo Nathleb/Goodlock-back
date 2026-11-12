@@ -12,7 +12,6 @@ with automatic targeting.
   Phone dev loop (Wi-Fi debugging, hot reload, LAN access to this backend): `Goodlock-app/docs/DEVELOPMENT.md`,
   driven by `Goodlock-app/tool/phone.sh` (`pair`, `connect`, `run`).
 
-> Roadmap & direction: [`docs/ROADMAP.md`](docs/ROADMAP.md) (mobile-first, to v1.0).
 > Architecture & conventions: [`CLAUDE.md`](CLAUDE.md).
 
 This document assumes both repos sit side by side:
