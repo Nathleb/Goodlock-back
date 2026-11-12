@@ -33,13 +33,29 @@ describe('PlayerService', () => {
 
   it('GAME-4: should have lost when 2 of the 4 characters are dead', () => {
     const dead = loseHp(makeChar(), 100);
-    const team: Player = { playerIndex: 0, team: [dead, dead, makeChar(), makeChar()] };
-    expect(hasLost(team)).toBe(true);
+    const player: Player = { playerIndex: 0, team: [makeChar(), makeChar()], fallen: [dead, dead] };
+    expect(hasLost(player)).toBe(true);
   });
 
   it('GAME-4: should not have lost with only 1 dead character', () => {
     const dead = loseHp(makeChar(), 100);
-    const team: Player = { playerIndex: 0, team: [dead, makeChar(), makeChar(), makeChar()] };
-    expect(hasLost(team)).toBe(false);
+    const player: Player = { playerIndex: 0, team: [makeChar(), makeChar(), makeChar()], fallen: [dead] };
+    expect(hasLost(player)).toBe(false);
+  });
+});
+
+describe('GAME-4: a player loses when 2 of their characters are dead', () => {
+  const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "C", maxHp: 10, baseSpeed: 1, baseDie: generateFullDie([
+    { description: "", priority: 0, effects: [] }, { description: "", priority: 0, effects: [] }, { description: "", priority: 0, effects: [] },
+    { description: "", priority: 0, effects: [] }, { description: "", priority: 0, effects: [] }, { description: "", priority: 0, effects: [] },
+  ]), position: { playerIndex: 0, slot: 0 } });
+  const dead = () => ({ ...makeChar(), hp: 0 });
+
+  it('counts the fallen, not the characters left on the board', () => {
+    expect(hasLost({ playerIndex: 0, team: [dead(), dead(), makeChar()] })).toBe(false);
+  });
+
+  it('has not lost when nobody has fallen', () => {
+    expect(hasLost({ playerIndex: 0, team: [makeChar()] })).toBe(false);
   });
 });

@@ -289,3 +289,28 @@ describe('states in the DTO', () => {
         expect(dto[0].changes[0].after.states.ROOT).toBe(2);
     });
 });
+
+describe('DEAD-1, GAME-7: the fallen in the DTO', () => {
+    const withFallen = (phase: GamePhase): GameState => {
+        const base = gs(phase, [false, false]);
+        const players = base.players.map(p => ({ ...p, fallen: [{ ...char(`dead${p.playerIndex}`, p.playerIndex, 2, false), hp: 0 }] })) as unknown as GameState['players'];
+        return { ...base, players };
+    };
+
+    it('lists, for each player, the characters who died, apart from the team on the board', () => {
+        const dto = GameStateMapper.toDTOForViewer(withFallen(GamePhase.KEEP), 0);
+        expect(dto.players[0].fallen.map(c => c.id)).toEqual(['dead0']);
+        expect(dto.players[1].fallen.map(c => c.id)).toEqual(['dead1']);
+        expect(dto.players[1].fallen[0].hp).toBe(0);
+        expect(dto.players[1].team.map(c => c.id)).toEqual(['c10', 'c11']);
+    });
+
+    it('is an empty list for a player nobody has killed', () => {
+        expect(GameStateMapper.toDTO(gs(GamePhase.KEEP, [false, false])).players[0].fallen).toEqual([]);
+    });
+
+    it('stays hidden with the opponent team before the first round', () => {
+        const dto = GameStateMapper.toDTOForViewer(withFallen(GamePhase.PLACEMENT), 0);
+        expect(dto.players[1].fallen).toEqual([]);
+    });
+});

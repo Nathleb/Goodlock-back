@@ -1,4 +1,4 @@
-import { dealDamage, isDead, netStat, stateValue } from "../services/Character.service";
+import { dealDamage, netStat, stateValue } from "../services/Character.service";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
 import GameState from "../types/GameState.type";
@@ -22,7 +22,7 @@ export default class Damage implements Effect {
         return applyAtPositions(gameState, targets, c => {
             const amount = Math.max(0, this.amount + power - netStat(c, 'ARMOR'));
             // A hit that would hurt is nullified by DIVINE_SHIELD, which it consumes.
-            if (amount > 0 && !isDead(c) && stateValue(c, 'DIVINE_SHIELD') > 0) return consumeDivineShield(c);
+            if (amount > 0 && stateValue(c, 'DIVINE_SHIELD') > 0) return consumeDivineShield(c);
             return dealDamage(c, amount);
         });
     }

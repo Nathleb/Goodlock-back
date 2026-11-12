@@ -20,6 +20,8 @@ type GameState = {
     readonly playersReady: readonly [boolean, boolean];
     readonly priorityQueue: PriorityQueue;
     readonly players: readonly [Player, Player];
+    /** The winner, once a player has lost (END-1). Absent while the match goes on. */
+    readonly winner?: PlayerIndex;
     /** Present only during SELECTION. */
     readonly selection?: SelectionState;
 };

@@ -1,5 +1,6 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import ApplyState from "@domain/strategies/ApplyState.class";
+import Damage from "@domain/strategies/Damage.class";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
@@ -75,15 +76,12 @@ describe('STATE-1: ApplyState', () => {
         expect(state.players[1].team.find(c => c.position.slot === 3)!.states.ROOT?.value).toBe(2);
     });
 
-    it('gives nothing to a dead occupant', () => {
-        const withDead: GameState = {
-            ...gs,
-            players: [gs.players[0], { ...gs.players[1], team: gs.players[1].team.map((c, i) => i === 0 ? { ...c, hp: 0 } : c) }],
-        };
+    it('DEAD-1: gives nothing to the cell a dead character left, the rest of the pattern applies', () => {
+        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
 
-        const { state } = new ApplyState('STUN', 1).solve(withDead, [pos(1, 0), pos(1, 1)], actorId());
+        const { state } = new ApplyState('STUN', 1).solve(killed, [pos(1, 0), pos(1, 1)], actorId());
 
-        expect(at(state, 1, 0).states).toEqual({});
-        expect(at(state, 1, 1).states.STUN?.value).toBe(1);
+        expect(state.players[1].fallen?.[0].states).toEqual({});
+        expect(state.players[1].team.find(c => c.position.slot === 1)?.states.STUN?.value).toBe(1);
     });
 });

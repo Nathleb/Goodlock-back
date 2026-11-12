@@ -19,11 +19,19 @@ export function endOfRound(gameState: GameState): GameState {
     };
 }
 
-export function checkWinner(gameState: GameState): 0 | 1 | 'draw' | null {
-    const p0lost = hasLost(gameState.players[0]);
-    const p1lost = hasLost(gameState.players[1]);
-    if (p0lost && p1lost) return 'draw';
-    if (p0lost) return 1;
-    if (p1lost) return 0;
-    return null;
+/**
+ * Decides the match when a player has 2 dead characters (GAME-4). When both have, the author of
+ * the effect that just applied loses (END-2). A decided match stays decided.
+ */
+export function checkMatchEnd(gameState: GameState, author: PlayerIndex): GameState {
+    if (gameState.winner !== undefined) return gameState;
+    const lost = gameState.players.map(hasLost);
+    if (!lost[0] && !lost[1]) return gameState;
+    const loser = lost[0] && lost[1] ? author : lost[0] ? 0 : 1;
+    return { ...gameState, winner: (1 - loser) as PlayerIndex };
+}
+
+/** The winner of a finished match, null while it goes on. There is no draw (END-1). */
+export function checkWinner(gameState: GameState): PlayerIndex | null {
+    return gameState.winner ?? null;
 }

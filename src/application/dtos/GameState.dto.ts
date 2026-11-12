@@ -30,7 +30,10 @@ export type CharacterDTO = {
 
 export type PlayerGameStateDTO = {
     playerIndex: 0 | 1;
+    /** The characters on the board. */
     team: CharacterDTO[];
+    /** The characters who died and left the board, in order of death, with 0 HP. */
+    fallen: CharacterDTO[];
 };
 
 type ResolveChangeDTO = {
@@ -84,6 +87,6 @@ export type PresenceChangedDTO = {
 };
 
 export type GameOverDTO = {
-    winner: 0 | 1 | 'draw';
+    winner: 0 | 1;
     reason: 'elimination' | 'forfeit' | 'afk' | 'concede';
 };

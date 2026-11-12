@@ -48,7 +48,7 @@ export class GameStateMapper {
     private static hideOpponentTeam(dto: GameStateDTO, viewerIndex: PlayerIndex): GameStateDTO {
         const enemyIndex = (1 - viewerIndex) as 0 | 1;
         const players = [...dto.players] as [PlayerGameStateDTO, PlayerGameStateDTO];
-        players[enemyIndex] = { ...players[enemyIndex], team: [] };
+        players[enemyIndex] = { ...players[enemyIndex], team: [], fallen: [] };
         return { ...dto, players };
     }
 
@@ -94,6 +94,7 @@ export class GameStateMapper {
         return {
             playerIndex: player.playerIndex,
             team: player.team.map(GameStateMapper.characterToDTO),
+            fallen: (player.fallen ?? []).map(GameStateMapper.characterToDTO),
         };
     }
 

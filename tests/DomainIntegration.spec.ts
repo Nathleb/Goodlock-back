@@ -9,7 +9,7 @@ import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
 import { beginPlacementPhase } from "@domain/services/Phase.service";
-import { endOfRound, checkWinner } from "@domain/services/Round.service";
+import { endOfRound, checkWinner, checkMatchEnd } from "@domain/services/Round.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
 } from "@domain/services/GameLoop.service";
@@ -125,12 +125,13 @@ describe('Domain integration — Single-target damage', () => {
         expect(state.players[1].team[0].hp).toBe(40);
     });
 
-    it('overkill damage floors HP at 0', () => {
+    it('DEAD-1: a lethal hit takes the character off the board, with 0 HP among the fallen', () => {
         const overkillDie = uniformDie('Overkill', 1, [{ effect: EffectLabel.Damage, magnitude: 999, targets: [enemyAbs(0)] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: overkillDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
-        expect(state.players[1].team[0].hp).toBe(0);
+        expect(state.players[1].team.find(c => c.position.slot === 0)).toBeUndefined();
+        expect(state.players[1].fallen).toEqual([expect.objectContaining({ hp: 0 })]);
     });
 
     it('damage hits only the targeted slot — adjacent characters are unaffected', () => {
@@ -210,20 +211,23 @@ describe('HEAL-1: Domain integration — Heal effects', () => {
         expect(state.players[0].team[1].hp).toBe(50);
     });
 
-    it('dead character cannot be healed', () => {
+    it('DEAD-2: a dead character cannot be healed', () => {
         const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyAbs(1)] }]);
-        let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        gameState = {
+        const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
+        const dead = gameState.players[0].team[1];
+        const withFallen: GameState = {
             ...gameState,
             players: [{
                 ...gameState.players[0],
-                team: gameState.players[0].team.map((char, idx) => idx === 1 ? { ...char, hp: 0 } : char),
-            }, gameState.players[1]] as typeof gameState.players,
+                team: gameState.players[0].team.filter(char => char !== dead),
+                fallen: [{ ...dead, hp: 0 }],
+            }, gameState.players[1]],
         };
 
-        const resolvedState = advanceToResolve(gameState);
+        const resolvedState = advanceToResolve(withFallen);
         const { state } = unwrap(performResolve(resolvedState));
-        expect(state.players[0].team[1].hp).toBe(0);
+        expect(state.players[0].team.find(c => c.position.slot === 1)).toBeUndefined();
+        expect(state.players[0].fallen?.[0].hp).toBe(0);
     });
 });
 
@@ -240,7 +244,7 @@ describe('PRIO-1: Domain integration — Priority ordering', () => {
         const resolvedState = advanceToResolve(gameState);
         const { state, log } = unwrap(performResolve(resolvedState));
 
-        expect(state.players[1].team[0].hp).toBe(0);   // killed by high-prio
+        expect(state.players[1].fallen?.[0].hp).toBe(0);   // killed by high-prio, off the board
         expect(state.players[0].team[0].hp).toBe(50);  // never hit
         const victimStep = log.find(logStep => logStep.characterId === player1.team[0].id)!;
         expect(victimStep.skipped).toBe(true);
@@ -428,20 +432,20 @@ describe('Domain integration — Win conditions', () => {
         expect(checkWinner(state)).toBe(1);
     });
 
-    it('checkWinner returns draw when both teams have exactly 2 dead characters', () => {
-        // Test checkWinner directly with a known-dead state: it isolates the
+    it('END-2: there is no draw: when both teams have exactly 2 dead characters, the author loses', () => {
+        // Test checkMatchEnd directly with a known-dead state: it isolates the
         // winner rule from the resolution order.
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
-        const killTwo = (team: typeof gameState.players[0]['team']) =>
-            team.map((char, idx) => idx < 2 ? { ...char, hp: 0 } : char);
+        const killTwo = (player: typeof gameState.players[0]) => ({
+            ...player,
+            team: player.team.slice(2),
+            fallen: player.team.slice(0, 2).map(char => ({ ...char, hp: 0 })),
+        });
         const stateWithDeadChars: GameState = {
             ...gameState,
-            players: [
-                { ...gameState.players[0], team: killTwo(gameState.players[0].team) },
-                { ...gameState.players[1], team: killTwo(gameState.players[1].team) },
-            ] as typeof gameState.players,
+            players: [killTwo(gameState.players[0]), killTwo(gameState.players[1])],
         };
-        expect(checkWinner(stateWithDeadChars)).toBe('draw');
+        expect(checkWinner(checkMatchEnd(stateWithDeadChars, 0))).toBe(1);
     });
 
     it('checkWinner returns null when only 1 character has died', () => {
@@ -449,7 +453,7 @@ describe('Domain integration — Win conditions', () => {
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
-        expect(state.players[1].team.filter(c => c.hp === 0)).toHaveLength(1);
+        expect(state.players[1].fallen).toHaveLength(1);
         expect(checkWinner(state)).toBeNull();
     });
 });
