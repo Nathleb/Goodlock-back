@@ -144,10 +144,6 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): Result<Gam
             // KEEP-4: each player gains the increment when both have confirmed.
             const updated = addIncrement(marked);
 
-            if (updated.rollsLeft === 0) {
-                return resetReady(beginResolvePhase(updated));
-            }
-
             const rerolled = { ...rerollBothPlayers(updated), rollsLeft: updated.rollsLeft - 1 };
             // After the final reroll there are no rerolls left, so locking is moot —
             // skip the dead keep round and go straight to resolve with the final dice.

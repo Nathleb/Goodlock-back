@@ -107,7 +107,7 @@ describe('END-2: deaths are checked after each effect', () => {
         expect(state.winner).toBe(1 - author);
     });
 
-    it('there is no draw: the winner is a player', () => {
+    it('END-2: when one effect gives both players their second death, the match has a winner: a draw only comes from time', () => {
         const bothDie = face(1, [{ effect: EffectLabel.Damage, magnitude: 99, targets: [allyAbs(1), enemyAbs(1)] }]);
 
         const { state } = run(withFallen(teamOf(0, { 0: bothDie }), 1), withFallen(teamOf(1), 1));

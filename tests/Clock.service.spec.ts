@@ -228,7 +228,7 @@ describe('KEEP-4: each player gains the increment when both have confirmed a Kee
     });
 
     it('is granted by confirmKeep when the second player confirms, whether a Roll or Resolve follows', () => {
-        for (const rollsLeft of [2, 1, 0]) {
+        for (const rollsLeft of [2, 1]) {
             const first = unwrap(confirmKeep(keepWith([false, false], rollsLeft), 0));
             expect(first.clocks.map(c => c.remainingMs)).toEqual([600_000, 600_000]);
             const second = unwrap(confirmKeep(first, 1));
