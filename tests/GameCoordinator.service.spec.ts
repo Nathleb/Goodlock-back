@@ -58,7 +58,7 @@ const lethalDie = generateFullDie(Array(6).fill({ description: 'Kill', priority:
 const withDeadEnemies = (gs: typeof baseGs) => ({
     ...gs,
     players: [
-        { ...gs.players[0], team: gs.players[0].team.map((c, i) => i === 0 ? { ...c, face: lethalDie[0] } : c) },
+        { ...gs.players[0], team: gs.players[0].team.map((c, i) => i === 0 ? { ...c, face: lethalDie[0], baseDie: lethalDie } : c) },
         { ...gs.players[1], team: gs.players[1].team.slice(0, 3).map((c, i) => i === 0 ? { ...c, hp: 1 } : c), fallen: gs.players[1].team.slice(3).map(c => ({ ...c, hp: 0 })) },
     ] as [Player, Player],
 });
@@ -472,7 +472,7 @@ describe('confirmKeep', () => {
 
     it('hides an unexpected failure while resolving behind INTERNAL', () => {
         const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
-        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 1 })));
         mockRoom.updateGameState.mockImplementationOnce(() => { throw new TypeError('db down'); });
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INTERNAL', message: 'Internal error' });
@@ -485,8 +485,8 @@ describe('confirmKeep', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameStateUpdated', expect.objectContaining({ phase: GamePhase.KEEP }));
     });
 
-    it('EOR-3: resolves the round when both confirm with rollsLeft = 0: roundResolved then next-round gameStateUpdated', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 0 })));
+    it('EOR-3: resolves the round when both confirm the last Keep: roundResolved then next-round gameStateUpdated', () => {
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 1 })));
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'roundResolved', expect.objectContaining({ resolveLog: expect.any(Array) }));
         const events = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
@@ -504,7 +504,7 @@ describe('confirmKeep', () => {
     });
 
     it('resolves then emits gameOver last when a winner is found', () => {
-        mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 0 }))));
+        mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 1 }))));
         coordinator.confirmKeep(SOCKET_0, []);
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 0, reason: 'elimination' });
         const events = mockWs.emitToRoom.mock.calls.map(([, event]) => event);
@@ -512,7 +512,7 @@ describe('confirmKeep', () => {
     });
 
     describe('upkeep at the start of the next round', () => {
-        const resolving = (gs: typeof baseGs) => p1Ready({ ...gs, rollsLeft: 0 });
+        const resolving = (gs: typeof baseGs) => p1Ready({ ...gs, rollsLeft: 1 });
         // VITALITY -1 touched during round 0: it survives this round's tick and hurts at the start of round 1.
         const poisoned = { VITALITY: { value: -1, touchedRound: 0 } };
         const edit = (gs: typeof baseGs, pi: 0 | 1, slot: number, change: Partial<Player['team'][number]>) => ({
@@ -753,7 +753,7 @@ describe('confirmSelection guards', () => {
 });
 
 describe('a round that ends the match', () => {
-    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 0 })))));
+    beforeEach(() => mockRoom.getRoom.mockReturnValue(makeRoom(withDeadEnemies(p1Ready({ ...keepGs, rollsLeft: 1 })))));
 
     it('ROOM-6: closes the room once the winner is announced', () => {
         const order: string[] = [];

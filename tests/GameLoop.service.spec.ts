@@ -109,14 +109,6 @@ describe('confirmKeep', () => {
         expect(result.playersReady).toEqual([false, false]);
     });
 
-    it('transitions to RESOLVE when rollsLeft is 0 and both confirm', () => {
-        const inKeep = { ...beginKeepPhase(gs), rollsLeft: 0 };
-        const after0 = unwrap(confirmKeep(inKeep, 0));
-        const result = unwrap(confirmKeep(after0, 1));
-        expect(result.phase).toBe(GamePhase.RESOLVE);
-        expect(result.playersReady).toEqual([false, false]);
-    });
-
     it('ROLL-4: transitions straight to RESOLVE when the final reroll exhausts rollsLeft (no dead keep round)', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
         const after0 = unwrap(confirmKeep(inKeep, 0));
@@ -166,7 +158,7 @@ describe('confirmKeep', () => {
     });
 
     it('does not transition on first confirm alone', () => {
-        const inKeep = { ...beginKeepPhase(gs), rollsLeft: 0 };
+        const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
         const result = unwrap(confirmKeep(inKeep, 0));
         expect(result.phase).toBe(GamePhase.KEEP);
     });
