@@ -164,3 +164,23 @@ describe('stable player identity', () => {
         expect(mockWs.emitToRoom).toHaveBeenCalledWith('room-1', 'gameOver', { winner: 1, reason: 'concede' });
     });
 });
+
+describe('CLOCK-2: a cancelled confirmation makes the clock run again', () => {
+    it('charges nothing while the player was confirmed, and charges again once they cancel', () => {
+        let current = gs(GamePhase.PLACEMENT, [false, false]);
+        mockRoom.getRoom.mockImplementation(() => room({ gameState: current }));
+        mockRoom.updateGameState.mockImplementation((_id: string, state: GameState) => { current = state; });
+
+        now = NOW + 5 * SECOND;
+        coordinator.confirmPlacement(SOCKET_0);
+        now = NOW + 15 * SECOND;
+        coordinator.cancelPlacement(SOCKET_0);
+        now = NOW + 25 * SECOND;
+        coordinator.confirmPlacement(SOCKET_0);
+
+        // Player 0 thought for 5 s, was confirmed (paused) for 10 s, then thought again for 10 s.
+        expect(current.clocks[0].remainingMs).toBe(585_000);
+        // Player 1 never confirmed: the whole 25 s are charged to them.
+        expect(current.clocks[1].remainingMs).toBe(575_000);
+    });
+});

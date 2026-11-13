@@ -71,6 +71,24 @@ describe('confirmPlacement', () => {
     });
 });
 
+describe('ROLL-1, ROLL-2: the first Roll rolls the dice that are not kept', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('gives a new face to each die that is not kept, leaves a kept die alone, and remembers what was kept', () => {
+        jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last face of every die
+        const inRoll = beginRollPhase(gs);
+        const keepFirst = (p: Player): Player => ({ ...p, team: p.team.map((c, i) => i === 0 ? { ...c, isFaceLocked: true } : c) });
+        const rolled = unwrap(performRoll({ ...inRoll, players: [keepFirst(inRoll.players[0]), keepFirst(inRoll.players[1])] }));
+
+        for (const player of rolled.players) {
+            expect(player.team[0].face.description).toBe('A');
+            expect(player.team[0].keptAtLastRoll).toBe(true);
+            expect(player.team.slice(1).map(c => c.face.description)).toEqual(['F', 'F', 'F', 'F']);
+            expect(player.team.slice(1).every(c => !c.keptAtLastRoll)).toBe(true);
+        }
+    });
+});
+
 describe('performRoll', () => {
     it('transitions to KEEP and resets playersReady', () => {
         const inRoll = beginRollPhase(gs);

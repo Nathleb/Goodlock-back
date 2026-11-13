@@ -692,6 +692,18 @@ describe('PriorityQueueService', () => {
       expect(orderOf([quick], [quicker])).toEqual([quicker.id, quick.id]);
     });
 
+    it('between two hasted characters the base speed decides, not the size of the Haste', () => {
+      const quickLongHaste = hero('quick-long-haste', 1, 0, 0, 3);
+      const quickerShortHaste = hero('quicker-short-haste', 9, 1, 0, 1);
+      expect(orderOf([quickLongHaste], [quickerShortHaste])).toEqual([quickerShortHaste.id, quickLongHaste.id]);
+    });
+
+    it('between two slowed characters the base speed decides, not the size of the Slow', () => {
+      const slowShortSlow = hero('slow-short-slow', 1, 0, 0, -1);
+      const fastLongSlow = hero('fast-long-slow', 9, 1, 0, -3);
+      expect(orderOf([slowShortSlow], [fastLongSlow])).toEqual([fastLongSlow.id, slowShortSlow.id]);
+    });
+
     it('never lets SPEED cross a bracket', () => {
       const hastedLow = hero('hasted-low', 1, 0, 0, 3, 0);
       const neutralHigh = hero('neutral-high', 1, 1, 0, 0, 1);

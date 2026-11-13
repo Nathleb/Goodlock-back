@@ -97,6 +97,13 @@ describe('STATE-6, DMG-1: DIVINE_SHIELD', () => {
         expect(at(state, 1, 0).hp).toBe(20);
     });
 
+    it('DMG-1, STATE-6: a hit the armour shield would have absorbed entirely still spends the Divine Shield', () => {
+        const { state } = new Damage(5).solve(patch(gs, 1, 0, { ...shielded(), shield: 6 }), [pos(1, 0)], actorId());
+
+        expect(at(state, 1, 0).states).toEqual({});
+        expect(at(state, 1, 0).shield).toBe(6);
+    });
+
     it('DEAD-1: is not consumed by a hit on the cell its dead holder left', () => {
         // Fixed damage ignores the shield, so its holder can die with it.
         const killed = new FixedDamage(20).solve(patch(gs, 1, 0, shielded()), [pos(1, 0)], actorId()).state;
