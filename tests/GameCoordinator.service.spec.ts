@@ -779,3 +779,20 @@ describe('confirmKeep payload message', () => {
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_LOCK', message: 'lockedCharacterIds must be an array' });
     });
 });
+
+describe('ROLL-1, ROLL-4: the last Keep leads to the third Roll, then to Resolve', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('rolls the dice that are not kept before resolving, and leaves a kept die alone', () => {
+        jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last face of every die
+        mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 1 })));
+        const keptId = baseGs.players[0].team[0].id;
+
+        coordinator.confirmKeep(SOCKET_0, [keptId]);
+
+        const resolved = mockWs.emitToRoom.mock.calls.find(([, event]) => event === 'roundResolved')![2];
+        const faces = (player: 0 | 1) => resolved.gameState.players[player].team.map((c: { face: { description: string } }) => c.face.description);
+        expect(faces(0)).toEqual(['A', 'F', 'F', 'F']);
+        expect(faces(1)).toEqual(['F', 'F', 'F', 'F']);
+    });
+});

@@ -7,6 +7,7 @@ import { createCharacterFromTemplate } from '@domain/services/CharacterGeneratio
 import { TEAM_SIZE } from '@domain/services/Deck.service';
 import { CatalogId } from '@shared/branded.types';
 import { testTemplate } from './helpers/catalog';
+import { settleClocks } from '@domain/services/Clock.service';
 
 const build = (t: CharacterTemplate) => createCharacterFromTemplate(t);
 const ids = (...xs: string[]) => xs as CatalogId[];
@@ -109,6 +110,19 @@ describe('selection error messages', () => {
     it('explains a confirm when no selection is in progress', () => {
         const noSelection = { ...gs, selection: undefined };
         expect(unwrapErr(confirmSelection(noSelection, 0, PICK_0, build))).toEqual({ code: 'NO_SELECTION', message: 'No selection in progress' });
+    });
+});
+
+describe('CLOCK-4, GAME-7: the clocks are published to the opponent when the Selection ends', () => {
+    it('keeps the published value until both players have confirmed, then publishes the time left', () => {
+        const thinking = settleClocks(gs, 30_000); // 30 s of Selection: 570 s left on each clock
+
+        const first = unwrap(confirmSelection(thinking, 0, PICK_0, build));
+        expect(first.clocks.map(c => c.publishedMs)).toEqual([600_000, 600_000]);
+
+        const both = unwrap(confirmSelection(first, 1, PICK_1, build));
+        expect(both.phase).toBe(GamePhase.PLACEMENT);
+        expect(both.clocks.map(c => c.publishedMs)).toEqual([570_000, 570_000]);
     });
 });
 
