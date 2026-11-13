@@ -900,5 +900,22 @@ describe('PriorityQueueService', () => {
       expect(step.skipped).toBe(false);
       expect(step.effects).toHaveLength(1);
     });
+
+    it('DEAD-3, SEQ-1: when the actor dies on a cell of an effect, that effect still applies to its other cells, and the next effect does not', () => {
+      // One effect on the actor's own cell then two enemy cells, followed by a second effect on another enemy cell.
+      const selfThenEnemies = face(0, [
+        { effect: EffectLabel.Damage, magnitude: 8, targets: [allyRel(0), enemyRel(0, 1)] },
+        { effect: EffectLabel.Damage, magnitude: 9, targets: [enemyRel(2)] },
+      ]);
+      const p0 = teamOf(0, { 0: selfThenEnemies });
+      const weak = { ...p0, team: p0.team.map((c, i) => i === 0 ? { ...c, hp: 5 } : c) };
+
+      const { state } = run(weak, teamOf(1));
+
+      expect(state.players[0].fallen).toHaveLength(1);
+      expect(hp(state, 1, 0)).toBe(12);
+      expect(hp(state, 1, 1)).toBe(12);
+      expect(hp(state, 1, 2)).toBe(20);
+    });
   });
 });
