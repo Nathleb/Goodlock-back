@@ -8,7 +8,8 @@ import { createCharacter, generateFullDie } from "@domain/services/CharacterGene
 import { createGameState } from "./helpers/gameState";
 import { createPlayer } from "@domain/services/Player.service";
 import { gainShield } from "@domain/services/Character.service";
-import { beginPlacementPhase } from "@domain/services/Phase.service";
+import { beginRollPhase } from "@domain/services/Phase.service";
+import { upkeep } from "@domain/services/Upkeep.service";
 import { endOfRound, checkMatchEnd } from "@domain/services/Round.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
@@ -39,14 +40,23 @@ function makeTeam(die: DieFn, playerIndex: 0 | 1, maxHp = 50) {
 }
 
 /**
- * Advance PLACEMENT → ROLL → KEEP → RESOLVE.
+ * Advance PLACEMENT → ROLL → KEEP → RESOLVE (the first round).
  * Locks all dice after the first Roll and confirms both Keeps until Resolve
  * (the round plays all three Rolls, ROLL-4).
  */
 function advanceToResolve(gameState: GameState): GameState {
-    let state = unwrap(confirmPlacement(gameState, 0));
-    state = unwrap(confirmPlacement(state, 1));
-    state = unwrap(performRoll(state));
+    const rolling = unwrap(confirmPlacement(unwrap(confirmPlacement(gameState, 0)), 1));
+    return rollToResolve(rolling);
+}
+
+/** The next rounds (GAME-6): Upkeep, then Roll, Keep, Roll, Keep, Roll, Resolve: there is no Placement. */
+function advanceNextRoundToResolve(endOfRoundState: GameState): GameState {
+    return rollToResolve(beginRollPhase(upkeep(endOfRoundState)));
+}
+
+/** ROLL → KEEP → ... → RESOLVE: all dice kept after the first Roll, both Keeps confirmed until Resolve. */
+function rollToResolve(rolling: GameState): GameState {
+    let state = unwrap(performRoll(rolling));
     state = {
         ...state,
         players: state.players.map(player => ({
@@ -432,7 +442,7 @@ describe('Domain integration — Win conditions', () => {
         expect(state.winner).toBe(1);
     });
 
-    it('END-2: there is no draw: when both teams have exactly 2 dead characters, the author loses', () => {
+    it('END-2: when both teams have exactly 2 dead characters, the author loses', () => {
         // Test checkMatchEnd directly with a known-dead state: it isolates the
         // winner rule from the resolution order.
         const gameState = createGameState(createPlayer(makeTeam(noopDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
@@ -496,10 +506,10 @@ describe('EOR-1: Domain integration — Round cleanup and multi-round', () => {
 
         // Round 2: endOfRound wipes the leftover shield; the shielder now idles, so nothing absorbs the hit.
         const idle = (team: typeof round1.players[1]['team']) => team.map(c => c.position.slot === 0 ? { ...c, baseDie: noopDie, face: noopDie[0] } : c);
-        const nextRound = beginPlacementPhase(endOfRound(round1));
+        const nextRound = endOfRound(round1);
         expect(nextRound.players[1].team[0].shield).toBe(0);
         const round2Start = { ...nextRound, players: [nextRound.players[0], { ...nextRound.players[1], team: idle(nextRound.players[1].team) }] as typeof nextRound.players };
-        const { state: round2 } = unwrap(performResolve(advanceToResolve(round2Start)));
+        const { state: round2 } = unwrap(performResolve(advanceNextRoundToResolve(round2Start)));
         expect(round2.players[1].team[0].hp).toBe(45);
     });
 
@@ -512,8 +522,8 @@ describe('EOR-1: Domain integration — Round cleanup and multi-round', () => {
         expect(round1State.players[1].team[0].hp).toBe(40);
 
         // Round 2
-        const round2GameState = beginPlacementPhase(endOfRound(round1State));
-        const { state: round2State } = unwrap(performResolve(advanceToResolve(round2GameState)));
+        const round2GameState = endOfRound(round1State);
+        const { state: round2State } = unwrap(performResolve(advanceNextRoundToResolve(round2GameState)));
         expect(round2State.players[1].team[0].hp).toBe(30);
         // endOfRound hasn't been called yet; counter was incremented once (after round 1)
         expect(round2State.currentRound).toBe(1);
