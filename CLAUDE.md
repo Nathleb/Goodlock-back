@@ -9,6 +9,14 @@ Backend of Goodlock, a tactical PvP dice game. **Rules reference: `../Goodlock-s
 npm run start:dev       # watch mode
 npm run build           # compile to dist/
 npm run protocol:schema # regenerate protocol/protocol.schema.json from ServerEvents
+npm run dev:stack       # db:up + db:migrate + start:dev: the whole local backend in one command
+
+# Local database (Docker Postgres, see docker-compose.yml)
+npm run db:up           # start it and wait until it accepts connections
+npm run db:down         # stop it (the data stays in the Docker volume)
+npm run db:status       # which migrations are applied (read-only)
+npm run db:migrate      # apply the pending migrations (prisma migrate deploy): a human-only step
+npm run db:baseline     # once, for a database whose tables exist but that has no migration history
 
 # Tests
 npm run test            # run all tests
