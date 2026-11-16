@@ -26,13 +26,13 @@ const withFallen = (player: Player, n: number): Player => ({
 });
 const run = (p0: Player, p1: Player) => unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(p0, p1)));
 const killing = (...targets: ReturnType<typeof enemyAbs>[]): EffectEntry[] =>
-    targets.map(t => ({ effect: EffectLabel.Damage, magnitude: 99, targets: [t] }));
+    targets.map(t => ({ targets: [t], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }));
 const cell = (s: GameState, pi: PlayerIndex, slot: number) => s.players[pi].team.find(c => c.position.slot === slot);
 
 describe('END-1, RES-4: the match ends as soon as a player loses', () => {
     it('stops the resolution at the effect that gives the second death: the rest of the face and of the round is not played', () => {
         const killer = face(1, killing(enemyAbs(0), enemyAbs(1), enemyAbs(2)));
-        const late = face(0, [{ effect: EffectLabel.Damage, magnitude: 9, targets: [enemyAbs(0)] }]);
+        const late = face(0, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 9 }] }]);
         const p0 = teamOf(0, { 0: killer });
         const p1 = teamOf(1, { 3: late });
 
@@ -83,8 +83,8 @@ describe('END-2: deaths are checked after each effect', () => {
     it('a player whose own effect gives them their second death loses before the rest of the face applies', () => {
         // "lose 3 HP, then deal 9 to the enemy in front": the second death of the author stops the face.
         const selfCost = face(1, [
-            { effect: EffectLabel.FixedDamage, magnitude: 20, targets: [allyAbs(1)] },
-            { effect: EffectLabel.Damage, magnitude: 9, targets: [enemyAbs(0)] },
+            { targets: [allyAbs(1)], parts: [{ part: EffectLabel.FixedDamage, magnitude: 20 }] },
+            { targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 9 }] },
         ]);
         const p0 = withFallen(teamOf(0, { 0: selfCost }), 1);
 
@@ -95,7 +95,7 @@ describe('END-2: deaths are checked after each effect', () => {
     });
 
     it.each([0, 1] as const)('when one effect gives both players their second death, its author loses (author: player %i)', (author) => {
-        const bothDie = face(1, [{ effect: EffectLabel.Damage, magnitude: 99, targets: [allyAbs(1), enemyAbs(1)] }]);
+        const bothDie = face(1, [{ targets: [allyAbs(1), enemyAbs(1)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]);
         const overrides = { 0: bothDie };
         const authorTeam = withFallen(teamOf(author, overrides), 1);
         const otherTeam = withFallen(teamOf((1 - author) as PlayerIndex), 1);
@@ -108,7 +108,7 @@ describe('END-2: deaths are checked after each effect', () => {
     });
 
     it('END-2: when one effect gives both players their second death, the match has a winner: a draw only comes from time', () => {
-        const bothDie = face(1, [{ effect: EffectLabel.Damage, magnitude: 99, targets: [allyAbs(1), enemyAbs(1)] }]);
+        const bothDie = face(1, [{ targets: [allyAbs(1), enemyAbs(1)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]);
 
         const { state } = run(withFallen(teamOf(0, { 0: bothDie }), 1), withFallen(teamOf(1), 1));
 

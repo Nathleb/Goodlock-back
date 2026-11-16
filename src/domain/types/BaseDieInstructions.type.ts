@@ -3,30 +3,33 @@ import { StatName } from "./Modifier.type";
 import { StateName } from "./State.type";
 import TargetGroup from "./TargetGroup.type";
 
-type BasicEffectEntry = {
-    readonly effect: Exclude<EffectLabel, EffectLabel.ApplyStat | EffectLabel.ApplyState>;
+type BasicPartEntry = {
+    readonly part: Exclude<EffectLabel, EffectLabel.ApplyStat | EffectLabel.ApplyState>;
     readonly magnitude: number;
-    readonly targets: readonly TargetGroup[];
 };
 
 /** Adds a stat instance: `magnitude` is the stat value (negative = debuff), `duration` is in rounds. */
 type ApplyStatEntry = {
-    readonly effect: EffectLabel.ApplyStat;
+    readonly part: EffectLabel.ApplyStat;
     readonly stat: StatName;
     readonly magnitude: number;
     readonly duration: number;
-    readonly targets: readonly TargetGroup[];
 };
 
 /** Puts a state on its axis: no magnitude, `duration` is in rounds. */
 type ApplyStateEntry = {
-    readonly effect: EffectLabel.ApplyState;
+    readonly part: EffectLabel.ApplyState;
     readonly state: StateName;
     readonly duration: number;
-    readonly targets: readonly TargetGroup[];
 };
 
-export type EffectEntry = BasicEffectEntry | ApplyStatEntry | ApplyStateEntry;
+export type PartEntry = BasicPartEntry | ApplyStatEntry | ApplyStateEntry;
+
+/** One step of a face as authored: its target cells and the parts applied to them, in order. */
+export type EffectEntry = {
+    readonly targets: readonly TargetGroup[];
+    readonly parts: readonly PartEntry[];
+};
 
 type FaceTemplate = {
     readonly description: string;

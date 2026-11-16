@@ -89,7 +89,7 @@ function makeTeamWith(playerIndex: 0 | 1, dies: Partial<Record<SlotIndex, DieFn>
 
 describe('Domain integration — Phase flow', () => {
     it('GAME-6: PLACEMENT → ROLL → KEEP → RESOLVE → RESULT completes without error', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const dmgDie = uniformDie('Damage', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeamWith(1, { 0: dmgDie }), 1));
 
         const resolvedState = advanceToResolve(gameState);
@@ -118,7 +118,7 @@ describe('Domain integration — Phase flow', () => {
 // ─── Single-target damage ─────────────────────────────────────────────────────
 
 describe('Domain integration — Single-target damage', () => {
-    const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+    const dmgDie = uniformDie('Damage', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] }]);
 
     it('reduces target HP by exact damage amount', () => {
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
@@ -136,7 +136,7 @@ describe('Domain integration — Single-target damage', () => {
     });
 
     it('DEAD-1: a lethal hit takes the character off the board, with 0 HP among the fallen', () => {
-        const overkillDie = uniformDie('Overkill', 1, [{ effect: EffectLabel.Damage, magnitude: 999, targets: [enemyAbs(0)] }]);
+        const overkillDie = uniformDie('Overkill', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 999 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: overkillDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -145,7 +145,7 @@ describe('Domain integration — Single-target damage', () => {
     });
 
     it('damage hits only the targeted slot — adjacent characters are unaffected', () => {
-        const slot2Die = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(2)] }]);
+        const slot2Die = uniformDie('Damage', 1, [{ targets: [enemyAbs(2)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: slot2Die }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -159,7 +159,7 @@ describe('Domain integration — Single-target damage', () => {
 // ─── Shield absorption ────────────────────────────────────────────────────────
 
 describe('DMG-1: Domain integration — Shield absorption', () => {
-    const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+    const dmgDie = uniformDie('Damage', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
 
     it('shield absorbs part of the damage before HP is reduced', () => {
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
@@ -198,7 +198,7 @@ describe('DMG-1: Domain integration — Shield absorption', () => {
 
 describe('HEAL-1: Domain integration — Heal effects', () => {
     it('single-target heal increases damaged target HP', () => {
-        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.Heal, magnitude: 15, targets: [allyAbs(1)] }]);
+        const healDie = uniformDie('Heal', 1, [{ targets: [allyAbs(1)], parts: [{ part: EffectLabel.Heal, magnitude: 15 }] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
@@ -214,7 +214,7 @@ describe('HEAL-1: Domain integration — Heal effects', () => {
     });
 
     it('heal is capped at maxHp and never overheals', () => {
-        const bigHealDie = uniformDie('BigHeal', 1, [{ effect: EffectLabel.Heal, magnitude: 100, targets: [allyAbs(1)] }]);
+        const bigHealDie = uniformDie('BigHeal', 1, [{ targets: [allyAbs(1)], parts: [{ part: EffectLabel.Heal, magnitude: 100 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: bigHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -222,7 +222,7 @@ describe('HEAL-1: Domain integration — Heal effects', () => {
     });
 
     it('DEAD-2: a dead character cannot be healed', () => {
-        const healDie = uniformDie('Heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyAbs(1)] }]);
+        const healDie = uniformDie('Heal', 1, [{ targets: [allyAbs(1)], parts: [{ part: EffectLabel.Heal, magnitude: 20 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: healDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const dead = gameState.players[0].team[1];
         const withFallen: GameState = {
@@ -245,8 +245,8 @@ describe('HEAL-1: Domain integration — Heal effects', () => {
 
 describe('PRIO-1: Domain integration — Priority ordering', () => {
     it('higher-priority attacker kills target before lower-priority defender fires', () => {
-        const highPrioDmgDie = uniformDie('HighPrio', 5, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
-        const lowPrioDmgDie  = uniformDie('LowPrio',  1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+        const highPrioDmgDie = uniformDie('HighPrio', 5, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 50 }] }]);
+        const lowPrioDmgDie  = uniformDie('LowPrio',  1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] }]);
         const player0 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Killer', maxHp: 50, baseSpeed: 0, baseDie: highPrioDmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } })], 0);
         const player1 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Victim', maxHp: 50, baseSpeed: 0, baseDie: lowPrioDmgDie, position: { playerIndex: 1, slot: 0 as SlotIndex } })], 1);
         const gameState = createGameState(player0, player1);
@@ -261,7 +261,7 @@ describe('PRIO-1: Domain integration — Priority ordering', () => {
     });
 
     it('equal-priority characters both fire — neither is skipped', () => {
-        const dmgDie = uniformDie('Damage', 3, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+        const dmgDie = uniformDie('Damage', 3, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] }]);
         const player0 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'A', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } })], 0);
         const player1 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'B', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 1, slot: 0 as SlotIndex } })], 1);
         const gameState = createGameState(player0, player1);
@@ -275,7 +275,7 @@ describe('PRIO-1: Domain integration — Priority ordering', () => {
     });
 
     it('resolve log contains a step for every queued character', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const dmgDie = uniformDie('Damage', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
         const player0 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'A', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 0, slot: 0 as SlotIndex } })], 0);
         const player1 = createPlayer([createCharacter({ catalogId: TEST_CATALOG_ID, name: 'B', maxHp: 50, baseSpeed: 0, baseDie: dmgDie, position: { playerIndex: 1, slot: 0 as SlotIndex } })], 1);
         const gameState = createGameState(player0, player1);
@@ -293,7 +293,7 @@ describe('PRIO-1: Domain integration — Priority ordering', () => {
 
 describe('Domain integration — Self-targeted effects', () => {
     it('a self-heal fires in resolve with no target assignment', () => {
-        const selfHealDie = uniformDie('Self-heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyRel(0)] }]);
+        const selfHealDie = uniformDie('Self-heal', 1, [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Heal, magnitude: 20 }] }]);
         let gameState = createGameState(createPlayer(makeTeam(selfHealDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
@@ -310,7 +310,7 @@ describe('Domain integration — Self-targeted effects', () => {
     });
 
     it('a self-shield grants shield to each character with no target assignment', () => {
-        const selfShieldDie = uniformDie('Self-shield', 1, [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }]);
+        const selfShieldDie = uniformDie('Self-shield', 1, [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 5 }] }]);
         const gameState = createGameState(createPlayer(makeTeam(selfShieldDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -319,8 +319,8 @@ describe('Domain integration — Self-targeted effects', () => {
     });
 
     it('self-targeted and enemy-targeted faces coexist and both fire correctly in the same round', () => {
-        const selfHealDie = uniformDie('Self-heal', 1, [{ effect: EffectLabel.Heal, magnitude: 20, targets: [allyRel(0)] }]);
-        const dmgDie      = uniformDie('Damage',   1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+        const selfHealDie = uniformDie('Self-heal', 1, [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Heal, magnitude: 20 }] }]);
+        const dmgDie      = uniformDie('Damage',   1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] }]);
 
         const player0Team = [
             createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Self-healer', maxHp: 50, baseSpeed: 0, baseDie: selfHealDie, position: { playerIndex: 0, slot: 0 as SlotIndex } }),
@@ -349,7 +349,7 @@ describe('Domain integration — Self-targeted effects', () => {
 
 describe('TGT-2: Domain integration — cleave effects', () => {
     it('cleave damage around slot 2 hits slots 1, 2 and 3 only', () => {
-        const cleaveDmgDie = uniformDie('cleave', 1, [{ effect: EffectLabel.Damage, magnitude: 8, targets: [enemyAbs(1, 2, 3)] }]);
+        const cleaveDmgDie = uniformDie('cleave', 1, [{ targets: [enemyAbs(1, 2, 3)], parts: [{ part: EffectLabel.Damage, magnitude: 8 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -359,7 +359,7 @@ describe('TGT-2: Domain integration — cleave effects', () => {
     });
 
     it('cleave damage at edge slot 0 hits only slots 0 and 1', () => {
-        const cleaveDmgDie = uniformDie('cleave', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0, 1)] }]);
+        const cleaveDmgDie = uniformDie('cleave', 1, [{ targets: [enemyAbs(0, 1)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -369,7 +369,7 @@ describe('TGT-2: Domain integration — cleave effects', () => {
     });
 
     it('cleave heal around slot 2 heals allies at slots 1, 2 and 3', () => {
-        const cleaveHealDie = uniformDie('cleave heal', 1, [{ effect: EffectLabel.Heal, magnitude: 10, targets: [allyAbs(1, 2, 3)] }]);
+        const cleaveHealDie = uniformDie('cleave heal', 1, [{ targets: [allyAbs(1, 2, 3)], parts: [{ part: EffectLabel.Heal, magnitude: 10 }] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: cleaveHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
@@ -391,7 +391,7 @@ describe('TGT-2: Domain integration — cleave effects', () => {
 
 describe('Domain integration — Full-team effects', () => {
     it('full-team damage hits all 4 enemy characters, the empty cell included in the pattern', () => {
-        const fullTeamDmgDie = uniformDie('Full-team damage', 1, [{ effect: EffectLabel.Damage, magnitude: 6, targets: [enemyAbs(0, 1, 2, 3, 4)] }]);
+        const fullTeamDmgDie = uniformDie('Full-team damage', 1, [{ targets: [enemyAbs(0, 1, 2, 3, 4)], parts: [{ part: EffectLabel.Damage, magnitude: 6 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamDmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -399,7 +399,7 @@ describe('Domain integration — Full-team effects', () => {
     });
 
     it('full-team heal restores HP to all 4 ally characters including the actor', () => {
-        const fullTeamHealDie = uniformDie('Full-team heal', 1, [{ effect: EffectLabel.Heal, magnitude: 12, targets: [allyAbs(0, 1, 2, 3, 4)] }]);
+        const fullTeamHealDie = uniformDie('Full-team heal', 1, [{ targets: [allyAbs(0, 1, 2, 3, 4)], parts: [{ part: EffectLabel.Heal, magnitude: 12 }] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamHealDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
@@ -415,7 +415,7 @@ describe('Domain integration — Full-team effects', () => {
     });
 
     it('full-team shield grants shield to all 4 ally characters', () => {
-        const fullTeamShieldDie = uniformDie('Full-team shield', 1, [{ effect: EffectLabel.Shield, magnitude: 4, targets: [allyAbs(0, 1, 2, 3, 4)] }]);
+        const fullTeamShieldDie = uniformDie('Full-team shield', 1, [{ targets: [allyAbs(0, 1, 2, 3, 4)], parts: [{ part: EffectLabel.Shield, magnitude: 4 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: fullTeamShieldDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -426,7 +426,7 @@ describe('Domain integration — Full-team effects', () => {
 // ─── Win conditions ───────────────────────────────────────────────────────────
 
 describe('Domain integration — Win conditions', () => {
-    const killDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyRel(0)] }]);
+    const killDie = uniformDie('Kill', 1, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 50 }] }]);
 
     it('END-1: the winner is 0 when player 1 loses 2 or more characters', () => {
         const gameState = createGameState(createPlayer(makeTeam(killDie, 0), 0), createPlayer(makeTeam(noopDie, 1), 1));
@@ -459,7 +459,7 @@ describe('Domain integration — Win conditions', () => {
     });
 
     it('END-1: nobody has won when only 1 character has died', () => {
-        const dmgDie = uniformDie('Kill', 1, [{ effect: EffectLabel.Damage, magnitude: 50, targets: [enemyAbs(0)] }]);
+        const dmgDie = uniformDie('Kill', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 50 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         const resolvedState = advanceToResolve(gameState);
         const { state } = unwrap(performResolve(resolvedState));
@@ -472,7 +472,7 @@ describe('Domain integration — Win conditions', () => {
 
 describe('EOR-1: Domain integration — Round cleanup and multi-round', () => {
     it('endOfRound resets shields, unlocks dice, increments round, restores rollsLeft', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const dmgDie = uniformDie('Damage', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
         let gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
         gameState = {
             ...gameState,
@@ -495,8 +495,8 @@ describe('EOR-1: Domain integration — Round cleanup and multi-round', () => {
     });
 
     it('a shield left over from round 1 does not absorb damage in round 2', () => {
-        const selfShieldDie = uniformDie('Self-shield', 2, [{ effect: EffectLabel.Shield, magnitude: 10, targets: [allyRel(0)] }]);
-        const dmgDie        = uniformDie('Damage',      1, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+        const selfShieldDie = uniformDie('Self-shield', 2, [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 10 }] }]);
+        const dmgDie        = uniformDie('Damage',      1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
         const gameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeamWith(1, { 0: selfShieldDie }), 1));
 
         // Round 1: the shield (priority 2) lands before the 5 damage (priority 1): 5 shield left, HP intact.
@@ -514,7 +514,7 @@ describe('EOR-1: Domain integration — Round cleanup and multi-round', () => {
     });
 
     it('damage accumulates correctly across two consecutive rounds', () => {
-        const dmgDie = uniformDie('Damage', 1, [{ effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] }]);
+        const dmgDie = uniformDie('Damage', 1, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] }]);
         const initialGameState = createGameState(createPlayer(makeTeamWith(0, { 0: dmgDie }), 0), createPlayer(makeTeam(noopDie, 1), 1));
 
         // Round 1

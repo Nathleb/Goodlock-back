@@ -10,12 +10,12 @@ import { Player } from "@domain/types/Player.type";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }] },
-    { description: "Heal", priority: 1, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [allyRel(0)] }] },
-    { description: "Shield", priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }] },
-    { description: "Damage", priority: 2, effects: [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }] },
-    { description: "Heal", priority: 2, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [allyRel(0)] }] },
-    { description: "Shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 5, targets: [allyRel(0)] }] },
+    { description: "Damage", priority: 1, effects: [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }] },
+    { description: "Heal", priority: 1, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Heal, magnitude: 5 }] }] },
+    { description: "Shield", priority: 1, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 5 }] }] },
+    { description: "Damage", priority: 2, effects: [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }] },
+    { description: "Heal", priority: 2, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Heal, magnitude: 5 }] }] },
+    { description: "Shield", priority: 2, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 5 }] }] },
 ];
 
 const die = generateFullDie(baseDieInstructions);

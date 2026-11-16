@@ -40,7 +40,7 @@ describe('COLL-2: getCollection', () => {
         const catalog = makeTestCatalog(0);
         const template = {
             id: id('hitter'), name: 'Hitter', maxHp: 10, baseSpeed: 5,
-            baseDieInstructions: Array(6).fill({ description: 'hit', priority: 1, effects: [{ effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] }),
+            baseDieInstructions: Array(6).fill({ description: 'hit', priority: 1, effects: [{ targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'Damage', magnitude: 3 }] }] }),
         };
         jest.spyOn(catalog, 'get').mockReturnValue(template as never);
         coordinator = new CollectionCoordinatorService(catalog, collection);

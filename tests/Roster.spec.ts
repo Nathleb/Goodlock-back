@@ -5,7 +5,7 @@ import { loadCatalogFromDir } from "@infrastructure/adapters/catalog/FileCharact
 const tmpltDir = path.join(__dirname, "..", "tmplt");
 const roster = fs.readdirSync(tmpltDir).filter(f => f.endsWith(".json"))
     .map(f => JSON.parse(fs.readFileSync(path.join(tmpltDir, f), "utf-8")));
-type Face = { description: string; priority: number; effects: { effect: string; stat?: string; state?: string }[] };
+type Face = { description: string; priority: number; effects: { parts: { part: string; stat?: string; state?: string }[] }[] };
 const faces = roster.flatMap(c => c.baseDieInstructions as Face[]);
 
 describe('the roster', () => {
@@ -27,8 +27,8 @@ describe('the roster', () => {
     });
 
     it('uses these states and these stats', () => {
-        const states = new Set(faces.flatMap(f => f.effects).filter(e => e.effect === 'ApplyState').map(e => e.state));
-        const stats = new Set(faces.flatMap(f => f.effects).filter(e => e.effect === 'ApplyStat').map(e => e.stat));
+        const states = new Set(faces.flatMap(f => f.effects).flatMap(e => e.parts).filter(p => p.part === 'ApplyState').map(p => p.state));
+        const stats = new Set(faces.flatMap(f => f.effects).flatMap(e => e.parts).filter(p => p.part === 'ApplyStat').map(p => p.stat));
         expect([...states].sort()).toEqual(['DIVINE_SHIELD', 'HASTE', 'POISON', 'ROOT', 'STUN']);
         expect([...stats].sort()).toEqual(['ARMOR', 'POWER']);
     });

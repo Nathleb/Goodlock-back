@@ -200,7 +200,7 @@ describe('face DTO', () => {
     it('exposes each effect with its label, magnitude and target groups', () => {
         const die = generateFullDie(Array(6).fill({
             description: 'd', priority: 0, effects: [
-                { effect: EffectLabel.Damage, magnitude: 3, targets: [enemyRel(-1, 0, 1)] },
+                { targets: [enemyRel(-1, 0, 1)], parts: [{ part: EffectLabel.Damage, magnitude: 3 }] },
             ],
         }) as unknown as BaseDieInstructions);
         const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'T', maxHp: 10, baseSpeed: 1, baseDie: die, position: { playerIndex: 0, slot: 0 } });
@@ -237,8 +237,8 @@ describe('stats in the DTO', () => {
     });
 
     it('carries stat and duration on an ApplyStat face effect, and nothing extra on others', () => {
-        const apply = { label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2, targets: [] };
-        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [] };
+        const apply = { targets: [], parts: [{ label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2 }] };
+        const damage = { targets: [], parts: [{ label: EffectLabel.Damage, magnitude: 5 }] };
         const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
@@ -272,8 +272,8 @@ describe('states in the DTO', () => {
     });
 
     it('carries state and duration on an ApplyState face effect, and nothing extra on others', () => {
-        const apply = { label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1, targets: [] };
-        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [] };
+        const apply = { targets: [], parts: [{ label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1 }] };
+        const damage = { targets: [], parts: [{ label: EffectLabel.Damage, magnitude: 5 }] };
         const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });

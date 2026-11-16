@@ -1,12 +1,12 @@
 import PriorityQueue, { QueueEntry, ResolveStep, ResolvedEffect } from "../types/PriorityQueue.type";
-import DieFace from "../types/DieFace.type";
+import DieFace, { FaceEffect } from "../types/DieFace.type";
 import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
 import { stateValue } from "./Character.service";
 import { effectFor } from "../strategies/effectFor";
 import { checkMatchEnd } from "./Round.service";
-import { PlayerIndex } from "../types/Position.type";
+import Position, { PlayerIndex } from "../types/Position.type";
 import { CharacterId } from "@shared/branded.types";
 
 export function createPriorityQueue(): PriorityQueue {
@@ -86,6 +86,18 @@ function compareActors(state: GameState, tieKeys: TieKeys) {
 
 const entryActor = ([face, id, speed]: QueueEntry): Actor => ({ id, bracket: face.priority, speed });
 
+/** Applies the parts of an effect to its cells, one part after another. */
+function applyParts(gameState: GameState, effect: FaceEffect, targets: readonly Position[], actorId: CharacterId): { state: GameState; affected: CharacterId[] } {
+    let state = gameState;
+    const affected: CharacterId[] = [];
+    for (const part of effect.parts) {
+        const applied = effectFor(part).solve(state, targets, actorId);
+        state = applied.state;
+        affected.push(...applied.affected);
+    }
+    return { state, affected };
+}
+
 /** The characters on the board in resolution order without the bracket: the order of the start-of-round effects (UPK-1). */
 export function startOfRoundOrder(state: GameState): CharacterId[] {
     const actors = state.players.flatMap(p => p.team).map(c => ({ id: c.id, bracket: 0, speed: c.baseSpeed }));
@@ -121,9 +133,9 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             // DEAD-3: an actor who died during its own action stops it.
             if (actor === undefined) break;
             const targets = resolveTargets(faceEffect.targets, actor.position);
-            effects.push({ effect: faceEffect.label, targets });
+            effects.push({ effect: faceEffect.parts[0].label, targets });
             if (targets.length === 0) continue;
-            const { state: newState, affected } = effectFor(faceEffect).solve(state, targets, characterId);
+            const { state: newState, affected } = applyParts(state, faceEffect, targets, characterId);
             // END-2: deaths are checked after each effect; the match ends at once (END-1).
             state = checkMatchEnd(newState, actor.position.playerIndex as PlayerIndex);
             affected.forEach(id => affectedIds.add(id));

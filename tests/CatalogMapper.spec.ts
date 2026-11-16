@@ -2,7 +2,7 @@ import { CatalogMapper } from '@application/mappers/CatalogMapper';
 import CharacterTemplate from '@domain/types/CharacterTemplate.type';
 import { CatalogId } from '@shared/branded.types';
 
-const face = { description: 'hit', priority: 1, effects: [{ effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0, 1] }] }] };
+const face = { description: 'hit', priority: 1, effects: [{ targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0, 1] }], parts: [{ part: 'Damage', magnitude: 3 }] }] };
 const template = {
     id: 'hitter' as CatalogId, name: 'Hitter', maxHp: 12, baseSpeed: 7,
     baseDieInstructions: [face, face, face, face, face, face],
@@ -24,8 +24,8 @@ describe('CatalogMapper', () => {
 
     it('carries stat and duration on an ApplyStat effect, and nothing extra on others', () => {
         const buffFace = { description: 'buff', priority: 0, effects: [
-            { effect: 'ApplyStat', stat: 'POWER', magnitude: -3, duration: 2, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] },
-            { effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] },
+            { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'ApplyStat', stat: 'POWER', magnitude: -3, duration: 2 }] },
+            { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'Damage', magnitude: 3 }] },
         ] };
         const buffer = { ...template, baseDieInstructions: [buffFace, buffFace, buffFace, buffFace, buffFace, buffFace] } as unknown as CharacterTemplate;
 
@@ -38,7 +38,7 @@ describe('CatalogMapper', () => {
 
     it('describes an ApplyState effect with its state and duration, magnitude 0', () => {
         const stunFace = { description: 'stun', priority: 0, effects: [
-            { effect: 'ApplyState', state: 'STUN', duration: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] },
+            { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'ApplyState', state: 'STUN', duration: 1 }] },
         ] };
         const stunner = { ...template, baseDieInstructions: [stunFace, stunFace, stunFace, stunFace, stunFace, stunFace] } as unknown as CharacterTemplate;
 
@@ -51,7 +51,7 @@ describe('CatalogMapper', () => {
 
 describe('CatalogMapper without targets', () => {
     it('describes an effect with no target groups as an empty list', () => {
-        const bare = { ...template, baseDieInstructions: Array(6).fill({ description: 'wait', priority: 0, effects: [{ effect: 'Shield', magnitude: 1 }] }) } as unknown as CharacterTemplate;
+        const bare = { ...template, baseDieInstructions: Array(6).fill({ description: 'wait', priority: 0, effects: [{ parts: [{ part: 'Shield', magnitude: 1 }] }] }) } as unknown as CharacterTemplate;
         expect(CatalogMapper.toDTO(bare).baseDie[0].effects[0].targets).toEqual([]);
     });
 });

@@ -143,14 +143,15 @@ export class GameStateMapper {
         return {
             description: face.description,
             priority: face.priority,
-            effects: face.effects.map(e => ({
-                effect: e.label,
-                magnitude: e.magnitude,
-                ...(e.stat !== undefined && { stat: e.stat }),
-                ...(e.state !== undefined && { state: e.state }),
-                ...(e.duration !== undefined && { duration: e.duration }),
+            // One wire effect per part, each with the cells of its effect.
+            effects: face.effects.flatMap(e => e.parts.map(part => ({
+                effect: part.label,
+                magnitude: part.magnitude,
+                ...(part.stat !== undefined && { stat: part.stat }),
+                ...(part.state !== undefined && { state: part.state }),
+                ...(part.duration !== undefined && { duration: part.duration }),
                 targets: e.targets.map(g => ({ side: g.side, mode: g.mode, n: [...g.n] })),
-            })),
+            }))),
         };
     }
 }

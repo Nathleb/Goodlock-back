@@ -3,7 +3,7 @@
 One commit per step, tests green at each. A test that states a rule is proposed to the user and
 written once validated. A change to an existing test is shown to the user first.
 
-- [ ] 1. **Domain: faces carry parts.** Types, generation, `tmplt/*.json` rewritten as single-part
+- [x] 1. **Domain: faces carry parts.** Types, generation, `tmplt/*.json` rewritten as single-part
   effects, resolution looping over `parts`. Red test: a template effect with two parts yields a
   face effect with those two parts in order. Existing tests adapted in shape only. The two mappers
   are touched just enough to compile and still emit the current wire shape (accepted exception to

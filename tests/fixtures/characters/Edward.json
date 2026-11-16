@@ -4,11 +4,11 @@
     "maxHp": 18,
     "baseSpeed": 7,
     "baseDieInstructions": [
-        { "description": "Deal 4 damage to the enemy in front and gain 2 shield.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 4, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] },{ "effect": "Shield", "magnitude": 2, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Deal 5 damage to the enemy in front and gain 3 shield.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 5, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] },{ "effect": "Shield", "magnitude": 3, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Deal 3 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
-        { "description": "Deal 3 damage to the enemy in front and gain 1 shield.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 3, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] },{ "effect": "Shield", "magnitude": 1, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Deal 4 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 4, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }] }] },
-        { "description": "Gain 4 shield.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 4, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] }
+        { "description": "Deal 4 damage to the enemy in front and gain 2 shield.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 4 }] },{ "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Shield", "magnitude": 2 }] }] },
+        { "description": "Deal 5 damage to the enemy in front and gain 3 shield.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 5 }] },{ "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Shield", "magnitude": 3 }] }] },
+        { "description": "Deal 3 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }], "parts": [{ "part": "Damage", "magnitude": 3 }] }] },
+        { "description": "Deal 3 damage to the enemy in front and gain 1 shield.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 3 }] },{ "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Shield", "magnitude": 1 }] }] },
+        { "description": "Deal 4 damage to the enemy in front and its neighbours.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [-1,0,1] }], "parts": [{ "part": "Damage", "magnitude": 4 }] }] },
+        { "description": "Gain 4 shield.", "priority": 1, "effects": [{ "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Shield", "magnitude": 4 }] }] }
     ]
 }

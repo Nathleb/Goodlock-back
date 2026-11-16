@@ -54,7 +54,7 @@ const p0Ready = (gs: typeof baseGs) => ({ ...gs, playersReady: [true, false] as 
 const p1Ready = (gs: typeof baseGs) => ({ ...gs, playersReady: [false, true] as [boolean, boolean] });
 
 // The enemy has lost one character and the other one in front of our slot 0 has 1 HP left: the round's first action ends the match.
-const lethalDie = generateFullDie(Array(6).fill({ description: 'Kill', priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 99, targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }] }] }) as unknown as BaseDieInstructions);
+const lethalDie = generateFullDie(Array(6).fill({ description: 'Kill', priority: 1, effects: [{ targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }] }) as unknown as BaseDieInstructions);
 const withDeadEnemies = (gs: typeof baseGs) => ({
     ...gs,
     players: [
