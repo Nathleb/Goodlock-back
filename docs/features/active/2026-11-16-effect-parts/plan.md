@@ -8,7 +8,7 @@ written once validated. A change to an existing test is shown to the user first.
   face effect with those two parts in order. Existing tests adapted in shape only. The two mappers
   are touched just enough to compile and still emit the current wire shape (accepted exception to
   "one layer per step").
-- [ ] 2. **Domain: SWAP-1.** Catalog load refuses a Swap that shares its effect.
+- [x] 2. **Domain: SWAP-1.** Catalog load refuses a Swap that shares its effect.
 - [ ] 3. **Domain: SEQ-1, TGT-2.** The effect applier: parts in order on each cell; a cell named
   twice receives the whole effect twice.
 - [ ] 4. **Domain: DEAD-1, DEAD-3.** Deaths settle once the effect has applied. Upkeep unchanged.

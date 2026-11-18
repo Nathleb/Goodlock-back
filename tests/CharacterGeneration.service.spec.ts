@@ -218,6 +218,14 @@ describe('template error messages', () => {
       .toThrow('Invalid targets for effect "Damage" on face "Bite": targets must be a non-empty array');
   });
 
+  it.each([
+    ['after it', [{ part: 'Swap', magnitude: 0 }, { part: 'Damage', magnitude: 3 }]],
+    ['before it', [{ part: 'Shield', magnitude: 3 }, { part: 'Swap', magnitude: 0 }]],
+  ])('SWAP-1: throws on a Swap that shares its effect with another part (%s)', (_label, parts) => {
+    expect(build({ targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0, 1] }], parts }))
+      .toThrow('Invalid effect on face "Bite": a Swap is the only part of its effect');
+  });
+
   it('names the effect, the face and the stat problem', () => {
     expect(build({ targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'ApplyStat', stat: 'POWER', magnitude: 0, duration: 1 }] }))
       .toThrow('Invalid stat parameters for effect "ApplyStat" on face "Bite": magnitude must be a non-zero integer');

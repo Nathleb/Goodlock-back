@@ -68,9 +68,13 @@ function addEffectToFace(dieFace: DieFace, entry: EffectEntry): DieFace {
     if (parts.length === 0) {
         throw new Error(`Invalid effect on face "${dieFace.description}": an effect needs at least one part`);
     }
-    const name = parts.map(p => p.part).join('+');
     const swaps = parts.some(p => p.part === EffectLabel.Swap);
-    const errors = validateEffectTargets(swaps ? EffectLabel.Swap : name, entry.targets ?? []);
+    // SWAP-1: a Swap is the only part of its effect.
+    if (swaps && parts.length > 1) {
+        throw new Error(`Invalid effect on face "${dieFace.description}": a Swap is the only part of its effect`);
+    }
+    const name = parts.map(p => p.part).join('+');
+    const errors = validateEffectTargets(name, entry.targets ?? []);
     if (errors.length > 0) {
         throw new Error(`Invalid targets for effect "${name}" on face "${dieFace.description}": ${errors.join('; ')}`);
     }
