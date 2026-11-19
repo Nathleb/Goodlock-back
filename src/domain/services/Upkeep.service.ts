@@ -1,7 +1,7 @@
 import GameState from "../types/GameState.type";
 import Character from "../types/Character.type";
 import { gainHp, loseHp, stateValue } from "./Character.service";
-import { applyAtPositions } from "../utils/TargetUtils";
+import { applyAtPositions, settleDeaths } from "../utils/TargetUtils";
 import { startOfRoundOrder } from "./PriorityQueue.service";
 import { checkMatchEnd } from "./Round.service";
 
@@ -25,7 +25,7 @@ export function upkeep(gameState: GameState): GameState {
         // POISON is a plain HP loss: ARMOR, the armour shield and DIVINE_SHIELD do not apply to it.
         // gainHp caps at max HP. A character the poison kills leaves the board (DEAD-1).
         const change = (c: Character) => vitality < 0 ? loseHp(c, POISON_DAMAGE) : gainHp(c, REGEN_HEAL);
-        state = applyAtPositions(state, [character.position], change).state;
+        state = settleDeaths(applyAtPositions(state, [character.position], change).state);
         state = checkMatchEnd(state, character.position.playerIndex);
         if (state.winner !== undefined) break;
     }

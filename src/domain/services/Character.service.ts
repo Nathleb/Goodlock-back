@@ -33,8 +33,8 @@ export function loseHp(character: Character, amount: number): Character {
     return updateCharacter(character, { hp: Math.max(character.hp - amount, 0) });
 }
 
+/** A character at 0 HP that is still on the board can be healed: it dies only once the effect has applied (DEAD-1). */
 export function gainHp(character: Character, amount: number): Character {
-    if (isDead(character)) return character;
     return updateCharacter(character, { hp: Math.min(character.hp + amount, character.maxHp) });
 }
 

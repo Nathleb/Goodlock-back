@@ -1,7 +1,8 @@
 import Character from "../types/Character.type";
 import { Player } from "../types/Player.type";
 import GameState from "../types/GameState.type";
-import Position, { PlayerIndex } from "../types/Position.type";
+import Position from "../types/Position.type";
+import { isDead } from "../services/Character.service";
 import { CharacterId } from "@shared/branded.types";
 
 /**
@@ -26,22 +27,25 @@ function applyEffectToTargets(players: readonly [Player, Player], targetedCharac
 }
 
 /**
- * A character whose HP reached 0 leaves the board at once (DEAD-1): it moves from the team to
- * the fallen of its player, and its cell becomes empty.
+ * DEAD-1: once an effect has applied, every character at 0 HP dies and leaves the board: it moves
+ * from the team to the fallen of its player, and its cell becomes empty. Characters killed by the
+ * same effect die at the same time.
  */
-export function buryIfDead(players: readonly [Player, Player], playerIndex: PlayerIndex, characterId: CharacterId): readonly [Player, Player] {
-    const player = players[playerIndex];
-    const char = player.team.find(c => c.id === characterId);
-    if (!char || char.hp > 0) return players;
-    const buried: Player = { ...player, team: player.team.filter(c => c !== char), fallen: [...(player.fallen ?? []), char] };
-    return (playerIndex === 0 ? [buried, players[1]] : [players[0], buried]) as readonly [Player, Player];
+export function settleDeaths(gameState: GameState): GameState {
+    if (!gameState.players.some(p => p.team.some(isDead))) return gameState;
+    const players = gameState.players.map(player => {
+        const dead = player.team.filter(isDead);
+        if (dead.length === 0) return player;
+        return { ...player, team: player.team.filter(c => !isDead(c)), fallen: [...(player.fallen ?? []), ...dead] };
+    }) as unknown as readonly [Player, Player];
+    return { ...gameState, players };
 }
 
 /**
  * Applies `fn` to the occupant of each position, once per occurrence and in
  * order: a position listed twice is applied twice (overlapping patterns stack).
- * Empty cells are skipped, and a character killed on a cell leaves the board before the next
- * one (DEAD-1). `affected` lists each touched id once.
+ * Empty cells are skipped. A character brought to 0 HP stays on its cell: deaths settle once the
+ * whole effect has applied (`settleDeaths`). `affected` lists each touched id once.
  */
 export function applyAtPositions(
     gameState: GameState,
@@ -53,7 +57,7 @@ export function applyAtPositions(
     for (const p of positions) {
         const char = players[p.playerIndex].team.find(c => c.position.slot === p.slot);
         if (!char) continue;
-        players = buryIfDead(applyEffectToTargets(players, [char], fn), p.playerIndex, char.id);
+        players = applyEffectToTargets(players, [char], fn);
         if (!affected.includes(char.id)) affected.push(char.id);
     }
     return { state: { ...gameState, players }, affected };

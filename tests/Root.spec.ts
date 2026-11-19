@@ -1,4 +1,5 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import Swap from "@domain/strategies/Swap.class";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
@@ -108,7 +109,7 @@ describe('STATE-5: ROOT', () => {
     it('DEAD-1: a rooted character that died leaves its cell free: a Swap into it works', () => {
         const base = root(createGameState(five(0, 'A'), five(1, 'B')), 0, 2);
         const alive = occupant(base, 0, 1)!.id;
-        const gs = new FixedDamage(999).solve(base, [pos(0, 2)], alive).state;
+        const gs = settleDeaths(new FixedDamage(999).solve(base, [pos(0, 2)], alive).state);
 
         const { state, affected } = new Swap().solve(gs, [pos(0, 1), pos(0, 2)], alive);
 

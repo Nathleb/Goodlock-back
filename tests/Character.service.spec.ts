@@ -43,10 +43,10 @@ describe('CharacterService', () => {
     expect(updatedCharacter.hp).toBe(100);
   });
 
-  it('should not heal a dead character', () => {
-    const dead = loseHp(character, character.hp);
-    const healed = gainHp(dead, 50);
-    expect(healed.hp).toBe(0);
+  it('DEAD-1: heals a character at 0 HP that is still on the board', () => {
+    const atZero = loseHp(character, character.hp);
+    const healed = gainHp(atZero, 50);
+    expect(healed.hp).toBe(50);
   });
 
   it('should deal damage', () => {

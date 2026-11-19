@@ -1,4 +1,5 @@
 import { CharacterId } from '@shared/branded.types';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "./helpers/gameState";
@@ -113,7 +114,7 @@ describe('SWAP-1: Swap: actor with an ally', () => {
     it('DEAD-1: moves into the cell a dead ally left', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
-        const gsWithDead = new FixedDamage(999).solve(gs, [{ playerIndex: 0, slot: 1 }], charA.id).state;
+        const gsWithDead = settleDeaths(new FixedDamage(999).solve(gs, [{ playerIndex: 0, slot: 1 }], charA.id).state);
 
         const { state } = resolveSwap(gsWithDead, charA.id, [allyRel(0), allyAbs(1)]);
 

@@ -903,6 +903,13 @@ describe('PriorityQueueService', () => {
       expect(hp(state, 1, 0)).toBe(10); // 20 → 10 → 15 → 5 → 10
     });
 
+    it('DEAD-1: a character brought to 0 HP then healed by the same effect stays on the board', () => {
+      const f = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.FixedDamage, magnitude: 20 }, { part: EffectLabel.Heal, magnitude: 5 }] }]);
+      const { state } = run(teamOf(0, { 0: f }), teamOf(1));
+      expect(hp(state, 1, 0)).toBe(5);
+      expect(state.players[1].fallen ?? []).toHaveLength(0);
+    });
+
     it('RES-1: an actor killed before its turn is skipped with no effects logged', () => {
       const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const lethal = face(1, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]);

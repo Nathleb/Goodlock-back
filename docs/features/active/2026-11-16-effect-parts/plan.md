@@ -11,7 +11,7 @@ written once validated. A change to an existing test is shown to the user first.
 - [x] 2. **Domain: SWAP-1.** Catalog load refuses a Swap that shares its effect.
 - [x] 3. **Domain: SEQ-1, TGT-2.** The effect applier: parts in order on each cell; a cell named
   twice receives the whole effect twice.
-- [ ] 4. **Domain: DEAD-1, DEAD-3.** Deaths settle once the effect has applied. Upkeep unchanged.
+- [x] 4. **Domain: DEAD-1, DEAD-3.** Deaths settle once the effect has applied. Upkeep unchanged.
   The tests and comments that state the old "at once" text are fixed here.
 - [ ] 5. **Domain: STATE-6, DMG-1.** Divine Shield nullifies the whole effect on the character.
 - [ ] 6. **Domain: RES-2.** The log lists the parts of each effect.

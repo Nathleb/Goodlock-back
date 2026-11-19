@@ -1,4 +1,5 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import ApplyState from "@domain/strategies/ApplyState.class";
 import Damage from "@domain/strategies/Damage.class";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
@@ -77,7 +78,7 @@ describe('STATE-1: ApplyState', () => {
     });
 
     it('DEAD-1: gives nothing to the cell a dead character left, the rest of the pattern applies', () => {
-        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const killed = settleDeaths(new Damage(20).solve(gs, [pos(1, 0)], actorId()).state);
 
         const { state } = new ApplyState('STUN', 1).solve(killed, [pos(1, 0), pos(1, 1)], actorId());
 

@@ -1,4 +1,5 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import Damage from "@domain/strategies/Damage.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
@@ -106,7 +107,7 @@ describe('STATE-6, DMG-1: DIVINE_SHIELD', () => {
 
     it('DEAD-1: is not consumed by a hit on the cell its dead holder left', () => {
         // Fixed damage ignores the shield, so its holder can die with it.
-        const killed = new FixedDamage(20).solve(patch(gs, 1, 0, shielded()), [pos(1, 0)], actorId()).state;
+        const killed = settleDeaths(new FixedDamage(20).solve(patch(gs, 1, 0, shielded()), [pos(1, 0)], actorId()).state);
         const { state } = new Damage(5).solve(killed, [pos(1, 0)], actorId());
         expect(state).toEqual(killed);
         expect(state.players[1].fallen?.[0].states.DIVINE_SHIELD?.value).toBe(1);
