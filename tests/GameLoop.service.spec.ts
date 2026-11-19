@@ -10,11 +10,12 @@ import { createPlayer } from "@domain/services/Player.service";
 import { beginKeepPhase, beginRollPhase } from "@domain/services/Phase.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
-    cancelPlacement, cancelKeep, createSelectionState,
+    cancelPlacement, cancelKeep, createSelectionState, previewRound,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
 import { unwrap, unwrapErr } from "./helpers/result";
 import GameState from "@domain/types/GameState.type";
+import { ResolveStep } from "@domain/types/PriorityQueue.type";
 import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
 
 const dice = ScriptedDiceSource.always(0);
@@ -201,6 +202,32 @@ describe('performResolve', () => {
 
     it('returns a WRONG_PHASE error when called outside RESOLVE phase', () => {
         expect(unwrapErr(performResolve(gs)).code).toBe('WRONG_PHASE');
+    });
+});
+
+describe('previewRound', () => {
+    it('gives the log performResolve would give from the same faces, without touching the state', () => {
+        const inKeep = beginKeepPhase(gs);
+        const before = structuredClone(inKeep);
+        const { log } = unwrap(performResolve({ ...inKeep, phase: GamePhase.RESOLVE }));
+        const preview = unwrap(previewRound(inKeep));
+        expect(preview.length).toBeGreaterThan(0);
+        expect(preview).toEqual(log);
+        expect(inKeep).toEqual(before);
+    });
+
+    it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
+        expect(unwrapErr(previewRound(beginRollPhase(gs))).code).toBe('WRONG_PHASE');
+    });
+
+    it('ignores locks: kept dice give the same preview as free ones', () => {
+        // The snapshots in the log carry each character as it is, lock flag included; only that flag may differ.
+        const unlocked = (log: readonly ResolveStep[]) => log.map(step => ({
+            ...step,
+            changes: step.changes.map(c => ({ ...c, character: { ...c.character, isFaceLocked: false } })),
+        }));
+        const inKeep = beginKeepPhase(gs);
+        expect(unlocked(unwrap(previewRound(lockAllPlayers(inKeep))))).toEqual(unlocked(unwrap(previewRound(inKeep))));
     });
 });
 
