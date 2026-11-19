@@ -32,7 +32,6 @@ function applyEffectToTargets(players: readonly [Player, Player], targetedCharac
  * same effect die at the same time.
  */
 export function settleDeaths(gameState: GameState): GameState {
-    if (!gameState.players.some(p => p.team.some(isDead))) return gameState;
     const players = gameState.players.map(player => {
         const dead = player.team.filter(isDead);
         if (dead.length === 0) return player;

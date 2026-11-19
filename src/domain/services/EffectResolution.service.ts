@@ -34,7 +34,7 @@ function nullifyOn(state: GameState, cell: Position, original: Character): GameS
  */
 export function applyEffect(gameState: GameState, effect: FaceEffect, targets: readonly Position[], actorId: CharacterId): AppliedEffect {
     const [first] = effect.parts;
-    if (first?.label === EffectLabel.Swap) return effectFor(first).solve(gameState, targets, actorId);
+    if (first.label === EffectLabel.Swap) return effectFor(first).solve(gameState, targets, actorId);
 
     let state = gameState;
     const affected: CharacterId[] = [];
