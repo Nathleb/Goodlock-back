@@ -848,8 +848,15 @@ describe('PriorityQueueService', () => {
       ]);
       const { log } = run(teamOf(0, { 0: hit }), teamOf(1));
       const step = log.find(s => s.effects.length === 2)!;
-      expect(step.effects[0]).toEqual({ effect: EffectLabel.Damage, targets: [{ playerIndex: 1, slot: 0 }, { playerIndex: 1, slot: 1 }] });
-      expect(step.effects[1]).toEqual({ effect: EffectLabel.Shield, targets: [{ playerIndex: 0, slot: 0 }] });
+      expect(step.effects[0]).toEqual({ parts: [EffectLabel.Damage], targets: [{ playerIndex: 1, slot: 0 }, { playerIndex: 1, slot: 1 }] });
+      expect(step.effects[1]).toEqual({ parts: [EffectLabel.Shield], targets: [{ playerIndex: 0, slot: 0 }] });
+    });
+
+    it('RES-2: logs each effect with its parts, in order, and its cells', () => {
+      const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 1 }, { part: EffectLabel.ApplyState, state: 'POISON', duration: 1 }] }]);
+      const { log } = run(teamOf(0, { 0: hit }), teamOf(1));
+      const step = log.find(s => s.effects.length === 1)!;
+      expect(step.effects).toEqual([{ parts: [EffectLabel.Damage, EffectLabel.ApplyState], targets: [{ playerIndex: 1, slot: 0 }] }]);
     });
 
     it('an effect whose cells are all off the board fizzles and logs targets []', () => {
@@ -857,7 +864,7 @@ describe('PriorityQueueService', () => {
       const { state, log } = run(teamOf(0, { 0: miss }), teamOf(1));
       expect(state.players[1].team.every(c => c.hp === 20)).toBe(true);
       const step = log.find(s => s.effects.length === 1)!;
-      expect(step).toMatchObject({ skipped: false, effects: [{ effect: EffectLabel.Damage, targets: [] }], changes: [] });
+      expect(step).toMatchObject({ skipped: false, effects: [{ parts: [EffectLabel.Damage], targets: [] }], changes: [] });
     });
 
     it('SEQ-1: relative cells follow an actor moved earlier in the round', () => {

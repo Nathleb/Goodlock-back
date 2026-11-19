@@ -184,8 +184,8 @@ describe('RES-2: resolveStepsToDTO', () => {
             characterId: asCharacter('x'),
             skipped: false,
             effects: [
-                { effect: EffectLabel.Damage, targets: [{ playerIndex: 1, slot: 2 }] },
-                { effect: EffectLabel.Heal, targets: [] },
+                { parts: [EffectLabel.Damage], targets: [{ playerIndex: 1, slot: 2 }] },
+                { parts: [EffectLabel.Heal], targets: [] },
             ],
             changes: [],
         }]);

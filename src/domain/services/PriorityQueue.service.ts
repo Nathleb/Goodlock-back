@@ -121,7 +121,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             // DEAD-3: an actor who died during its own action stops it.
             if (actor === undefined) break;
             const targets = resolveTargets(faceEffect.targets, actor.position);
-            effects.push({ effect: faceEffect.parts[0].label, targets });
+            effects.push({ parts: faceEffect.parts.map(p => p.label), targets });
             if (targets.length === 0) continue;
             const { state: newState, affected } = applyEffect(state, faceEffect, targets, characterId);
             // END-2: deaths are checked after each effect; the match ends at once (END-1).
