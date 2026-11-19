@@ -95,6 +95,7 @@ export class GameCoordinatorService {
         this.wsPort.emitToRoom(roomId, 'roundResolved', {
             gameState: GameStateMapper.toDTO(next),
             resolveLog: GameStateMapper.resolveStepsToDTO(log),
+            startOfResolve: GameStateMapper.toDTO(gs),
         });
 
         // END-1: a match decided in the middle of Resolve ends here; the room closes with it (ROOM-6).

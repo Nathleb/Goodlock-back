@@ -559,18 +559,24 @@
       "type": "object",
       "properties": {
         "gameState": {
-          "$ref": "#/definitions/GameStateDTO"
+          "$ref": "#/definitions/GameStateDTO",
+          "description": "The board once the round has resolved."
         },
         "resolveLog": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/ResolveStepDTO"
           }
+        },
+        "startOfResolve": {
+          "$ref": "#/definitions/GameStateDTO",
+          "description": "The board when Resolve starts: the faces of the last Roll, the ones `resolveLog` plays (ROLL-2: all public)."
         }
       },
       "required": [
         "gameState",
-        "resolveLog"
+        "resolveLog",
+        "startOfResolve"
       ],
       "additionalProperties": false
     },
