@@ -890,6 +890,19 @@ describe('PriorityQueueService', () => {
       expect(hp(state, 1, 1)).toBe(20);
     });
 
+    it('SEQ-1: the parts of an effect apply in order on each cell', () => {
+      const f = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 5 }, { part: EffectLabel.Damage, magnitude: 8 }] }]);
+      const { state } = run(teamOf(0, { 0: f }), teamOf(1));
+      expect(hp(state, 1, 0)).toBe(17);
+      expect(state.players[1].team[0].shield).toBe(0);
+    });
+
+    it('TGT-2: a cell named by two groups receives the whole effect twice', () => {
+      const f = face(0, [{ targets: [enemyAbs(0), enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }, { part: EffectLabel.Heal, magnitude: 5 }] }]);
+      const { state } = run(teamOf(0, { 0: f }), teamOf(1));
+      expect(hp(state, 1, 0)).toBe(10); // 20 → 10 → 15 → 5 → 10
+    });
+
     it('RES-1: an actor killed before its turn is skipped with no effects logged', () => {
       const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const lethal = face(1, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]);
