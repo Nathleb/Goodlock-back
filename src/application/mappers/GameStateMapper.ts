@@ -100,11 +100,10 @@ export class GameStateMapper {
         return steps.map(step => ({
             characterId: step.characterId,
             skipped: step.skipped,
-            // One wire effect per part, each with the cells of its effect.
-            effects: step.effects.flatMap(e => e.parts.map(part => ({
-                effect: part,
+            effects: step.effects.map(e => ({
+                parts: [...e.parts],
                 targets: e.targets.map(t => ({ playerIndex: t.playerIndex, slot: t.slot })),
-            }))),
+            })),
             changes: step.changes.map(c => ({
                 characterId: c.characterId,
                 after: GameStateMapper.characterToDTO(c.character),
@@ -144,15 +143,16 @@ export class GameStateMapper {
         return {
             description: face.description,
             priority: face.priority,
-            // One wire effect per part, each with the cells of its effect.
-            effects: face.effects.flatMap(e => e.parts.map(part => ({
-                effect: part.label,
-                magnitude: part.magnitude,
-                ...(part.stat !== undefined && { stat: part.stat }),
-                ...(part.state !== undefined && { state: part.state }),
-                ...(part.duration !== undefined && { duration: part.duration }),
+            effects: face.effects.map(e => ({
                 targets: e.targets.map(g => ({ side: g.side, mode: g.mode, n: [...g.n] })),
-            }))),
+                parts: e.parts.map(part => ({
+                    part: part.label,
+                    magnitude: part.magnitude,
+                    ...(part.stat !== undefined && { stat: part.stat }),
+                    ...(part.state !== undefined && { state: part.state }),
+                    ...(part.duration !== undefined && { duration: part.duration }),
+                })),
+            })),
         };
     }
 }

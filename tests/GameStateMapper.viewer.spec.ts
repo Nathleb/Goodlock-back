@@ -190,8 +190,8 @@ describe('RES-2: resolveStepsToDTO', () => {
             changes: [],
         }]);
         expect(dto[0].effects).toEqual([
-            { effect: 'Damage', targets: [{ playerIndex: 1, slot: 2 }] },
-            { effect: 'Heal', targets: [] },
+            { parts: ['Damage'], targets: [{ playerIndex: 1, slot: 2 }] },
+            { parts: ['Heal'], targets: [] },
         ]);
     });
 });
@@ -207,7 +207,7 @@ describe('face DTO', () => {
         const dto = GameStateMapper.characterToDTO(character);
         expect(dto.catalogId).toBe(TEST_CATALOG_ID);
         expect(dto.face.effects).toEqual([
-            { effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }] },
+            { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }], parts: [{ part: 'Damage', magnitude: 3 }] },
         ]);
     });
 });
@@ -243,9 +243,9 @@ describe('stats in the DTO', () => {
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
 
-        expect(dto.face.effects[0]).toMatchObject({ effect: 'ApplyStat', magnitude: 3, stat: 'POWER', duration: 2 });
-        expect('stat' in dto.face.effects[1]).toBe(false);
-        expect('duration' in dto.face.effects[1]).toBe(false);
+        expect(dto.face.effects[0].parts[0]).toMatchObject({ part: 'ApplyStat', magnitude: 3, stat: 'POWER', duration: 2 });
+        expect('stat' in dto.face.effects[1].parts[0]).toBe(false);
+        expect('duration' in dto.face.effects[1].parts[0]).toBe(false);
     });
 
     it('shows up in the resolve-step changes too', () => {
@@ -278,8 +278,8 @@ describe('states in the DTO', () => {
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
 
-        expect(dto.face.effects[0]).toMatchObject({ effect: 'ApplyState', magnitude: 0, state: 'STUN', duration: 1 });
-        expect('state' in dto.face.effects[1]).toBe(false);
+        expect(dto.face.effects[0].parts[0]).toMatchObject({ part: 'ApplyState', magnitude: 0, state: 'STUN', duration: 1 });
+        expect('state' in dto.face.effects[1].parts[0]).toBe(false);
     });
 
     it('shows up in the resolve-step changes too', () => {

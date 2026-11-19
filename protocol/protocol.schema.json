@@ -369,12 +369,6 @@
           "items": {
             "type": "object",
             "properties": {
-              "effect": {
-                "type": "string"
-              },
-              "magnitude": {
-                "type": "number"
-              },
               "targets": {
                 "type": "array",
                 "items": {
@@ -401,22 +395,42 @@
                   "additionalProperties": false
                 }
               },
-              "stat": {
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              },
-              "duration": {
-                "type": "number"
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "part": {
+                      "type": "string"
+                    },
+                    "magnitude": {
+                      "type": "number"
+                    },
+                    "stat": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "string"
+                    },
+                    "duration": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "part",
+                    "magnitude"
+                  ],
+                  "additionalProperties": false,
+                  "description": "One thing an effect does to its cells."
+                }
               }
             },
             "required": [
-              "effect",
-              "magnitude",
-              "targets"
+              "targets",
+              "parts"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "description": "One step of a face: its target cells and its parts, in order."
           }
         }
       },
@@ -492,8 +506,11 @@
           "items": {
             "type": "object",
             "properties": {
-              "effect": {
-                "type": "string"
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               },
               "targets": {
                 "type": "array",
@@ -516,7 +533,7 @@
               }
             },
             "required": [
-              "effect",
+              "parts",
               "targets"
             ],
             "additionalProperties": false

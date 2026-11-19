@@ -43,7 +43,7 @@ type ResolveChangeDTO = {
 };
 
 type ResolvedEffectDTO = {
-    effect: string;
+    parts: string[];
     targets: { playerIndex: number; slot: number }[];  // [] = fizzled
 };
 

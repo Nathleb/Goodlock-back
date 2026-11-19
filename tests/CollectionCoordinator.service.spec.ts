@@ -48,7 +48,7 @@ describe('COLL-2: getCollection', () => {
 
         const { characters } = await coordinator.getCollection(USER);
 
-        expect(characters[0].baseDie[0].effects).toEqual([{ effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }]);
+        expect(characters[0].baseDie[0].effects).toEqual([{ targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'Damage', magnitude: 3 }] }]);
     });
 
     it('skips owned ids the catalog no longer knows', async () => {
