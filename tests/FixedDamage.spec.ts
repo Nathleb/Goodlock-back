@@ -1,4 +1,5 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import { gainShield } from "@domain/services/Character.service";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
@@ -43,7 +44,7 @@ describe('DMG-3: FixedDamage', () => {
     });
 
     it('DEAD-1: does nothing on the cell a dead character left', () => {
-        const killed = new FixedDamage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const killed = settleDeaths(new FixedDamage(20).solve(gs, [pos(1, 0)], actorId()).state);
         const { state, affected } = new FixedDamage(5).solve(killed, [pos(1, 0)], actorId());
         expect(state).toEqual(killed);
         expect(affected).toEqual([]);

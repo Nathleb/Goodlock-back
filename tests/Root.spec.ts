@@ -1,4 +1,5 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import Swap from "@domain/strategies/Swap.class";
 import FixedDamage from "@domain/strategies/FixedDamage.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
@@ -82,7 +83,7 @@ describe('STATE-5: ROOT', () => {
 
     it('a rooted character still acts and still takes damage', () => {
         const rooted = (c: ReturnType<typeof createCharacter>) => ({ ...c, states: { ROOT: { value: 1, touchedRound: 0 } } });
-        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }] }] };
+        const hitFace = { description: 'hit', priority: 0, effects: [{ targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }], parts: [{ label: EffectLabel.Damage, magnitude: 5 }] }] };
         const attacker = rooted(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'att', maxHp: 20, baseSpeed: 5, baseDie: Array(6).fill(hitFace) as unknown as Die, position: { playerIndex: 0, slot: 0 } }));
         const victim = rooted(createCharacter({ catalogId: TEST_CATALOG_ID, name: 'vic', maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: 1, slot: 0 } }));
         const gs = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([victim], 1)));
@@ -97,7 +98,7 @@ describe('STATE-5: ROOT', () => {
         const base = createGameState(five(0, 'A'), five(1, 'B'));
         const gs = root(base, 0, 1);
         const rooted = occupant(gs, 0, 1)!;
-        const moveFace = { description: 'move', priority: 0, effects: [{ label: EffectLabel.Swap, magnitude: 0, targets: [{ side: 'ALLY' as const, mode: 'RELATIVE' as const, n: [0] }, { side: 'ALLY' as const, mode: 'ABSOLUTE' as const, n: [0] }] }] };
+        const moveFace = { description: 'move', priority: 0, effects: [{ targets: [{ side: 'ALLY' as const, mode: 'RELATIVE' as const, n: [0] }, { side: 'ALLY' as const, mode: 'ABSOLUTE' as const, n: [0] }], parts: [{ label: EffectLabel.Swap, magnitude: 0 }] }] };
         const withFace = { ...gs, players: [{ ...gs.players[0], team: gs.players[0].team.map(c => c.id === rooted.id ? { ...c, face: moveFace } : { ...c, face: { description: 'rest', priority: 0, effects: [] } }) }, gs.players[1]] as GameState['players'] };
 
         const { state } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(withFace));
@@ -108,7 +109,7 @@ describe('STATE-5: ROOT', () => {
     it('DEAD-1: a rooted character that died leaves its cell free: a Swap into it works', () => {
         const base = root(createGameState(five(0, 'A'), five(1, 'B')), 0, 2);
         const alive = occupant(base, 0, 1)!.id;
-        const gs = new FixedDamage(999).solve(base, [pos(0, 2)], alive).state;
+        const gs = settleDeaths(new FixedDamage(999).solve(base, [pos(0, 2)], alive).state);
 
         const { state, affected } = new Swap().solve(gs, [pos(0, 1), pos(0, 2)], alive);
 
@@ -123,8 +124,8 @@ describe('STATE-5: ROOT', () => {
                 catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, position: { playerIndex, slot },
                 baseDie: generateFullDie(Array(6).fill({ description: 'f', priority: 0, effects }) as unknown as BaseDieInstructions),
             });
-        const rootEnemy: EffectEntry = { effect: EffectLabel.ApplyState, state: 'ROOT', duration: 1, targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }] };
-        const moveRight: EffectEntry = { effect: EffectLabel.Swap, magnitude: 0, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }, { side: 'ALLY', mode: 'ABSOLUTE', n: [1] }] };
+        const rootEnemy: EffectEntry = { targets: [{ side: 'ENEMY', mode: 'ABSOLUTE', n: [0] }], parts: [{ part: EffectLabel.ApplyState, state: 'ROOT', duration: 1 }] };
+        const moveRight: EffectEntry = { targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }, { side: 'ALLY', mode: 'ABSOLUTE', n: [1] }], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] };
         const resolveWith = (rooterSpeed: number) => {
             const rooter = hero('rooter', rooterSpeed, 0, 0, [rootEnemy]);
             const mover = hero('mover', 5, 1, 0, [moveRight]);

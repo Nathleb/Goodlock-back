@@ -5,7 +5,7 @@ import { FileCharacterCatalog, loadCatalogFromDir } from '@infrastructure/adapte
 import { CatalogId } from '@shared/branded.types';
 
 
-const face = { description: 'hit', priority: 0, effects: [{ effect: 'Damage', magnitude: 1, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }] }] };
+const face = { description: 'hit', priority: 0, effects: [{ targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [0] }], parts: [{ part: 'Damage', magnitude: 1 }] }] };
 const template = (fields: Record<string, unknown>) => ({ name: 'N', maxHp: 10, baseSpeed: 5, baseDieInstructions: Array(6).fill(face), ...fields });
 
 let dir: string;
@@ -46,7 +46,7 @@ describe('loadCatalogFromDir', () => {
     });
 
     it('throws on an effect that fails target validation, naming the file', () => {
-        const badFace = { ...face, effects: [{ effect: 'Swap', magnitude: 0, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0, 1, 2] }] }] };
+        const badFace = { ...face, effects: [{ targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0, 1, 2] }], parts: [{ part: 'Swap', magnitude: 0 }] }] };
         writeTemplates({ 'Bad.json': template({ id: 'bad', baseDieInstructions: Array(6).fill(badFace) }) });
         expect(() => loadCatalogFromDir(dir)).toThrow(/Bad\.json/);
     });

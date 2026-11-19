@@ -101,7 +101,7 @@ export class GameStateMapper {
             characterId: step.characterId,
             skipped: step.skipped,
             effects: step.effects.map(e => ({
-                effect: e.effect,
+                parts: [...e.parts],
                 targets: e.targets.map(t => ({ playerIndex: t.playerIndex, slot: t.slot })),
             })),
             changes: step.changes.map(c => ({
@@ -144,12 +144,14 @@ export class GameStateMapper {
             description: face.description,
             priority: face.priority,
             effects: face.effects.map(e => ({
-                effect: e.label,
-                magnitude: e.magnitude,
-                ...(e.stat !== undefined && { stat: e.stat }),
-                ...(e.state !== undefined && { state: e.state }),
-                ...(e.duration !== undefined && { duration: e.duration }),
                 targets: e.targets.map(g => ({ side: g.side, mode: g.mode, n: [...g.n] })),
+                parts: e.parts.map(part => ({
+                    part: part.label,
+                    magnitude: part.magnitude,
+                    ...(part.stat !== undefined && { stat: part.stat }),
+                    ...(part.state !== undefined && { state: part.state }),
+                    ...(part.duration !== undefined && { duration: part.duration }),
+                })),
             })),
         };
     }

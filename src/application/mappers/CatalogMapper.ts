@@ -14,11 +14,13 @@ export class CatalogMapper {
                 description: face.description,
                 priority: face.priority,
                 effects: face.effects.map(e => ({
-                    effect: e.effect,
-                    magnitude: e.effect === EffectLabel.ApplyState ? 0 : e.magnitude,
-                    ...(e.effect === EffectLabel.ApplyStat && { stat: e.stat, duration: e.duration }),
-                    ...(e.effect === EffectLabel.ApplyState && { state: e.state, duration: e.duration }),
                     targets: (e.targets ?? []).map(g => ({ side: g.side, mode: g.mode, n: [...g.n] })),
+                    parts: e.parts.map(part => ({
+                        part: part.part,
+                        magnitude: part.part === EffectLabel.ApplyState ? 0 : part.magnitude,
+                        ...(part.part === EffectLabel.ApplyStat && { stat: part.stat, duration: part.duration }),
+                        ...(part.part === EffectLabel.ApplyState && { state: part.state, duration: part.duration }),
+                    })),
                 })),
             })),
         };

@@ -184,14 +184,14 @@ describe('RES-2: resolveStepsToDTO', () => {
             characterId: asCharacter('x'),
             skipped: false,
             effects: [
-                { effect: EffectLabel.Damage, targets: [{ playerIndex: 1, slot: 2 }] },
-                { effect: EffectLabel.Heal, targets: [] },
+                { parts: [EffectLabel.Damage], targets: [{ playerIndex: 1, slot: 2 }] },
+                { parts: [EffectLabel.Heal], targets: [] },
             ],
             changes: [],
         }]);
         expect(dto[0].effects).toEqual([
-            { effect: 'Damage', targets: [{ playerIndex: 1, slot: 2 }] },
-            { effect: 'Heal', targets: [] },
+            { parts: ['Damage'], targets: [{ playerIndex: 1, slot: 2 }] },
+            { parts: ['Heal'], targets: [] },
         ]);
     });
 });
@@ -200,14 +200,14 @@ describe('face DTO', () => {
     it('exposes each effect with its label, magnitude and target groups', () => {
         const die = generateFullDie(Array(6).fill({
             description: 'd', priority: 0, effects: [
-                { effect: EffectLabel.Damage, magnitude: 3, targets: [enemyRel(-1, 0, 1)] },
+                { targets: [enemyRel(-1, 0, 1)], parts: [{ part: EffectLabel.Damage, magnitude: 3 }] },
             ],
         }) as unknown as BaseDieInstructions);
         const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'T', maxHp: 10, baseSpeed: 1, baseDie: die, position: { playerIndex: 0, slot: 0 } });
         const dto = GameStateMapper.characterToDTO(character);
         expect(dto.catalogId).toBe(TEST_CATALOG_ID);
         expect(dto.face.effects).toEqual([
-            { effect: 'Damage', magnitude: 3, targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }] },
+            { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }], parts: [{ part: 'Damage', magnitude: 3 }] },
         ]);
     });
 });
@@ -237,15 +237,15 @@ describe('stats in the DTO', () => {
     });
 
     it('carries stat and duration on an ApplyStat face effect, and nothing extra on others', () => {
-        const apply = { label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2, targets: [] };
-        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [] };
+        const apply = { targets: [], parts: [{ label: EffectLabel.ApplyStat, magnitude: 3, stat: 'POWER' as const, duration: 2 }] };
+        const damage = { targets: [], parts: [{ label: EffectLabel.Damage, magnitude: 5 }] };
         const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
 
-        expect(dto.face.effects[0]).toMatchObject({ effect: 'ApplyStat', magnitude: 3, stat: 'POWER', duration: 2 });
-        expect('stat' in dto.face.effects[1]).toBe(false);
-        expect('duration' in dto.face.effects[1]).toBe(false);
+        expect(dto.face.effects[0].parts[0]).toMatchObject({ part: 'ApplyStat', magnitude: 3, stat: 'POWER', duration: 2 });
+        expect('stat' in dto.face.effects[1].parts[0]).toBe(false);
+        expect('duration' in dto.face.effects[1].parts[0]).toBe(false);
     });
 
     it('shows up in the resolve-step changes too', () => {
@@ -272,14 +272,14 @@ describe('states in the DTO', () => {
     });
 
     it('carries state and duration on an ApplyState face effect, and nothing extra on others', () => {
-        const apply = { label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1, targets: [] };
-        const damage = { label: EffectLabel.Damage, magnitude: 5, targets: [] };
+        const apply = { targets: [], parts: [{ label: EffectLabel.ApplyState, magnitude: 0, state: 'STUN' as const, duration: 1 }] };
+        const damage = { targets: [], parts: [{ label: EffectLabel.Damage, magnitude: 5 }] };
         const face: DieFace = { description: 'd', priority: 0, effects: [apply, damage] };
 
         const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), face });
 
-        expect(dto.face.effects[0]).toMatchObject({ effect: 'ApplyState', magnitude: 0, state: 'STUN', duration: 1 });
-        expect('state' in dto.face.effects[1]).toBe(false);
+        expect(dto.face.effects[0].parts[0]).toMatchObject({ part: 'ApplyState', magnitude: 0, state: 'STUN', duration: 1 });
+        expect('state' in dto.face.effects[1].parts[0]).toBe(false);
     });
 
     it('shows up in the resolve-step changes too', () => {

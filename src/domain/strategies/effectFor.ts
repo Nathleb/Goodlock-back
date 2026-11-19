@@ -1,6 +1,6 @@
 import Effect from "../types/Effect.type";
 import EffectLabel from "../types/EffectLabels.type";
-import { FaceEffect } from "../types/DieFace.type";
+import { FacePart } from "../types/DieFace.type";
 import Damage from "./Damage.class";
 import FixedDamage from "./FixedDamage.class";
 import Heal from "./Heal.class";
@@ -9,15 +9,12 @@ import Swap from "./Swap.class";
 import ApplyStat from "./ApplyStat.class";
 import ApplyState from "./ApplyState.class";
 
-/** What a strategy is built from: the data of one face effect. */
-export type EffectSpec = Pick<FaceEffect, 'label' | 'magnitude' | 'stat' | 'state' | 'duration'>;
-
 /**
- * The strategy that applies a face effect. The set of effects is closed (`EffectLabel`): a new
- * label does not compile until it has its case here. Throws on a face effect missing the
+ * The strategy that applies one part of a face effect. The set of effects is closed (`EffectLabel`): a new
+ * label does not compile until it has its case here. Throws on a part missing the
  * parameters its strategy needs, which only a bad template can produce (checked at catalog load).
  */
-export function effectFor(spec: EffectSpec): Effect {
+export function effectFor(spec: FacePart): Effect {
     switch (spec.label) {
         case EffectLabel.Damage: return new Damage(spec.magnitude);
         case EffectLabel.FixedDamage: return new FixedDamage(spec.magnitude);

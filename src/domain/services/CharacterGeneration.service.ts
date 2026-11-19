@@ -2,8 +2,8 @@ import CharacterTemplate from "../types/CharacterTemplate.type";
 import EffectLabel from "../types/EffectLabels.type";
 import { effectFor } from "../strategies/effectFor";
 import Die from "../types/Die.type";
-import DieFace from "../types/DieFace.type";
-import { BaseDieInstructions, EffectEntry } from "../types/BaseDieInstructions.type";
+import DieFace, { FacePart } from "../types/DieFace.type";
+import { BaseDieInstructions, EffectEntry, PartEntry } from "../types/BaseDieInstructions.type";
 import Character from "../types/Character.type";
 import Position from "../types/Position.type";
 import { validateEffectTargets, validateStatParams, validateStateParams } from "./TargetResolution.service";
@@ -64,32 +64,43 @@ function generateFaceFromEffectEntries(face: DieFace, effectEntries: readonly Ef
 
 function addEffectToFace(dieFace: DieFace, entry: EffectEntry): DieFace {
     // Template load is a startup boundary: a bad template is a non-recoverable config error.
-    const errors = validateEffectTargets(entry.effect, entry.targets ?? []);
+    const parts = entry.parts ?? [];
+    if (parts.length === 0) {
+        throw new Error(`Invalid effect on face "${dieFace.description}": an effect needs at least one part`);
+    }
+    const swaps = parts.some(p => p.part === EffectLabel.Swap);
+    // SWAP-1: a Swap is the only part of its effect.
+    if (swaps && parts.length > 1) {
+        throw new Error(`Invalid effect on face "${dieFace.description}": a Swap is the only part of its effect`);
+    }
+    const name = parts.map(p => p.part).join('+');
+    const errors = validateEffectTargets(name, entry.targets ?? []);
     if (errors.length > 0) {
-        throw new Error(`Invalid targets for effect "${entry.effect}" on face "${dieFace.description}": ${errors.join('; ')}`);
+        throw new Error(`Invalid targets for effect "${name}" on face "${dieFace.description}": ${errors.join('; ')}`);
     }
-    if (entry.effect === EffectLabel.ApplyStat) {
-        const statErrors = validateStatParams(entry);
-        if (statErrors.length > 0) {
-            throw new Error(`Invalid stat parameters for effect "${entry.effect}" on face "${dieFace.description}": ${statErrors.join('; ')}`);
-        }
+    const effect = { targets: entry.targets, parts: parts.map(p => buildPart(dieFace.description, p)) };
+    return { ...dieFace, effects: [...dieFace.effects, effect] };
+}
+
+function partParamErrors(entry: PartEntry): { kind: string; errors: string[] } {
+    if (entry.part === EffectLabel.ApplyStat) return { kind: 'stat', errors: validateStatParams(entry) };
+    if (entry.part === EffectLabel.ApplyState) return { kind: 'state', errors: validateStateParams(entry) };
+    return { kind: '', errors: [] };
+}
+
+function buildPart(faceDescription: string, entry: PartEntry): FacePart {
+    const { kind, errors } = partParamErrors(entry);
+    if (errors.length > 0) {
+        throw new Error(`Invalid ${kind} parameters for effect "${entry.part}" on face "${faceDescription}": ${errors.join('; ')}`);
     }
-    if (entry.effect === EffectLabel.ApplyState) {
-        const stateErrors = validateStateParams(entry);
-        if (stateErrors.length > 0) {
-            throw new Error(`Invalid state parameters for effect "${entry.effect}" on face "${dieFace.description}": ${stateErrors.join('; ')}`);
-        }
-    }
-    const params = entry.effect === EffectLabel.ApplyStat ? { stat: entry.stat, duration: entry.duration }
-        : entry.effect === EffectLabel.ApplyState ? { state: entry.state, duration: entry.duration }
+    const params = entry.part === EffectLabel.ApplyStat ? { stat: entry.stat, duration: entry.duration }
+        : entry.part === EffectLabel.ApplyState ? { state: entry.state, duration: entry.duration }
         : undefined;
-    // A state has no magnitude: the face effect carries 0.
-    const magnitude = entry.effect === EffectLabel.ApplyState ? 0 : entry.magnitude;
+    // A state has no magnitude: the part carries 0.
+    const magnitude = entry.part === EffectLabel.ApplyState ? 0 : entry.magnitude;
+    const part: FacePart = { label: entry.part, magnitude, ...params };
     // The validators above already reject missing parameters; this call is what rejects an
-    // unknown effect label at catalog load instead of mid-match. Do not remove it.
-    effectFor({ label: entry.effect, magnitude, ...params });
-    return {
-        ...dieFace,
-        effects: [...dieFace.effects, { label: entry.effect, magnitude, ...params, targets: entry.targets }],
-    };
+    // unknown part label at catalog load instead of mid-match. Do not remove it.
+    effectFor(part);
+    return part;
 }

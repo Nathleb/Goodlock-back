@@ -1,4 +1,5 @@
 import { CharacterId } from '@shared/branded.types';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import { TEST_CATALOG_ID } from './helpers/catalog';
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { createGameState } from "./helpers/gameState";
@@ -15,12 +16,12 @@ import { enemyAbs, allyAbs, allyRel } from "./helpers/targets";
 // Each face carries its own cells. Actor-relative faces reproduce the old
 // "actor pushes / moves itself" fixtures; one-off faces cover specific targets.
 const baseDieInstructions: BaseDieInstructions = [
-    { description: "Damage",       priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }] },
-    { description: "Swap with 0",  priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0), allyAbs(0)] }] },
-    { description: "Push left 1",  priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, -1)] }] },
-    { description: "Push right 1", priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, 1)] }] },
-    { description: "Move to 2",    priority: 1, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0), allyAbs(2)] }] },
-    { description: "Push left 2",  priority: 2, effects: [{ effect: EffectLabel.Swap,   magnitude: 0, targets: [allyRel(0, -2)] }] },
+    { description: "Damage",       priority: 1, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }] },
+    { description: "Swap with 0",  priority: 1, effects: [{ targets: [allyRel(0), allyAbs(0)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
+    { description: "Push left 1",  priority: 1, effects: [{ targets: [allyRel(0, -1)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
+    { description: "Push right 1", priority: 1, effects: [{ targets: [allyRel(0, 1)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
+    { description: "Move to 2",    priority: 1, effects: [{ targets: [allyRel(0), allyAbs(2)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
+    { description: "Push left 2",  priority: 2, effects: [{ targets: [allyRel(0, -2)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
 ];
 
 const die = generateFullDie(baseDieInstructions);
@@ -44,7 +45,7 @@ function resolveSwap(gs: GameState, actorId: CharacterId, targets: TargetGroup[]
     const actor = gs.players.flatMap(p => p.team).find(c => c.id === actorId)!;
     const emptyFace = { description: '-', priority: 1, effects: [] };
     const face = generateFullDie([
-        { description: 'test', priority: 1, effects: [{ effect: EffectLabel.Swap, magnitude: 0, targets }] },
+        { description: 'test', priority: 1, effects: [{ targets, parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
         emptyFace, emptyFace, emptyFace, emptyFace, emptyFace,
     ])[0];
     const state = {
@@ -113,7 +114,7 @@ describe('SWAP-1: Swap: actor with an ally', () => {
     it('DEAD-1: moves into the cell a dead ally left', () => {
         const gs = createGameState(player1, player2);
         const charA = gs.players[0].team[0];
-        const gsWithDead = new FixedDamage(999).solve(gs, [{ playerIndex: 0, slot: 1 }], charA.id).state;
+        const gsWithDead = settleDeaths(new FixedDamage(999).solve(gs, [{ playerIndex: 0, slot: 1 }], charA.id).state);
 
         const { state } = resolveSwap(gsWithDead, charA.id, [allyRel(0), allyAbs(1)]);
 

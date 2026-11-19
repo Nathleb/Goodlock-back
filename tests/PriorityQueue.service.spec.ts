@@ -17,12 +17,12 @@ import { enemyAbs, enemyRel, allyRel, allyAbs } from "./helpers/targets";
 
 describe('PriorityQueueService', () => {
   const baseDieInstructions: BaseDieInstructions = [
-    { description: "Deals 1 damage", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyAbs(0)] }] },
-    { description: "Heals 2 HP",     priority: 1, effects: [{ effect: EffectLabel.Heal, magnitude: 2, targets: [enemyAbs(0)] }] },
-    { description: "Grants 3 shield",priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 3, targets: [enemyAbs(0)] }] },
-    { description: "Deals 4 damage", priority: 2, effects: [{ effect: EffectLabel.Damage, magnitude: 4, targets: [enemyAbs(0)] }] },
-    { description: "Heals 5 HP",     priority: 2, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [enemyAbs(0)] }] },
-    { description: "Grants 6 shield",priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 6, targets: [enemyAbs(0)] }] },
+    { description: "Deals 1 damage", priority: 1, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 1 }] }] },
+    { description: "Heals 2 HP",     priority: 1, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Heal, magnitude: 2 }] }] },
+    { description: "Grants 3 shield",priority: 1, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Shield, magnitude: 3 }] }] },
+    { description: "Deals 4 damage", priority: 2, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 4 }] }] },
+    { description: "Heals 5 HP",     priority: 2, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Heal, magnitude: 5 }] }] },
+    { description: "Grants 6 shield",priority: 2, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Shield, magnitude: 6 }] }] },
   ];
 
   const die = generateFullDie(baseDieInstructions);
@@ -52,7 +52,7 @@ describe('PriorityQueueService', () => {
   });
 
   it('applies a face built from data alone: the strategy comes from the effect label', () => {
-    const hit: DieFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 7, targets: [enemyAbs(0)] }] };
+    const hit: DieFace = { description: 'hit', priority: 0, effects: [{ targets: [enemyAbs(0)], parts: [{ label: EffectLabel.Damage, magnitude: 7 }] }] };
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Actor", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 0, slot: 0 } });
     const victim = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Victim", maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 } });
     const state: GameState = {
@@ -96,7 +96,7 @@ describe('PriorityQueueService', () => {
 
   it('killing blow appears in the log changes with hp 0', () => {
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Attacker", maxHp: 100, baseSpeed: 0, baseDie: generateFullDie([
-        { description: "Kill", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 100, targets: [enemyAbs(0)] }] },
+        { description: "Kill", priority: 1, effects: [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 100 }] }] },
         { description: "B", priority: 1, effects: [] },
         { description: "C", priority: 1, effects: [] },
         { description: "D", priority: 1, effects: [] },
@@ -160,7 +160,7 @@ describe('PriorityQueueService', () => {
       { description: "A",        priority: 1, effects: [] },
       { description: "B",        priority: 1, effects: [] },
       { description: "C",        priority: 1, effects: [] },
-      { description: "push-left", priority: 1, effects: [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyRel(0, -1)] }] },
+      { description: "push-left", priority: 1, effects: [{ targets: [allyRel(0, -1)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }] },
       { description: "E",        priority: 1, effects: [] },
       { description: "F",        priority: 1, effects: [] },
     ]);
@@ -272,7 +272,7 @@ describe('PriorityQueueService', () => {
 
   it('a self-targeted face resolves without throwing during unstacking', () => {
     const selfFace = generateFullDie(Array(6).fill(
-        { description: 'self-only', priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 2, targets: [allyRel(0)] }] },
+        { description: 'self-only', priority: 1, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 2 }] }] },
     ) as unknown as BaseDieInstructions)[0];
     const actor = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'SelfActor', maxHp: 100, baseSpeed: 0, baseDie: [selfFace, selfFace, selfFace, selfFace, selfFace, selfFace], position: { playerIndex: 0, slot: 0 as SlotIndex } });
     const enemy = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'Enemy', maxHp: 100, baseSpeed: 0, baseDie: die, position: { playerIndex: 1, slot: 0 as SlotIndex } });
@@ -294,8 +294,8 @@ describe('PriorityQueueService', () => {
   it('a face with multiple effects resolves atomically in one log step', () => {
     const multiDie = generateFullDie([
       { description: "Damage+Shield", priority: 1, effects: [
-        { effect: EffectLabel.Damage, magnitude: 10, targets: [enemyAbs(0)] },
-        { effect: EffectLabel.Shield, magnitude: 5, targets: [enemyAbs(0)] },
+        { targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }] },
+        { targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Shield, magnitude: 5 }] },
       ]},
       { description: "B", priority: 1, effects: [] },
       { description: "C", priority: 1, effects: [] },
@@ -527,8 +527,8 @@ describe('PriorityQueueService', () => {
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
       createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
-    const buffAlly = (value: number): EffectEntry => ({ effect: EffectLabel.ApplyStat, stat: 'POWER', magnitude: value, duration: 2, targets: [allyAbs(1)] });
-    const hit = (amount: number): EffectEntry => ({ effect: EffectLabel.Damage, magnitude: amount, targets: [enemyAbs(0)] });
+    const buffAlly = (value: number): EffectEntry => ({ targets: [allyAbs(1)], parts: [{ part: EffectLabel.ApplyStat, stat: 'POWER', magnitude: value, duration: 2 }] });
+    const hit = (amount: number): EffectEntry => ({ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: amount }] });
 
     it('a faster buff applies to a slower ally acting later in the same resolution', () => {
       const buffer = hero('buffer', 9, 0, 0, [buffAlly(3)]);
@@ -542,7 +542,7 @@ describe('PriorityQueueService', () => {
     });
 
     it('a buff placed before the damage in one face already counts for that damage', () => {
-      const self: EffectEntry = { effect: EffectLabel.ApplyStat, stat: 'POWER', magnitude: 3, duration: 2, targets: [allyRel(0)] };
+      const self: EffectEntry = { targets: [allyRel(0)], parts: [{ part: EffectLabel.ApplyStat, stat: 'POWER', magnitude: 3, duration: 2 }] };
       const actor = hero('actor', 5, 0, 0, [self, hit(5)]);
       const dummy = hero('dummy', 1, 1, 0, []);
       const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([actor], 0), createPlayer([dummy], 1)));
@@ -552,7 +552,7 @@ describe('PriorityQueueService', () => {
       expect(after.players[1].team[0].hp).toBe(100 - 8);
     });
 
-    const exposeEnemy = (value: number): EffectEntry => ({ effect: EffectLabel.ApplyStat, stat: 'ARMOR', magnitude: value, duration: 2, targets: [enemyAbs(0)] });
+    const exposeEnemy = (value: number): EffectEntry => ({ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.ApplyStat, stat: 'ARMOR', magnitude: value, duration: 2 }] });
 
     it('a faster ARMOR debuff applies to a hit resolved later in the same resolution', () => {
       const debuffer = hero('debuffer', 9, 0, 0, [exposeEnemy(-3)]);
@@ -567,7 +567,7 @@ describe('PriorityQueueService', () => {
 
     it('a slower ARMOR buff on the target does not reduce a faster hit that already resolved', () => {
       const attacker = hero('attacker', 9, 0, 0, [hit(5)]);
-      const guard: EffectEntry = { effect: EffectLabel.ApplyStat, stat: 'ARMOR', magnitude: 3, duration: 2, targets: [allyRel(0)] };
+      const guard: EffectEntry = { targets: [allyRel(0)], parts: [{ part: EffectLabel.ApplyStat, stat: 'ARMOR', magnitude: 3, duration: 2 }] };
       const defender = hero('defender', 3, 1, 0, [guard]);
       const state = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([defender], 1)));
 
@@ -593,8 +593,8 @@ describe('PriorityQueueService', () => {
       generateFullDie(Array(6).fill({ description: 'f', priority, effects }) as unknown as BaseDieInstructions);
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[]) =>
       createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects), position: { playerIndex, slot } });
-    const hit = (amount: number): EffectEntry => ({ effect: EffectLabel.Damage, magnitude: amount, targets: [enemyAbs(0)] });
-    const stunEnemy = (duration: number): EffectEntry => ({ effect: EffectLabel.ApplyState, state: 'STUN', duration, targets: [enemyAbs(0)] });
+    const hit = (amount: number): EffectEntry => ({ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: amount }] });
+    const stunEnemy = (duration: number): EffectEntry => ({ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.ApplyState, state: 'STUN', duration }] });
     const stunned = (c: ReturnType<typeof hero>, value = 1) => ({ ...c, states: { STUN: { value, touchedRound: 0 } } });
     const build = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) =>
       addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1)));
@@ -611,7 +611,7 @@ describe('PriorityQueueService', () => {
 
     it('a stun landing before the victim acts cancels its action', () => {
       const stunner = hero('stunner', 9, 0, 0, [stunEnemy(1)]);
-      const victim = hero('victim', 3, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+      const victim = hero('victim', 3, 1, 0, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
 
       const { state, log } = unstackPriorityQueueWithLog(build([stunner], [victim]));
 
@@ -621,7 +621,7 @@ describe('PriorityQueueService', () => {
 
     it('a stun landing after the victim acted does not cancel that action', () => {
       const stunner = hero('stunner', 3, 0, 0, [stunEnemy(1)]);
-      const victim = hero('victim', 9, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+      const victim = hero('victim', 9, 1, 0, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
 
       const { state, log } = unstackPriorityQueueWithLog(build([stunner], [victim]));
 
@@ -640,7 +640,7 @@ describe('PriorityQueueService', () => {
 
     it('STUN 1 applied in a round also cancels the action of the next round', () => {
       const stunner = hero('stunner', 9, 0, 0, [stunEnemy(1)]);
-      const victim = hero('victim', 3, 1, 0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyAbs(0)] }]);
+      const victim = hero('victim', 3, 1, 0, [{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const round1 = unstackPriorityQueueWithLog(build([stunner], [victim])).state;
 
       const nextRound = endOfRound(round1);
@@ -719,7 +719,7 @@ describe('PriorityQueueService', () => {
     const hero = (name: string, speed: number, playerIndex: PlayerIndex, slot: SlotIndex, effects: EffectEntry[] = [], priority = 0) =>
       createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 100, baseSpeed: speed, baseDie: dieOfFace(effects, priority), position: { playerIndex, slot } });
     const apply = (state: 'HASTE' | 'SLOW', side: 'ALLY' | 'ENEMY', slot: number, duration = 1): EffectEntry =>
-      ({ effect: EffectLabel.ApplyState, state, duration, targets: [{ side, mode: 'ABSOLUTE', n: [slot] }] });
+      ({ targets: [{ side, mode: 'ABSOLUTE', n: [slot] }], parts: [{ part: EffectLabel.ApplyState, state, duration }] });
     const run = (a: ReturnType<typeof hero>[], b: ReturnType<typeof hero>[]) => {
       const { log, state } = unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(createPlayer(a, 0), createPlayer(b, 1))));
       return { order: log.map(step => step.characterId), log, state };
@@ -762,7 +762,7 @@ describe('PriorityQueueService', () => {
     });
 
     it('a character hasting itself acts once', () => {
-      const selfish = hero('selfish', 5, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'HASTE', duration: 2, targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }] }]);
+      const selfish = hero('selfish', 5, 0, 0, [{ targets: [{ side: 'ALLY', mode: 'RELATIVE', n: [0] }], parts: [{ part: EffectLabel.ApplyState, state: 'HASTE', duration: 2 }] }]);
       const other = hero('other', 1, 1, 0);
 
       const { order } = run([selfish], [other]);
@@ -780,7 +780,7 @@ describe('PriorityQueueService', () => {
     });
 
     it('the initiative and slot ties are frozen when RESOLVE starts: a Swap mid-round does not reshuffle them', () => {
-      const swapper = hero('swapper', 9, 0, 0, [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyAbs(1), allyAbs(2)] }]);
+      const swapper = hero('swapper', 9, 0, 0, [{ targets: [allyAbs(1), allyAbs(2)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }]);
       const inSlot1 = hero('slot-1', 5, 0, 1);
       const inSlot2 = hero('slot-2', 5, 0, 2);
 
@@ -791,7 +791,7 @@ describe('PriorityQueueService', () => {
     });
 
     it('a stunned and hasted character is logged once, skipped', () => {
-      const starter = hero('starter', 9, 0, 0, [{ effect: EffectLabel.ApplyState, state: 'STUN', duration: 1, targets: [{ side: 'ALLY', mode: 'ABSOLUTE', n: [1] }] }, apply('HASTE', 'ALLY', 1)]);
+      const starter = hero('starter', 9, 0, 0, [{ targets: [{ side: 'ALLY', mode: 'ABSOLUTE', n: [1] }], parts: [{ part: EffectLabel.ApplyState, state: 'STUN', duration: 1 }] }, apply('HASTE', 'ALLY', 1)]);
       const target = hero('target', 1, 0, 1);
 
       const { log } = run([starter, target], [hero('dummy', 5, 1, 0)]);
@@ -835,7 +835,7 @@ describe('PriorityQueueService', () => {
     });
 
     it('BOARD-1: a relative attack hits the enemy facing the actor', () => {
-      const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
+      const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const { state } = run(teamOf(0, { 2: hit }), teamOf(1));
       expect(hp(state, 1, 2)).toBe(15);
       expect(hp(state, 1, 1)).toBe(20);
@@ -843,27 +843,34 @@ describe('PriorityQueueService', () => {
 
     it('logs the cells each effect actually resolved to', () => {
       const hit = face(0, [
-        { effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(-1, 0, 1)] },
-        { effect: EffectLabel.Shield, magnitude: 1, targets: [allyRel(0)] },
+        { targets: [enemyRel(-1, 0, 1)], parts: [{ part: EffectLabel.Damage, magnitude: 1 }] },
+        { targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 1 }] },
       ]);
       const { log } = run(teamOf(0, { 0: hit }), teamOf(1));
       const step = log.find(s => s.effects.length === 2)!;
-      expect(step.effects[0]).toEqual({ effect: EffectLabel.Damage, targets: [{ playerIndex: 1, slot: 0 }, { playerIndex: 1, slot: 1 }] });
-      expect(step.effects[1]).toEqual({ effect: EffectLabel.Shield, targets: [{ playerIndex: 0, slot: 0 }] });
+      expect(step.effects[0]).toEqual({ parts: [EffectLabel.Damage], targets: [{ playerIndex: 1, slot: 0 }, { playerIndex: 1, slot: 1 }] });
+      expect(step.effects[1]).toEqual({ parts: [EffectLabel.Shield], targets: [{ playerIndex: 0, slot: 0 }] });
+    });
+
+    it('RES-2: logs each effect with its parts, in order, and its cells', () => {
+      const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 1 }, { part: EffectLabel.ApplyState, state: 'POISON', duration: 1 }] }]);
+      const { log } = run(teamOf(0, { 0: hit }), teamOf(1));
+      const step = log.find(s => s.effects.length === 1)!;
+      expect(step.effects).toEqual([{ parts: [EffectLabel.Damage, EffectLabel.ApplyState], targets: [{ playerIndex: 1, slot: 0 }] }]);
     });
 
     it('an effect whose cells are all off the board fizzles and logs targets []', () => {
-      const miss = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(-1)] }]);
+      const miss = face(0, [{ targets: [enemyRel(-1)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const { state, log } = run(teamOf(0, { 0: miss }), teamOf(1));
       expect(state.players[1].team.every(c => c.hp === 20)).toBe(true);
       const step = log.find(s => s.effects.length === 1)!;
-      expect(step).toMatchObject({ skipped: false, effects: [{ effect: EffectLabel.Damage, targets: [] }], changes: [] });
+      expect(step).toMatchObject({ skipped: false, effects: [{ parts: [EffectLabel.Damage], targets: [] }], changes: [] });
     });
 
     it('SEQ-1: relative cells follow an actor moved earlier in the round', () => {
       // Fast ally at slot 0 swaps itself with the slow attacker at slot 2 → attacker now at slot 0.
-      const moveAttacker = face(1, [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyAbs(0, 2)] }]);
-      const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
+      const moveAttacker = face(1, [{ targets: [allyAbs(0, 2)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }]);
+      const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const { state } = run(teamOf(0, { 0: moveAttacker, 2: hit }), teamOf(1));
       expect(hp(state, 1, 0)).toBe(15);
       expect(hp(state, 1, 2)).toBe(20);
@@ -871,8 +878,8 @@ describe('PriorityQueueService', () => {
 
     it('relative cells target a slot, so they hit whoever stands there now', () => {
       // Enemy slot 1 swaps its slots 2 and 3 first (bracket 1); then our attacker at slot 2 hits enemy slot 2.
-      const enemySwap = face(1, [{ effect: EffectLabel.Swap, magnitude: 0, targets: [allyAbs(2, 3)] }]);
-      const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
+      const enemySwap = face(1, [{ targets: [allyAbs(2, 3)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] }]);
+      const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
       const p1 = teamOf(1, { 1: enemySwap });
       const wasAtSlot3 = p1.team[3].id;
       const { state } = run(teamOf(0, { 2: hit }), p1);
@@ -882,17 +889,37 @@ describe('PriorityQueueService', () => {
 
     it('SEQ-1: effects of one face resolve in order: a self-move shifts the next effect', () => {
       const moveThenHit = face(0, [
-        { effect: EffectLabel.Swap, magnitude: 0, targets: [allyRel(0), allyAbs(4)] },
-        { effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] },
+        { targets: [allyRel(0), allyAbs(4)], parts: [{ part: EffectLabel.Swap, magnitude: 0 }] },
+        { targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] },
       ]);
       const { state } = run(teamOf(0, { 1: moveThenHit }), teamOf(1));
       expect(hp(state, 1, 4)).toBe(15);
       expect(hp(state, 1, 1)).toBe(20);
     });
 
+    it('SEQ-1: the parts of an effect apply in order on each cell', () => {
+      const f = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 5 }, { part: EffectLabel.Damage, magnitude: 8 }] }]);
+      const { state } = run(teamOf(0, { 0: f }), teamOf(1));
+      expect(hp(state, 1, 0)).toBe(17);
+      expect(state.players[1].team[0].shield).toBe(0);
+    });
+
+    it('TGT-2: a cell named by two groups receives the whole effect twice', () => {
+      const f = face(0, [{ targets: [enemyAbs(0), enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 10 }, { part: EffectLabel.Heal, magnitude: 5 }] }]);
+      const { state } = run(teamOf(0, { 0: f }), teamOf(1));
+      expect(hp(state, 1, 0)).toBe(10); // 20 → 10 → 15 → 5 → 10
+    });
+
+    it('DEAD-1: a character brought to 0 HP then healed by the same effect stays on the board', () => {
+      const f = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.FixedDamage, magnitude: 20 }, { part: EffectLabel.Heal, magnitude: 5 }] }]);
+      const { state } = run(teamOf(0, { 0: f }), teamOf(1));
+      expect(hp(state, 1, 0)).toBe(5);
+      expect(state.players[1].fallen ?? []).toHaveLength(0);
+    });
+
     it('RES-1: an actor killed before its turn is skipped with no effects logged', () => {
-      const hit = face(0, [{ effect: EffectLabel.Damage, magnitude: 5, targets: [enemyRel(0)] }]);
-      const lethal = face(1, [{ effect: EffectLabel.Damage, magnitude: 99, targets: [enemyRel(0)] }]);
+      const hit = face(0, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
+      const lethal = face(1, [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]);
       const p0 = teamOf(0, { 0: hit });
       const { state, log } = run(p0, teamOf(1, { 0: lethal }));
       expect(hp(state, 1, 0)).toBe(20);
@@ -902,8 +929,8 @@ describe('PriorityQueueService', () => {
 
     it('DEAD-3: an actor that dies during its own action stops it: the rest of its face does not apply', () => {
       const selfCostThenHit = face(0, [
-        { effect: EffectLabel.FixedDamage, magnitude: 99, targets: [allyRel(0)] },
-        { effect: EffectLabel.Damage, magnitude: 9, targets: [enemyRel(0)] },
+        { targets: [allyRel(0)], parts: [{ part: EffectLabel.FixedDamage, magnitude: 99 }] },
+        { targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 9 }] },
       ]);
       const p0 = teamOf(0, { 0: selfCostThenHit });
       const { state, log } = run(p0, teamOf(1));
@@ -917,8 +944,8 @@ describe('PriorityQueueService', () => {
     it('DEAD-3, SEQ-1: when the actor dies on a cell of an effect, that effect still applies to its other cells, and the next effect does not', () => {
       // One effect on the actor's own cell then two enemy cells, followed by a second effect on another enemy cell.
       const selfThenEnemies = face(0, [
-        { effect: EffectLabel.Damage, magnitude: 8, targets: [allyRel(0), enemyRel(0, 1)] },
-        { effect: EffectLabel.Damage, magnitude: 9, targets: [enemyRel(2)] },
+        { targets: [allyRel(0), enemyRel(0, 1)], parts: [{ part: EffectLabel.Damage, magnitude: 8 }] },
+        { targets: [enemyRel(2)], parts: [{ part: EffectLabel.Damage, magnitude: 9 }] },
       ]);
       const p0 = teamOf(0, { 0: selfThenEnemies });
       const weak = { ...p0, team: p0.team.map((c, i) => i === 0 ? { ...c, hp: 5 } : c) };

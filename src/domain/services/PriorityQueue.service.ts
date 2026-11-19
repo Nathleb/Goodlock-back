@@ -4,7 +4,7 @@ import Character from "../types/Character.type";
 import GameState from "../types/GameState.type";
 import { resolveTargets } from "./TargetResolution.service";
 import { stateValue } from "./Character.service";
-import { effectFor } from "../strategies/effectFor";
+import { applyEffect } from "./EffectResolution.service";
 import { checkMatchEnd } from "./Round.service";
 import { PlayerIndex } from "../types/Position.type";
 import { CharacterId } from "@shared/branded.types";
@@ -121,9 +121,9 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             // DEAD-3: an actor who died during its own action stops it.
             if (actor === undefined) break;
             const targets = resolveTargets(faceEffect.targets, actor.position);
-            effects.push({ effect: faceEffect.label, targets });
+            effects.push({ parts: faceEffect.parts.map(p => p.label), targets });
             if (targets.length === 0) continue;
-            const { state: newState, affected } = effectFor(faceEffect).solve(state, targets, characterId);
+            const { state: newState, affected } = applyEffect(state, faceEffect, targets, characterId);
             // END-2: deaths are checked after each effect; the match ends at once (END-1).
             state = checkMatchEnd(newState, actor.position.playerIndex as PlayerIndex);
             affected.forEach(id => affectedIds.add(id));

@@ -1,4 +1,5 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
 import ApplyStat from "@domain/strategies/ApplyStat.class";
 import Damage from "@domain/strategies/Damage.class";
 import { createCharacter } from "@domain/services/CharacterGeneration.service";
@@ -39,7 +40,7 @@ describe('STAT-2: ApplyStat', () => {
     });
 
     it('DEAD-1: gives no instance to the cell a dead character left, the rest of the pattern applies', () => {
-        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const killed = settleDeaths(new Damage(20).solve(gs, [pos(1, 0)], actorId()).state);
 
         const { state } = new ApplyStat('POWER', 3, 2).solve(killed, [pos(1, 0), pos(1, 1)], actorId());
 
@@ -58,7 +59,7 @@ describe('STAT-2: ApplyStat', () => {
     });
 
     it('DEAD-1: does not list the cell a dead character left as affected', () => {
-        const killed = new Damage(20).solve(gs, [pos(1, 0)], actorId()).state;
+        const killed = settleDeaths(new Damage(20).solve(gs, [pos(1, 0)], actorId()).state);
 
         const { affected } = new ApplyStat('POWER', 3, 2).solve(killed, [pos(1, 0)], actorId());
 

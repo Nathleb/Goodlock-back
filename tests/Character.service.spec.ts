@@ -7,12 +7,12 @@ import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead } f
 
 describe('CharacterService', () => {
   const baseDieInstructions: BaseDieInstructions = [
-    { description: "Deals 1 damage", priority: 1, effects: [{ effect: EffectLabel.Damage, magnitude: 1, targets: [enemyRel(0)] }] },
-    { description: "Heals 2 HP", priority: 1, effects: [{ effect: EffectLabel.Heal, magnitude: 2, targets: [allyRel(0)] }] },
-    { description: "Grants 3 shield", priority: 1, effects: [{ effect: EffectLabel.Shield, magnitude: 3, targets: [allyRel(0)] }] },
-    { description: "Deals 4 damage", priority: 2, effects: [{ effect: EffectLabel.Damage, magnitude: 4, targets: [enemyRel(0)] }] },
-    { description: "Heals 5 HP", priority: 2, effects: [{ effect: EffectLabel.Heal, magnitude: 5, targets: [allyRel(0)] }] },
-    { description: "Grants 6 shield", priority: 2, effects: [{ effect: EffectLabel.Shield, magnitude: 6, targets: [allyRel(0)] }] },
+    { description: "Deals 1 damage", priority: 1, effects: [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 1 }] }] },
+    { description: "Heals 2 HP", priority: 1, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Heal, magnitude: 2 }] }] },
+    { description: "Grants 3 shield", priority: 1, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 3 }] }] },
+    { description: "Deals 4 damage", priority: 2, effects: [{ targets: [enemyRel(0)], parts: [{ part: EffectLabel.Damage, magnitude: 4 }] }] },
+    { description: "Heals 5 HP", priority: 2, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Heal, magnitude: 5 }] }] },
+    { description: "Grants 6 shield", priority: 2, effects: [{ targets: [allyRel(0)], parts: [{ part: EffectLabel.Shield, magnitude: 6 }] }] },
   ];
 
   const die = generateFullDie(baseDieInstructions);
@@ -43,10 +43,10 @@ describe('CharacterService', () => {
     expect(updatedCharacter.hp).toBe(100);
   });
 
-  it('should not heal a dead character', () => {
-    const dead = loseHp(character, character.hp);
-    const healed = gainHp(dead, 50);
-    expect(healed.hp).toBe(0);
+  it('DEAD-1: heals a character at 0 HP that is still on the board', () => {
+    const atZero = loseHp(character, character.hp);
+    const healed = gainHp(atZero, 50);
+    expect(healed.hp).toBe(50);
   });
 
   it('should deal damage', () => {

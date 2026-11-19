@@ -9,6 +9,8 @@ The rules live in `../Goodlock-specs/GAME-DESIGN.md` (read-only from this repo),
 | Priority bracket of a face (PRIO-1) | `DieFace.priority` |
 | Base speed (PRIO-1) | `Character.baseSpeed` |
 | Initiative token (PRIO-2, PRIO-3) | `GameState.initiativePlayerIndex` |
+| Effect: target cells and ordered parts (SEQ-1) | `FaceEffect` `{ targets, parts }` (`domain/types/DieFace.type.ts`), applied by `applyEffect` (`domain/services/EffectResolution.service.ts`); `{ targets, parts }` in `tmplt/*.json` and on the wire |
+| Part of an effect | `FacePart` `{ label, magnitude, stat?, state?, duration? }`; `label` is an `EffectLabel`, its strategy comes from `effectFor`; `{ part, ... }` in `tmplt/*.json` and on the wire |
 | Group of cells: side, fixed cells or offsets (TGT-2) | `TargetGroup`: `side` `ALLY`/`ENEMY`, `mode` `ABSOLUTE`/`RELATIVE`, `n` |
 | Damage (DMG-1) | `EffectLabel.Damage` |
 | Fixed damage (DMG-3) | `EffectLabel.FixedDamage` |
@@ -19,6 +21,6 @@ The rules live in `../Goodlock-specs/GAME-DESIGN.md` (read-only from this repo),
 | Axes Speed, Vitality, Stun, Root, Divine Shield (STATE-1) | `STATE_AXES`: `SPEED`, `VITALITY`, `STUN`, `ROOT`, `DIVINE_SHIELD` |
 | Haste, Slow, Regen, Poison, Stun, Root, Divine Shield | `HASTE`, `SLOW`, `REGEN`, `POISON`, `STUN`, `ROOT`, `DIVINE_SHIELD` |
 | Max HP, HP, shield | `Character.maxHp`, `.hp`, `.shield` |
-| Dead character, off the board (DEAD-1) | `Player.fallen`, in order of death; `Player.team` lists the characters on the board only |
+| Dead character, off the board (DEAD-1) | `Player.fallen`, in order of death; `Player.team` lists the characters on the board only; `settleDeaths` buries them once an effect has applied |
 | Winner, no draw (END-1, END-2) | `GameState.winner`, set by `checkMatchEnd` |
 | Order of the start-of-round effects (UPK-1) | `startOfRoundOrder` (`domain/services/PriorityQueue.service.ts`) |

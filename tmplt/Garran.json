@@ -4,11 +4,11 @@
     "maxHp": 110,
     "baseSpeed": 5,
     "baseDieInstructions": [
-        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "Damage", "magnitude": 15, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Take 8 damage, then deal 26 damage to the enemy in front.", "priority": 0, "effects": [{ "effect": "FixedDamage", "magnitude": 8, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }, { "effect": "Damage", "magnitude": 26, "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }] }] },
-        { "description": "Gain 15 shield.", "priority": 1, "effects": [{ "effect": "Shield", "magnitude": 15, "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }] }] },
+        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 15 }] }] },
+        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 15 }] }] },
+        { "description": "Deal 15 damage to the enemy in front.", "priority": 0, "effects": [{ "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 15 }] }] },
+        { "description": "Take 8 damage, then deal 26 damage to the enemy in front.", "priority": 0, "effects": [{ "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "FixedDamage", "magnitude": 8 }] }, { "targets": [{ "side": "ENEMY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Damage", "magnitude": 26 }] }] },
+        { "description": "Gain 15 shield.", "priority": 1, "effects": [{ "targets": [{ "side": "ALLY", "mode": "RELATIVE", "n": [0] }], "parts": [{ "part": "Shield", "magnitude": 15 }] }] },
         { "description": "Nothing.", "priority": 0, "effects": [] }
     ]
 }

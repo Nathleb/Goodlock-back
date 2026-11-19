@@ -1,4 +1,7 @@
 import { TEST_CATALOG_ID } from './helpers/catalog';
+import { settleDeaths } from "@domain/utils/TargetUtils";
+import { applyEffect } from "@domain/services/EffectResolution.service";
+import { FaceEffect, FacePart } from "@domain/types/DieFace.type";
 import Damage from "@domain/strategies/Damage.class";
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { addAllEffectsToPriorityQueue, unstackPriorityQueueWithLog } from "@domain/services/PriorityQueue.service";
@@ -106,7 +109,7 @@ describe('STATE-6, DMG-1: DIVINE_SHIELD', () => {
 
     it('DEAD-1: is not consumed by a hit on the cell its dead holder left', () => {
         // Fixed damage ignores the shield, so its holder can die with it.
-        const killed = new FixedDamage(20).solve(patch(gs, 1, 0, shielded()), [pos(1, 0)], actorId()).state;
+        const killed = settleDeaths(new FixedDamage(20).solve(patch(gs, 1, 0, shielded()), [pos(1, 0)], actorId()).state);
         const { state } = new Damage(5).solve(killed, [pos(1, 0)], actorId());
         expect(state).toEqual(killed);
         expect(state.players[1].fallen?.[0].states.DIVINE_SHIELD?.value).toBe(1);
@@ -132,7 +135,7 @@ describe('STATE-6, DMG-1: DIVINE_SHIELD', () => {
     });
 
     it('shows up in the resolve log: the nullified target is listed with its shield spent and hp intact', () => {
-        const hitFace = { description: 'hit', priority: 0, effects: [{ label: EffectLabel.Damage, magnitude: 5, targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }] }] };
+        const hitFace = { description: 'hit', priority: 0, effects: [{ targets: [{ side: 'ENEMY' as const, mode: 'ABSOLUTE' as const, n: [0] }], parts: [{ label: EffectLabel.Damage, magnitude: 5 }] }] };
         const attacker = createCharacter({ catalogId: TEST_CATALOG_ID, name: 'att', maxHp: 20, baseSpeed: 5, baseDie: Array(6).fill(hitFace) as unknown as Die, position: { playerIndex: 0, slot: 0 } });
         const victim = { ...createCharacter({ catalogId: TEST_CATALOG_ID, name: 'vic', maxHp: 20, baseSpeed: 1, baseDie: EMPTY_DIE, position: { playerIndex: 1, slot: 0 } }), ...shielded() };
         const start = addAllEffectsToPriorityQueue(createGameState(createPlayer([attacker], 0), createPlayer([victim], 1)));
@@ -145,5 +148,43 @@ describe('STATE-6, DMG-1: DIVINE_SHIELD', () => {
         expect(step.changes[0].character).toMatchObject({ id: victim.id, hp: 20 });
         expect(step.changes[0].character.states).toEqual({});
         expect(state.players[1].team[0].hp).toBe(20);
+    });
+});
+
+describe('STATE-6: Divine Shield nullifies the whole effect on its holder', () => {
+    const damage = (magnitude: number): FacePart => ({ label: EffectLabel.Damage, magnitude });
+    const poison: FacePart = { label: EffectLabel.ApplyState, magnitude: 0, state: 'POISON', duration: 2 };
+    const effect = (...parts: FacePart[]): FaceEffect => ({ targets: [], parts });
+
+    it('STATE-6: other parts included: nothing applies to the holder, and the state is spent', () => {
+        const { state } = applyEffect(patch(gs, 1, 0, shielded()), effect(damage(5), poison), [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).states).toEqual({});
+    });
+
+    it('STATE-6: a part that applied before the Damage is undone too', () => {
+        const { state } = applyEffect(patch(gs, 1, 0, shielded()), effect(poison, damage(5)), [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).states).toEqual({});
+    });
+
+    it('STATE-6, TGT-2: a holder named twice by the effect receives nothing', () => {
+        const { state } = applyEffect(patch(gs, 1, 0, shielded()), effect(damage(5)), [pos(1, 0), pos(1, 0)], actorId());
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 0).states).toEqual({});
+    });
+
+    it('STATE-6: a Damage floored to 0 leaves the Divine Shield, and the other parts apply', () => {
+        const armored = patch(gs, 1, 0, { ...shielded(), modifiers: [{ stat: 'ARMOR', value: 9, roundsLeft: 2, appliedRound: 0 }] });
+        const { state } = applyEffect(armored, effect(damage(5), poison), [pos(1, 0)], actorId());
+        expect(at(state, 1, 0).states).toEqual({
+            DIVINE_SHIELD: { value: 1, touchedRound: 0 }, VITALITY: { value: -2, touchedRound: expect.any(Number) },
+        });
+    });
+
+    it('STATE-6: the other cells of the effect are still hit', () => {
+        const { state } = applyEffect(patch(gs, 1, 0, shielded()), effect(damage(5)), [pos(1, 0), pos(1, 1)], actorId());
+        expect(at(state, 1, 0).hp).toBe(20);
+        expect(at(state, 1, 1).hp).toBe(15);
     });
 });
