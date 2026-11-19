@@ -13,7 +13,7 @@ written once validated. A change to an existing test is shown to the user first.
   twice receives the whole effect twice.
 - [x] 4. **Domain: DEAD-1, DEAD-3.** Deaths settle once the effect has applied. Upkeep unchanged.
   The tests and comments that state the old "at once" text are fixed here.
-- [ ] 5. **Domain: STATE-6, DMG-1.** Divine Shield nullifies the whole effect on the character.
+- [x] 5. **Domain: STATE-6, DMG-1.** Divine Shield nullifies the whole effect on the character.
 - [ ] 6. **Domain: RES-2.** The log lists the parts of each effect.
 - [ ] 7. **Application: protocol.** DTOs, mappers, regenerated `protocol/protocol.schema.json`,
   `docs/GLOSSARY.md`, the "Add an effect" task and design rule 6 of `CLAUDE.md`.
