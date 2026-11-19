@@ -82,6 +82,11 @@ export type GameStateDTO = {
     players: [PlayerGameStateDTO, PlayerGameStateDTO];
     /** SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's). */
     selection?: SelectionViewDTO;
+    /**
+     * KEEP only, in every state of the phase: the log the round would give if every current face were
+     * final (locks do not change it). All faces are public in KEEP (ROLL-2), so both players get the same one.
+     */
+    preview?: ResolveStepDTO[];
 };
 
 type SelectionViewDTO = {

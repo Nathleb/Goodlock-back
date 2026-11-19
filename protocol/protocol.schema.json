@@ -169,6 +169,13 @@
           ],
           "additionalProperties": false,
           "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
+        },
+        "preview": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolveStepDTO"
+          },
+          "description": "KEEP only, in every state of the phase: the log the round would give if every current face were final (locks do not change it). All faces are public in KEEP (ROLL-2), so both players get the same one."
         }
       },
       "required": [
@@ -473,25 +480,6 @@
       "additionalProperties": false,
       "description": "A catalog character as the client sees it: identity, stats and the full die with targeting."
     },
-    "RoundResolvedDTO": {
-      "type": "object",
-      "properties": {
-        "gameState": {
-          "$ref": "#/definitions/GameStateDTO"
-        },
-        "resolveLog": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ResolveStepDTO"
-          }
-        }
-      },
-      "required": [
-        "gameState",
-        "resolveLog"
-      ],
-      "additionalProperties": false
-    },
     "ResolveStepDTO": {
       "type": "object",
       "properties": {
@@ -564,6 +552,25 @@
         "skipped",
         "effects",
         "changes"
+      ],
+      "additionalProperties": false
+    },
+    "RoundResolvedDTO": {
+      "type": "object",
+      "properties": {
+        "gameState": {
+          "$ref": "#/definitions/GameStateDTO"
+        },
+        "resolveLog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolveStepDTO"
+          }
+        }
+      },
+      "required": [
+        "gameState",
+        "resolveLog"
       ],
       "additionalProperties": false
     },
