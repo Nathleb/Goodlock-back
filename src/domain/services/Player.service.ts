@@ -1,12 +1,13 @@
 import Character from "../types/Character.type";
 import { rollForTurn } from "./Character.service";
+import { DiceSource } from "../types/DiceSource.type";
 import { Player } from "../types/Player.type";
 import { BOARD_SIZE, SlotIndex, PlayerIndex } from "../types/Position.type";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
 
-export function rollDiceForTurn(player: Player): Player {
-    const newTeam = player.team.map(char => rollForTurn(char));
+export function rollDiceForTurn(player: Player, dice: DiceSource): Player {
+    const newTeam = player.team.map(char => rollForTurn(char, dice));
     return { ...player, team: newTeam };
 }
 

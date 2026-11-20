@@ -10,7 +10,7 @@ import { TEAM_SIZE } from "./Deck.service";
 import CharacterTemplate from "../types/CharacterTemplate.type";
 import Character from "../types/Character.type";
 import { CatalogId } from "@shared/branded.types";
-import { roll1D } from "../utils/Random.utils";
+import { DiceSource } from "../types/DiceSource.type";
 import { addIncrement, createClocks, publishClocks } from "./Clock.service";
 import { DomainError, domainError } from "../errors/DomainError";
 import { Result, ok, err } from "@shared/result.type";
@@ -36,22 +36,22 @@ function areBothReady(gs: GameState): boolean {
     return gs.playersReady[0] && gs.playersReady[1];
 }
 
-function rerollBothPlayers(gs: GameState): GameState {
+function rerollBothPlayers(gs: GameState, dice: DiceSource): GameState {
     const players: [Player, Player] = [
-        rollDiceForTurn(gs.players[0]),
-        rollDiceForTurn(gs.players[1]),
+        rollDiceForTurn(gs.players[0], dice),
+        rollDiceForTurn(gs.players[1], dice),
     ];
     return { ...gs, players };
 }
 
 /** SEL-1: the initiative token is drawn and both clocks start. */
-export function createSelectionState(decks: readonly [readonly CharacterTemplate[], readonly CharacterTemplate[]], now: number): GameState {
+export function createSelectionState(decks: readonly [readonly CharacterTemplate[], readonly CharacterTemplate[]], now: number, dice: DiceSource): GameState {
     return {
         clocks: createClocks(),
         clockUpdatedAt: now,
         phase: GamePhase.SELECTION,
         currentRound: 0,
-        initiativePlayerIndex: roll1D(2) as PlayerIndex,
+        initiativePlayerIndex: dice.roll(2) as PlayerIndex,
         rollsLeft: 2,
         playersReady: [false, false],
         priorityQueue: createPriorityQueue(),
@@ -131,11 +131,11 @@ export function confirmPlacement(gs: GameState, playerIndex: PlayerIndex): Resul
         });
 }
 
-export function performRoll(gs: GameState): Result<GameState, DomainError> {
-    return checkPhase(gs, GamePhase.ROLL).map(g => resetReady(beginKeepPhase(rerollBothPlayers(g))));
+export function performRoll(gs: GameState, dice: DiceSource): Result<GameState, DomainError> {
+    return checkPhase(gs, GamePhase.ROLL).map(g => resetReady(beginKeepPhase(rerollBothPlayers(g, dice))));
 }
 
-export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): Result<GameState, DomainError> {
+export function confirmKeep(gs: GameState, playerIndex: PlayerIndex, dice: DiceSource): Result<GameState, DomainError> {
     return checkPhase(gs, GamePhase.KEEP)
         .andThen(g => checkNotReady(g, playerIndex))
         .map(g => {
@@ -144,7 +144,7 @@ export function confirmKeep(gs: GameState, playerIndex: PlayerIndex): Result<Gam
             // KEEP-4: each player gains the increment when both have confirmed.
             const updated = addIncrement(marked);
 
-            const rerolled = { ...rerollBothPlayers(updated), rollsLeft: updated.rollsLeft - 1 };
+            const rerolled = { ...rerollBothPlayers(updated, dice), rollsLeft: updated.rollsLeft - 1 };
             // After the final reroll there are no rerolls left, so locking is moot —
             // skip the dead keep round and go straight to resolve with the final dice.
             if (rerolled.rollsLeft === 0) {

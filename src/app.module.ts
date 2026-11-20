@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { ROOM_PORT, SESSION_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT, DICE_SOURCE } from '@application/ports/tokens';
 import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { NodeMatchTimer } from '@infrastructure/adapters/timers/node-match-timer';
+import { diceSourceFromEnv } from '@infrastructure/config/dice.config';
 import { RoomCoordinatorService } from '@application/services/RoomCoordinator.service';
 import { SessionCoordinatorService } from '@application/services/SessionCoordinator.service';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
@@ -40,6 +41,7 @@ import { DeckController } from '@infrastructure/adapters/http/DeckController';
         { provide: SESSION_PORT, useClass: SessionManager },
         { provide: WEBSOCKET_PORT, useClass: WebSocketService },
         { provide: MATCH_TIMER_PORT, useClass: NodeMatchTimer },
+        { provide: DICE_SOURCE, useFactory: () => diceSourceFromEnv(process.env) },
         MatchLifecycleService,
         SharedWebSocketService,
         RoomCoordinatorService,

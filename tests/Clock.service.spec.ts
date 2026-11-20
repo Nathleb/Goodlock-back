@@ -10,6 +10,9 @@ import { unwrap } from './helpers/result';
 import GamePhase from '@domain/types/GamePhase.type';
 import GameState from '@domain/types/GameState.type';
 import { PlayerIndex } from '@domain/types/Position.type';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 const T0 = 1_000_000;
 const SECOND = 1000;
@@ -36,7 +39,7 @@ describe('CLOCK-1: the clocks', () => {
 
 describe('SEL-1: the clocks start with the match', () => {
     it('are created, stamped with the start, when Selection opens', () => {
-        const gs = createSelectionState([[], []], T0);
+        const gs = createSelectionState([[], []], T0, dice);
         expect(gs.clocks).toEqual(createClocks());
         expect(gs.clockUpdatedAt).toBe(T0);
     });
@@ -201,13 +204,13 @@ describe('CLOCK-4, GAME-7: a clock is published to the opponent at the end of ea
     });
 
     it('does not change when only one player has confirmed', () => {
-        const first = unwrap(confirmKeep(running(GamePhase.KEEP, [500_000, 480_000]), 0));
+        const first = unwrap(confirmKeep(running(GamePhase.KEEP, [500_000, 480_000]), 0, dice));
         expect(published(first)).toEqual([600_000, 600_000]);
     });
 
     it('is updated when both have confirmed a Keep, increment included', () => {
-        const first = unwrap(confirmKeep(running(GamePhase.KEEP, [500_000, 480_000]), 0));
-        const second = unwrap(confirmKeep(first, 1));
+        const first = unwrap(confirmKeep(running(GamePhase.KEEP, [500_000, 480_000]), 0, dice));
+        const second = unwrap(confirmKeep(first, 1, dice));
         expect(published(second)).toEqual([510_000, 490_000]);
     });
 
@@ -229,9 +232,9 @@ describe('KEEP-4: each player gains the increment when both have confirmed a Kee
 
     it('is granted by confirmKeep when the second player confirms, whether a Roll or Resolve follows', () => {
         for (const rollsLeft of [2, 1]) {
-            const first = unwrap(confirmKeep(keepWith([false, false], rollsLeft), 0));
+            const first = unwrap(confirmKeep(keepWith([false, false], rollsLeft), 0, dice));
             expect(first.clocks.map(c => c.remainingMs)).toEqual([600_000, 600_000]);
-            const second = unwrap(confirmKeep(first, 1));
+            const second = unwrap(confirmKeep(first, 1, dice));
             expect(second.clocks.map(c => c.remainingMs)).toEqual([610_000, 610_000]);
         }
     });

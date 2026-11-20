@@ -15,6 +15,9 @@ import EffectLabel from '@domain/types/EffectLabels.type';
 import { generateFullDie, createCharacter } from '@domain/services/CharacterGeneration.service';
 import { BaseDieInstructions } from '@domain/types/BaseDieInstructions.type';
 import { enemyRel } from './helpers/targets';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 
@@ -150,7 +153,7 @@ describe('GAME-7, CHAR-1: team selection view', () => {
     const deck = (p: string) => Array.from({ length: 7 }, (_, i) => testTemplate(`${p}${i}`));
     const PICK_1 = ['b0', 'b1', 'b2', 'b3', 'b4'] as CatalogId[];
     const selecting = (picks: SelectionState['picks'], ready: [boolean, boolean]): GameState => ({
-        ...createSelectionState([deck('a'), deck('b')], 0),
+        ...createSelectionState([deck('a'), deck('b')], 0, dice),
         playersReady: ready,
         selection: { decks: [deck('a'), deck('b')], picks },
     });
