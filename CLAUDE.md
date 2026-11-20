@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Backend of Goodlock, a tactical PvP dice game. **Rules reference: `../Goodlock-specs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules, written in the language of the game, each rule with an ID. It lives in the specs space, isolated from the code: read it, never write there (permission denied). `docs/GLOSSARY.md` maps its terms to the code. Changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
+Backend of Goodlock, a tactical PvP dice game. **Rules reference: `../Goodlock-specs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference" and "Tests and roles"): it is the only source of the game rules, written in the language of the game, each rule with an ID. It lives in the specs space, isolated from the code: read it, never write there (permission denied). **Acceptance tests: `../Goodlock-acceptance/back/`**, written there by the test-writer from the rules: read them, never write there (permission denied, and the Bash sandbox only writes in this repo). The tests of `tests/` are unit tests. `docs/GLOSSARY.md` maps the terms of the rules to the code. Changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
 
 ## Commands
 
