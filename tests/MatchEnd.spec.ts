@@ -41,8 +41,11 @@ describe('END-1, RES-4: the match ends as soon as a player loses', () => {
         expect(state.players[1].fallen).toHaveLength(2);
         expect(cell(state, 1, 2)?.hp).toBe(20);
         expect(cell(state, 0, 0)?.hp).toBe(20);
-        expect(log).toHaveLength(1);
+        // The log still lists every entry: the 9 the decided match did not play are unplayed.
+        expect(log).toHaveLength(10);
+        expect(log[0]).toMatchObject({ characterId: p0.team[0].id, unplayed: false });
         expect(log[0].effects).toHaveLength(2);
+        expect(log.slice(1).every(s => s.unplayed && s.skipped && s.effects.length === 0 && s.changes.length === 0)).toBe(true);
         expect(state.winner).toBe(0);
     });
 

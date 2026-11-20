@@ -52,6 +52,7 @@ type ResolvedEffectDTO = {
 export type ResolveStepDTO = {
     characterId: string;
     skipped: boolean;
+    unplayed: boolean;  // the match ended before this action's turn: it was not played (END-1)
     effects: ResolvedEffectDTO[];
     changes: ResolveChangeDTO[];
 };

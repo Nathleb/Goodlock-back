@@ -105,6 +105,7 @@ export class GameStateMapper {
         return steps.map(step => ({
             characterId: step.characterId,
             skipped: step.skipped,
+            unplayed: step.unplayed,
             effects: step.effects.map(e => ({
                 parts: [...e.parts],
                 targets: e.targets.map(t => ({ playerIndex: t.playerIndex, slot: t.slot })),

@@ -186,6 +186,7 @@ describe('RES-2: resolveStepsToDTO', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
             characterId: asCharacter('x'),
             skipped: false,
+            unplayed: false,
             effects: [
                 { parts: [EffectLabel.Damage], targets: [{ playerIndex: 1, slot: 2 }] },
                 { parts: [EffectLabel.Heal], targets: [] },
@@ -195,6 +196,17 @@ describe('RES-2: resolveStepsToDTO', () => {
         expect(dto[0].effects).toEqual([
             { parts: ['Damage'], targets: [{ playerIndex: 1, slot: 2 }] },
             { parts: ['Heal'], targets: [] },
+        ]);
+    });
+
+    it('END-1: tells an action the decided match did not play from one that was played', () => {
+        const dto = GameStateMapper.resolveStepsToDTO([
+            { characterId: asCharacter('played'), skipped: false, unplayed: false, effects: [], changes: [] },
+            { characterId: asCharacter('stunned'), skipped: true, unplayed: false, effects: [], changes: [] },
+            { characterId: asCharacter('late'), skipped: true, unplayed: true, effects: [], changes: [] },
+        ]);
+        expect(dto.map(s => [s.characterId, s.skipped, s.unplayed])).toEqual([
+            ['played', false, false], ['stunned', true, false], ['late', true, true],
         ]);
     });
 });
@@ -266,7 +278,7 @@ describe('stats in the DTO', () => {
 
     it('shows up in the resolve-step changes too', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: asCharacter('a'), skipped: false, effects: [],
+            characterId: asCharacter('a'), skipped: false, unplayed: false, effects: [],
             changes: [{ characterId: asCharacter('a'), character: { ...char('a', 0, 0, false), modifiers: [power(3)] } }],
         }]);
         expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3, ARMOR: 0 });
@@ -300,7 +312,7 @@ describe('states in the DTO', () => {
 
     it('shows up in the resolve-step changes too', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: asCharacter('a'), skipped: false, effects: [],
+            characterId: asCharacter('a'), skipped: false, unplayed: false, effects: [],
             changes: [{ characterId: asCharacter('a'), character: { ...char('a', 0, 0, false), states: { ROOT: { value: 2, touchedRound: 1 } } } }],
         }]);
         expect(dto[0].changes[0].after.states.ROOT).toBe(2);

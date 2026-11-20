@@ -494,6 +494,9 @@
         "skipped": {
           "type": "boolean"
         },
+        "unplayed": {
+          "type": "boolean"
+        },
         "effects": {
           "type": "array",
           "items": {
@@ -555,6 +558,7 @@
       "required": [
         "characterId",
         "skipped",
+        "unplayed",
         "effects",
         "changes"
       ],

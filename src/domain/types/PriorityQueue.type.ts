@@ -16,6 +16,8 @@ export type ResolvedEffect = {
 export type ResolveStep = {
     readonly characterId: CharacterId;
     readonly skipped: boolean;
+    /** True only for an action the match, already decided, did not play (END-1); such a step is also skipped. */
+    readonly unplayed: boolean;
     readonly effects: readonly ResolvedEffect[];
     readonly changes: readonly { readonly characterId: CharacterId; readonly character: Character }[];
 };

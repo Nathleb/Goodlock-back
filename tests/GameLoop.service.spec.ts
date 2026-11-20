@@ -216,6 +216,23 @@ describe('previewRound', () => {
         expect(inKeep).toEqual(before);
     });
 
+    it('END-1, RES-2: lists every character on the board when the round would end the match', () => {
+        // Player 1 already lost a character, and the one in slot 0 dies to the first hit it takes.
+        const [frail, ...rest] = gs.players[1].team;
+        const gone = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Gone", maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: 1, slot: 4 } });
+        const lastStand: Player = { ...gs.players[1], team: [{ ...frail, hp: 1 }, ...rest], fallen: [{ ...gone, hp: 0 }] };
+        const inKeep = beginKeepPhase({ ...gs, players: [gs.players[0], lastStand] });
+
+        const preview = unwrap(previewRound(inKeep));
+        const { state, log } = unwrap(performResolve({ ...inKeep, phase: GamePhase.RESOLVE }));
+
+        expect(state.winner).toBe(0);
+        expect(preview).toEqual(log);
+        expect(preview).toHaveLength(10);
+        expect(new Set(preview.map(s => s.characterId)).size).toBe(10);
+        expect(preview.some(s => s.unplayed)).toBe(true);
+    });
+
     it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
         expect(unwrapErr(previewRound(beginRollPhase(gs))).code).toBe('WRONG_PHASE');
     });
