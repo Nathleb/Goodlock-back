@@ -206,7 +206,7 @@ describe('performResolve', () => {
 });
 
 describe('previewRound', () => {
-    it('gives the log performResolve would give from the same faces, without touching the state', () => {
+    it('UX-1: gives the log performResolve would give from the same faces, without touching the state', () => {
         const inKeep = beginKeepPhase(gs);
         const before = structuredClone(inKeep);
         const { log } = unwrap(performResolve({ ...inKeep, phase: GamePhase.RESOLVE }));
@@ -237,7 +237,7 @@ describe('previewRound', () => {
         expect(unwrapErr(previewRound(beginRollPhase(gs))).code).toBe('WRONG_PHASE');
     });
 
-    it('ignores locks: kept dice give the same preview as free ones', () => {
+    it('FLOW-3: ignores locks: kept dice give the same preview as free ones', () => {
         // The snapshots in the log carry each character as it is, lock flag included; only that flag may differ.
         const unlocked = (log: readonly ResolveStep[]) => log.map(step => ({
             ...step,

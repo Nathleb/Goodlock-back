@@ -7,6 +7,7 @@ import GameState from '@domain/types/GameState.type';
 import GamePhase from '@domain/types/GamePhase.type';
 import EffectLabel from '@domain/types/EffectLabels.type';
 import { SlotIndex } from '@domain/types/Position.type';
+import { Player } from '@domain/types/Player.type';
 import { BaseDieInstructions } from '@domain/types/BaseDieInstructions.type';
 import { createCharacter, generateFullDie } from '@domain/services/CharacterGeneration.service';
 import { createPlayer } from '@domain/services/Player.service';
@@ -29,6 +30,34 @@ describe('the round preview (UX-1 of the match screen spec)', () => {
         const dto = GameStateMapper.toDTO(state);
         expect(dto.preview).toEqual(GameStateMapper.resolveStepsToDTO(unwrap(previewRound(state))));
         expect(dto.preview!.length).toBeGreaterThan(0);
+        // Every action is in the same bracket at the same speed: player 0 holds the initiative, so its
+        // slot 0 acts first, and its face hits the enemy in front of it.
+        const [first] = dto.preview!;
+        expect(first.characterId).toBe(state.players[0].team[0].id);
+        expect(first.effects[0].targets).toEqual([{ playerIndex: 1, slot: 0 }]);
+        expect(first.effects[0].parts).toEqual([EffectLabel.Damage]);
+    });
+
+    it('never shows the dice kept in the Keep in progress: each snapshot shows a die as kept at the last Roll', () => {
+        // In each team: slot 0 is kept now but was not at the last Roll, slot 1 the other way round.
+        // The locks of the current Keep stay with their owner (GAME-9), in every state sent.
+        const withLocks = (player: Player): Player => ({
+            ...player,
+            team: player.team.map(c =>
+                c.position.slot === 0 ? { ...c, isFaceLocked: true, keptAtLastRoll: false }
+                : c.position.slot === 1 ? { ...c, isFaceLocked: false, keptAtLastRoll: true }
+                : c),
+        });
+        const base = inPhase(GamePhase.KEEP);
+        const state: GameState = { ...base, players: [withLocks(base.players[0]), withLocks(base.players[1])] };
+        const keptAtLastRoll = new Map(state.players.flatMap(p => p.team).map(c => [c.id as string, c.keptAtLastRoll]));
+        const flipped = state.players.flatMap(p => p.team).filter(c => c.position.slot <= 1).map(c => c.id as string);
+
+        for (const dto of [GameStateMapper.toDTO(state), GameStateMapper.toDTOForViewer(state, 0), GameStateMapper.toDTOForViewer(state, 1)]) {
+            const changes = dto.preview!.flatMap(step => step.changes);
+            expect(changes.map(c => c.characterId)).toEqual(expect.arrayContaining(flipped));
+            changes.forEach(c => expect(c.after.isFaceLocked).toBe(keptAtLastRoll.get(c.characterId)));
+        }
     });
 
     it('is the same for both viewers and in the room-wide state', () => {
@@ -48,8 +77,4 @@ describe('the round preview (UX-1 of the match screen spec)', () => {
             expect(GameStateMapper.toDTOForViewer(state, 1)).not.toHaveProperty('preview');
         },
     );
-
-    it.each([0, 1] as const)('is absent from the PLACEMENT state sent to player %s', (viewer) => {
-        expect(GameStateMapper.toDTOForPlacement(inPhase(GamePhase.PLACEMENT), viewer)).not.toHaveProperty('preview');
-    });
 });

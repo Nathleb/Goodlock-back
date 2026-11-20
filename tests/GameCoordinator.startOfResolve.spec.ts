@@ -8,14 +8,15 @@ import { MatchLifecycleService } from '@application/services/MatchLifecycle.serv
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import { Session } from '@application/dtos/Session.dto';
 import { RoundResolvedDTO } from '@application/dtos/Protocol.dto';
-import * as GameLoop from '@domain/services/GameLoop.service';
 import { createCharacter, generateFullDie } from '@domain/services/CharacterGeneration.service';
 import { createPlayer } from '@domain/services/Player.service';
 import { beginKeepPhase } from '@domain/services/Phase.service';
+import { INCREMENT_MS } from '@domain/services/Clock.service';
 import { BaseDieInstructions } from '@domain/types/BaseDieInstructions.type';
+import Character from '@domain/types/Character.type';
 import EffectLabel from '@domain/types/EffectLabels.type';
 import GamePhase from '@domain/types/GamePhase.type';
-import GameState from '@domain/types/GameState.type';
+import GameState, { PlayerClock } from '@domain/types/GameState.type';
 import { Player } from '@domain/types/Player.type';
 import { SlotIndex } from '@domain/types/Position.type';
 import { Room } from '@domain/types/Room.type';
@@ -42,7 +43,29 @@ const makeTeam = (pi: 0 | 1): Player =>
 
 // The last Keep: player 1 has confirmed, player 0's confirm ends it.
 const lastKeep: GameState = { ...beginKeepPhase(createGameState(makeTeam(0), makeTeam(1))), rollsLeft: 1, playersReady: [false, true] };
-const room: Room = { roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: true, gameState: lastKeep };
+const roomWith = (gameState: GameState): Room => ({ roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: true, gameState });
+
+/** Each die after the last Roll: a kept one keeps its face, the others give their last face (Math.random at 0.99). */
+const afterLastRoll = (c: Character): Character => c.isFaceLocked
+    ? { ...c, keptAtLastRoll: true }
+    : { ...c, face: c.baseDie[5], faceIndex: 5, keptAtLastRoll: false };
+
+/**
+ * The board Resolve starts from once both players have confirmed the last Keep at the instant the
+ * Keep began (no time charged): no Roll left, nobody confirmed, both clocks given the increment and published.
+ */
+const resolveFrom = (keep: GameState): GameState => {
+    const incremented = (c: PlayerClock): PlayerClock => ({ ...c, remainingMs: c.remainingMs + INCREMENT_MS, publishedMs: c.remainingMs + INCREMENT_MS });
+    const rolled = (p: Player): Player => ({ ...p, team: p.team.map(afterLastRoll) });
+    return {
+        ...keep,
+        phase: GamePhase.RESOLVE,
+        rollsLeft: 0,
+        playersReady: [false, false],
+        clocks: [incremented(keep.clocks[0]), incremented(keep.clocks[1])],
+        players: [rolled(keep.players[0]), rolled(keep.players[1])],
+    };
+};
 
 const mockSession = { getSession: jest.fn(), getSessionById: jest.fn(), createOrReconnectSession: jest.fn(), setSessionRoom: jest.fn(), disconnectSession: jest.fn(), deleteSession: jest.fn() };
 const mockRoom = { getRoom: jest.fn(), createRoom: jest.fn(), joinRoom: jest.fn(), quitRoom: jest.fn(), startGame: jest.fn(), updateGameState: jest.fn(), closeRoom: jest.fn(), listOpenRooms: jest.fn() };
@@ -66,38 +89,59 @@ beforeEach(async () => {
     }).compile();
     coordinator = module.get(GameCoordinatorService);
     mockSession.getSession.mockReturnValue(SESSION_0);
-    mockRoom.getRoom.mockReturnValue(room);
 });
 
 afterEach(() => jest.restoreAllMocks());
 
+/** Player 0 confirms the last Keep of `keep`, keeping `kept`: the `roundResolved` sent to the room. */
+function confirmLastKeep(keep: GameState, kept: string[] = []): RoundResolvedDTO {
+    mockRoom.getRoom.mockReturnValue(roomWith(keep));
+    jest.spyOn(Date, 'now').mockReturnValue(keep.clockUpdatedAt);
+    jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last Roll gives every free die its last face
+    coordinator.confirmKeep(SOCKET_0, kept);
+    return mockWs.emitToRoom.mock.calls.find(([, event]) => event === 'roundResolved')![2];
+}
+
 describe('roundResolved carries the board Resolve started from', () => {
-    let resolvedFrom: GameState;
     let payload: RoundResolvedDTO;
 
     beforeEach(() => {
-        jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last Roll gives every die its last face
-        const performResolve = jest.spyOn(GameLoop, 'performResolve');
-
-        coordinator.confirmKeep(SOCKET_0, []);
-
-        resolvedFrom = performResolve.mock.calls[0][0];
-        payload = mockWs.emitToRoom.mock.calls.find(([, event]) => event === 'roundResolved')![2];
+        payload = confirmLastKeep(lastKeep);
     });
 
     it('is the state the round was resolved from, as both players see it', () => {
-        expect(payload.startOfResolve).toEqual(GameStateMapper.toDTO(resolvedFrom));
+        expect(payload.startOfResolve).toEqual(GameStateMapper.toDTO(resolveFrom(lastKeep)));
     });
 
     it('is in the RESOLVE phase', () => {
         expect(payload.startOfResolve.phase).toBe(GamePhase.RESOLVE);
     });
 
-    it('shows the faces of the last Roll, the ones the log resolves', () => {
+    it('ROLL-2: shows the faces of the last Roll, the ones the log resolves', () => {
         const firstAction = payload.resolveLog.find(step => !step.skipped)!;
         const actor = payload.startOfResolve.players.flatMap(p => p.team).find(c => c.id === firstAction.characterId)!;
 
         expect(actor.face.description).toBe('F');
         expect(firstAction.effects.map(e => e.parts)).toEqual(actor.face.effects.map(e => e.parts.map(p => p.part)));
+    });
+});
+
+describe('ROLL-2: roundResolved shows which dice were kept at the last Roll', () => {
+    it('marks as kept only the dice kept in the last Keep, on both sides', () => {
+        // Player 1 confirmed earlier keeping its slot 2; player 0 now keeps its slot 0.
+        const opponentKept = lastKeep.players[1].team[2].id;
+        const keep: GameState = {
+            ...lastKeep,
+            players: [lastKeep.players[0], { ...lastKeep.players[1], team: lastKeep.players[1].team.map(c => ({ ...c, isFaceLocked: c.id === opponentKept })) }],
+        };
+        const ownKept = keep.players[0].team[0].id;
+
+        const payload = confirmLastKeep(keep, [ownKept]);
+
+        const kept = payload.startOfResolve.players.flatMap(p => p.team).filter(c => c.isFaceLocked).map(c => c.id);
+        expect(kept.sort()).toEqual([ownKept, opponentKept].sort());
+        expect(payload.startOfResolve.players.flatMap(p => p.team)).toHaveLength(8);
+        const ownKeptDto = payload.startOfResolve.players[0].team.find(c => c.id === ownKept)!;
+        expect(ownKeptDto.face.description).toBe('A');
     });
 });
