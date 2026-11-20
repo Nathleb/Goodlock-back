@@ -2,7 +2,7 @@ import { TEST_CATALOG_ID } from './helpers/catalog';
 import EffectLabel from "@domain/types/EffectLabels.type";
 import { enemyRel, allyRel } from "./helpers/targets";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
-import { hasLost, rollDiceForTurn } from "@domain/services/Player.service";
+import { createPlayer, hasLost, rollDiceForTurn } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
@@ -24,6 +24,13 @@ describe('PlayerService', () => {
   const makeChar = () => createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
   const character = makeChar();
   const player: Player = { playerIndex: 0, team: [character] };
+
+  it('puts each character on face 0 of its die, index included', () => {
+    const rolled = { ...makeChar(), face: die[3], faceIndex: 3 };
+    const [placed] = createPlayer([rolled], 1).team;
+    expect(placed.faceIndex).toBe(0);
+    expect(placed.face).toBe(die[0]);
+  });
 
   it('should roll dice for turn', () => {
     const updatedPlayer = rollDiceForTurn(player, dice);

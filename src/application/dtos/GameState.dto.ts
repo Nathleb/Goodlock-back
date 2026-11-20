@@ -15,6 +15,8 @@ export type CharacterDTO = {
     baseSpeed: number;
     baseDie: DieFaceDTO[];
     face: DieFaceDTO;
+    /** Index of `face` in `baseDie` (0..5): a die can hold identical faces, so the content alone does not tell which one came up. */
+    faceIndex: number;
     /**
      * Whether the die was kept at the last Roll (ROLL-2). In the state sent to one player only,
      * their own dice show instead what they last confirmed in the current Keep (GAME-9).

@@ -24,7 +24,7 @@ const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean, keptAtLastRoll = false): Character {
     return {
         id: asCharacter(id), catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [], states: {},
-        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked, keptAtLastRoll,
+        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, faceIndex: 0, isFaceLocked: locked, keptAtLastRoll,
         position: { playerIndex, slot: slot as SlotIndex },
     };
 }
@@ -212,6 +212,19 @@ describe('face DTO', () => {
         expect(dto.face.effects).toEqual([
             { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }], parts: [{ part: 'Damage', magnitude: 3 }] },
         ]);
+    });
+
+    it('carries the index of the current face, which tells apart identical faces', () => {
+        const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), faceIndex: 1 });
+        expect(dto.faceIndex).toBe(1);
+        expect(dto.baseDie[dto.faceIndex]).toEqual(dto.face);
+    });
+
+    it('carries the face index of both teams in the state sent to one player', () => {
+        const state = gs(GamePhase.RESOLVE, [false, false]);
+        const rolled = (p: Player): Player => ({ ...p, team: p.team.map((c, i) => ({ ...c, faceIndex: 2 + i })) });
+        const dto = GameStateMapper.toDTOForViewer({ ...state, players: [rolled(state.players[0]), rolled(state.players[1])] }, 0);
+        expect(dto.players.map(p => p.team.map(c => c.faceIndex))).toEqual([[2, 3], [2, 3]]);
     });
 });
 

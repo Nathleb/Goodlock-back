@@ -12,7 +12,8 @@ const updateCharacter = (character: Character, updates: Partial<Character>): Cha
 const DIE_SIZE = 6;
 
 export function rollDie(character: Character, dice: DiceSource): Character {
-    return updateCharacter(character, { face: character.baseDie[dice.roll(DIE_SIZE)] });
+    const faceIndex = dice.roll(DIE_SIZE);
+    return updateCharacter(character, { face: character.baseDie[faceIndex], faceIndex });
 }
 
 function canRollDie(character: Character): boolean {

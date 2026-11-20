@@ -135,6 +135,7 @@ export class GameStateMapper {
             baseSpeed: char.baseSpeed,
             baseDie: char.baseDie.map(GameStateMapper.faceToDTO),
             face: GameStateMapper.faceToDTO(char.face),
+            faceIndex: char.faceIndex,
             // Public: kept at the last Roll (ROLL-2). A choice in the current Keep stays with its owner (GAME-9).
             isFaceLocked: char.keptAtLastRoll,
             position: char.position,
