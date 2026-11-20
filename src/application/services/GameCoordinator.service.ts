@@ -1,9 +1,10 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT, DICE_SOURCE } from '@application/ports/tokens';
 import { SessionPort } from '@application/ports/SessionPort';
 import { RoomPort } from '@application/ports/RoomPort';
 import { WebSocketPort } from '@application/ports/WebSocketPort';
 import { CatalogPort } from '@application/ports/CatalogPort';
+import { DiceSource } from '@application/ports/DiceSourcePort';
 import { Session } from '@application/dtos/Session.dto';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
 import { Room } from '@domain/types/Room.type';
@@ -46,6 +47,7 @@ export class GameCoordinatorService {
         @Inject(ROOM_PORT) private readonly roomPort: RoomPort,
         @Inject(WEBSOCKET_PORT) private readonly wsPort: WebSocketPort,
         @Inject(CATALOG_PORT) private readonly catalogPort: CatalogPort,
+        @Inject(DICE_SOURCE) private readonly dice: DiceSource,
         private readonly lifecycle: MatchLifecycleService,
     ) {}
 
@@ -105,7 +107,7 @@ export class GameCoordinatorService {
             this.lifecycle.finish(roomId, next);
             return;
         }
-        next = invariant(performRoll(beginRollPhase(next)));
+        next = invariant(performRoll(beginRollPhase(next), this.dice));
         this.roomPort.updateGameState(roomId, next);
         this.wsPort.emitToRoom(roomId, 'gameStateUpdated', GameStateMapper.toDTO(next));
     }
@@ -187,7 +189,7 @@ export class GameCoordinatorService {
             if (decks.isErr()) { this.emitFailure(socketId, decks.error); return; }
 
             const [deck0, deck1] = decks.value;
-            const gameState = createSelectionState([this.templatesFor(deck0), this.templatesFor(deck1)], Date.now());
+            const gameState = createSelectionState([this.templatesFor(deck0), this.templatesFor(deck1)], Date.now(), this.dice);
 
             const started = this.roomPort.startGame(room.roomId, gameState);
             if (started.isErr()) { this.emitFailure(socketId, started.error); return; }
@@ -255,7 +257,7 @@ export class GameCoordinatorService {
             if (confirmed.isErr()) { this.emitFailure(socketId, confirmed.error); return; }
             let gs = confirmed.value;
             if (wasOtherReady) {
-                gs = invariant(performRoll(gs));
+                gs = invariant(performRoll(gs, this.dice));
                 this.roomPort.updateGameState(room.roomId, gs);
                 this.wsPort.emitToRoom(room.roomId, 'gameStateUpdated', GameStateMapper.toDTO(gs));
             } else {
@@ -283,7 +285,7 @@ export class GameCoordinatorService {
             const players = [...room.gameState.players] as [Player, Player];
             players[playerIndex] = updatedPlayer;
             const gsWithLocks: GameState = { ...room.gameState, players };
-            this.doConfirm(socketId, ctx, gsWithLocks, confirmKeep);
+            this.doConfirm(socketId, ctx, gsWithLocks, (g, i) => confirmKeep(g, i, this.dice));
         });
     }
 

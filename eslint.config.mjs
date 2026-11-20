@@ -39,6 +39,10 @@ export default [
           ],
         },
       ],
+      "no-restricted-properties": [
+        "error",
+        { object: "Math", property: "random", message: "the domain draws through a DiceSource passed as a parameter." },
+      ],
     },
   },
   {

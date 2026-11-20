@@ -1,11 +1,12 @@
 import { P0, P1, asRoom } from './helpers/ids';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
 import { TEST_CATALOG_ID, makeTestCatalog } from './helpers/catalog';
 import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { unwrap } from './helpers/result';
 import { ok, err } from '@shared/result.type';
 import { domainError } from '@domain/errors/DomainError';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, MATCH_TIMER_PORT, DICE_SOURCE } from '@application/ports/tokens';
 import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { Session } from '@application/dtos/Session.dto';
@@ -80,11 +81,14 @@ const mockTimer   = { schedule: jest.fn(), cancel: jest.fn() };
 const mockWs      = { joinRoom: jest.fn(), leaveRoom: jest.fn(), emitToSocket: jest.fn(), emitToRoom: jest.fn(), disconnectSocket: jest.fn() };
 
 let coordinator: GameCoordinatorService;
+/** The dice the coordinator draws from; a test swaps it to impose the faces. */
+let dice: ScriptedDiceSource;
 
 afterEach(() => jest.restoreAllMocks());
 
 beforeEach(async () => {
     jest.clearAllMocks();
+    dice = ScriptedDiceSource.always(0);
     const module = await Test.createTestingModule({
         providers: [
             GameCoordinatorService,
@@ -93,6 +97,7 @@ beforeEach(async () => {
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: CATALOG_PORT, useValue: catalog },
             { provide: MATCH_TIMER_PORT, useValue: mockTimer },
+            { provide: DICE_SOURCE, useFactory: () => ({ roll: (size: number) => dice.roll(size) }) },
             MatchLifecycleService,
         ],
     }).compile();
@@ -233,7 +238,7 @@ describe('SEL-2, GAME-7: team selection', () => {
     const fresh = () => createSelectionState([
         DECK_P0.map(id => catalog.get(id)!),
         DECK_P1.map(id => catalog.get(id)!),
-    ], Date.now());
+    ], Date.now(), dice);
     const lastState = (): GameState => mockRoom.updateGameState.mock.calls.at(-1)[1];
     const sentTo = (socket: string) => mockWs.emitToSocket.mock.calls.filter(c => c[0] === socket && c[1] === 'gameStateUpdated').map(c => c[2]);
 
@@ -729,7 +734,7 @@ describe('startGame guards', () => {
 
 describe('confirmSelection guards', () => {
     it('refuses ids that are not strings, saying what it expects', () => {
-        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], Date.now())), playerOrder: [P0, P1] });
+        mockRoom.getRoom.mockReturnValue({ ...makeRoom(createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], Date.now(), dice)), playerOrder: [P0, P1] });
         coordinator.confirmSelection(SOCKET_0, ['c0', 'c1', 'c2', 3] as unknown as string[]);
         expect(mockWs.emitToSocket).toHaveBeenCalledWith(SOCKET_0, 'error', { code: 'INVALID_SELECTION', message: 'characterIds must be an array of catalog ids' });
         expect(mockRoom.updateGameState).not.toHaveBeenCalled();
@@ -738,7 +743,7 @@ describe('confirmSelection guards', () => {
     it('seats the PLACEMENT views by playerOrder, not by playersId', () => {
         const PICK_P0 = ['c5', 'c0', 'c1', 'c2'] as CatalogId[];
         const PICK_P1 = ['c9', 'c8', 'c7', 'c6'] as CatalogId[];
-        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], Date.now());
+        const fresh = createSelectionState([DECK_P0.map(id => catalog.get(id)!), DECK_P1.map(id => catalog.get(id)!)], Date.now(), dice);
         const p1Picked = unwrap(confirmSelection(fresh, 1, PICK_P1, t => createCharacterFromTemplate(t)));
         // playersId lists the seats the other way round: only playerOrder says who holds seat 0.
         mockRoom.getRoom.mockReturnValue({ ...makeRoom(p1Picked), playersId: [P1, P0], playerOrder: [P0, P1] });
@@ -781,10 +786,8 @@ describe('confirmKeep payload message', () => {
 });
 
 describe('ROLL-1, ROLL-4: the last Keep leads to the third Roll, then to Resolve', () => {
-    afterEach(() => jest.restoreAllMocks());
-
     it('rolls the dice that are not kept before resolving, and leaves a kept die alone', () => {
-        jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last face of every die
+        dice = ScriptedDiceSource.always('last'); // the last face of every die
         mockRoom.getRoom.mockReturnValue(makeRoom(p1Ready({ ...keepGs, rollsLeft: 1 })));
         const keptId = baseGs.players[0].team[0].id;
 

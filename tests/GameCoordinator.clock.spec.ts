@@ -1,7 +1,8 @@
 import { P0, P1, asRoom } from './helpers/ids';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
 import { CatalogId, SocketId } from '@shared/branded.types';
 import { Test } from '@nestjs/testing';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT, MATCH_TIMER_PORT, DICE_SOURCE } from '@application/ports/tokens';
 import { makeTestCatalog } from './helpers/catalog';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
@@ -57,6 +58,7 @@ beforeEach(async () => {
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: CATALOG_PORT, useValue: makeTestCatalog(10) },
             { provide: MATCH_TIMER_PORT, useValue: mockTimer },
+            { provide: DICE_SOURCE, useValue: ScriptedDiceSource.always(0) },
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);

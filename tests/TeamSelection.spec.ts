@@ -8,6 +8,9 @@ import { TEAM_SIZE } from '@domain/services/Deck.service';
 import { CatalogId } from '@shared/branded.types';
 import { testTemplate } from './helpers/catalog';
 import { settleClocks } from '@domain/services/Clock.service';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 const build = (t: CharacterTemplate) => createCharacterFromTemplate(t);
 const ids = (...xs: string[]) => xs as CatalogId[];
@@ -19,7 +22,7 @@ const PICK_0 = ids('a5', 'a0', 'a1', 'a2');
 const PICK_1 = ids('b0', 'b1', 'b2', 'b3');
 
 let gs: GameState;
-beforeEach(() => { gs = createSelectionState([DECK_0, DECK_1], 0); });
+beforeEach(() => { gs = createSelectionState([DECK_0, DECK_1], 0, dice); });
 
 describe('createSelectionState', () => {
     it('GAME-1, CHAR-1: starts in SELECTION with both decks revealed, no picks and empty teams', () => {
@@ -128,7 +131,7 @@ describe('CLOCK-4, GAME-7: the clocks are published to the opponent when the Sel
 
 describe('CHAR-2: both players may field the same character', () => {
     it('lets both players bring the same deck and keep the same characters, each as its own character', () => {
-        const sameDeck = createSelectionState([DECK_0, DECK_0], 0);
+        const sameDeck = createSelectionState([DECK_0, DECK_0], 0, dice);
 
         const first = unwrap(confirmSelection(sameDeck, 0, PICK_0, build));
         const both = unwrap(confirmSelection(first, 1, PICK_0, build));
