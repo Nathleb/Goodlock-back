@@ -169,6 +169,13 @@
           ],
           "additionalProperties": false,
           "description": "SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's)."
+        },
+        "preview": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolveStepDTO"
+          },
+          "description": "KEEP only, in every state of the phase: the log the round would give if every current face were final (locks do not change it). All faces are public in KEEP (ROLL-2), so both players get the same one."
         }
       },
       "required": [
@@ -278,6 +285,10 @@
         "face": {
           "$ref": "#/definitions/DieFaceDTO"
         },
+        "faceIndex": {
+          "type": "number",
+          "description": "Index of `face` in `baseDie` (0..5): a die can hold identical faces, so the content alone does not tell which one came up."
+        },
         "isFaceLocked": {
           "type": "boolean",
           "description": "Whether the die was kept at the last Roll (ROLL-2). In the state sent to one player only, their own dice show instead what they last confirmed in the current Keep (GAME-9)."
@@ -347,6 +358,7 @@
         "baseSpeed",
         "baseDie",
         "face",
+        "faceIndex",
         "isFaceLocked",
         "position",
         "modifiers",
@@ -473,25 +485,6 @@
       "additionalProperties": false,
       "description": "A catalog character as the client sees it: identity, stats and the full die with targeting."
     },
-    "RoundResolvedDTO": {
-      "type": "object",
-      "properties": {
-        "gameState": {
-          "$ref": "#/definitions/GameStateDTO"
-        },
-        "resolveLog": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ResolveStepDTO"
-          }
-        }
-      },
-      "required": [
-        "gameState",
-        "resolveLog"
-      ],
-      "additionalProperties": false
-    },
     "ResolveStepDTO": {
       "type": "object",
       "properties": {
@@ -499,6 +492,9 @@
           "type": "string"
         },
         "skipped": {
+          "type": "boolean"
+        },
+        "unplayed": {
           "type": "boolean"
         },
         "effects": {
@@ -562,8 +558,34 @@
       "required": [
         "characterId",
         "skipped",
+        "unplayed",
         "effects",
         "changes"
+      ],
+      "additionalProperties": false
+    },
+    "RoundResolvedDTO": {
+      "type": "object",
+      "properties": {
+        "gameState": {
+          "$ref": "#/definitions/GameStateDTO",
+          "description": "The board once the round has resolved."
+        },
+        "resolveLog": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolveStepDTO"
+          }
+        },
+        "startOfResolve": {
+          "$ref": "#/definitions/GameStateDTO",
+          "description": "The board when Resolve starts: the faces of the last Roll, the ones `resolveLog` plays (ROLL-2: all public)."
+        }
+      },
+      "required": [
+        "gameState",
+        "resolveLog",
+        "startOfResolve"
       ],
       "additionalProperties": false
     },

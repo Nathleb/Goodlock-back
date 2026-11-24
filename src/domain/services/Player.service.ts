@@ -54,6 +54,7 @@ export function createPlayer(team: Character[], playerIndex: PlayerIndex): Playe
         ...char,
         position: { playerIndex, slot: index as SlotIndex },
         face: char.baseDie[0],
+        faceIndex: 0,
     }));
     return { playerIndex, team: positioned };
 }

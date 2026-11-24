@@ -3,8 +3,11 @@ import { ErrorPayload } from './Error.dto';
 import { RoomDTO } from './Room.dto';
 
 export type RoundResolvedDTO = {
+    /** The board once the round has resolved. */
     gameState: GameStateDTO;
     resolveLog: ResolveStepDTO[];
+    /** The board when Resolve starts: the faces of the last Roll, the ones `resolveLog` plays (ROLL-2: all public). */
+    startOfResolve: GameStateDTO;
 };
 
 export type SessionStartedDTO = { sessionId: string };

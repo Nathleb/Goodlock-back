@@ -10,11 +10,12 @@ import { createPlayer } from "@domain/services/Player.service";
 import { beginKeepPhase, beginRollPhase } from "@domain/services/Phase.service";
 import {
     confirmPlacement, performRoll, confirmKeep, performResolve,
-    cancelPlacement, cancelKeep, createSelectionState,
+    cancelPlacement, cancelKeep, createSelectionState, previewRound,
 } from "@domain/services/GameLoop.service";
 import { Player } from "@domain/types/Player.type";
 import { unwrap, unwrapErr } from "./helpers/result";
 import GameState from "@domain/types/GameState.type";
+import { ResolveStep } from "@domain/types/PriorityQueue.type";
 import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
 
 const dice = ScriptedDiceSource.always(0);
@@ -201,6 +202,49 @@ describe('performResolve', () => {
 
     it('returns a WRONG_PHASE error when called outside RESOLVE phase', () => {
         expect(unwrapErr(performResolve(gs)).code).toBe('WRONG_PHASE');
+    });
+});
+
+describe('previewRound', () => {
+    it('UX-1: gives the log performResolve would give from the same faces, without touching the state', () => {
+        const inKeep = beginKeepPhase(gs);
+        const before = structuredClone(inKeep);
+        const { log } = unwrap(performResolve({ ...inKeep, phase: GamePhase.RESOLVE }));
+        const preview = unwrap(previewRound(inKeep));
+        expect(preview.length).toBeGreaterThan(0);
+        expect(preview).toEqual(log);
+        expect(inKeep).toEqual(before);
+    });
+
+    it('END-1, RES-2: lists every character on the board when the round would end the match', () => {
+        // Player 1 already lost a character, and the one in slot 0 dies to the first hit it takes.
+        const [frail, ...rest] = gs.players[1].team;
+        const gone = createCharacter({ catalogId: TEST_CATALOG_ID, name: "Gone", maxHp: 100, baseSpeed: 1, baseDie: die, position: { playerIndex: 1, slot: 4 } });
+        const lastStand: Player = { ...gs.players[1], team: [{ ...frail, hp: 1 }, ...rest], fallen: [{ ...gone, hp: 0 }] };
+        const inKeep = beginKeepPhase({ ...gs, players: [gs.players[0], lastStand] });
+
+        const preview = unwrap(previewRound(inKeep));
+        const { state, log } = unwrap(performResolve({ ...inKeep, phase: GamePhase.RESOLVE }));
+
+        expect(state.winner).toBe(0);
+        expect(preview).toEqual(log);
+        expect(preview).toHaveLength(10);
+        expect(new Set(preview.map(s => s.characterId)).size).toBe(10);
+        expect(preview.some(s => s.unplayed)).toBe(true);
+    });
+
+    it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
+        expect(unwrapErr(previewRound(beginRollPhase(gs))).code).toBe('WRONG_PHASE');
+    });
+
+    it('FLOW-3: ignores locks: kept dice give the same preview as free ones', () => {
+        // The snapshots in the log carry each character as it is, lock flag included; only that flag may differ.
+        const unlocked = (log: readonly ResolveStep[]) => log.map(step => ({
+            ...step,
+            changes: step.changes.map(c => ({ ...c, character: { ...c.character, isFaceLocked: false } })),
+        }));
+        const inKeep = beginKeepPhase(gs);
+        expect(unlocked(unwrap(previewRound(lockAllPlayers(inKeep))))).toEqual(unlocked(unwrap(previewRound(inKeep))));
     });
 });
 

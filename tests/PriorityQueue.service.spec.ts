@@ -924,7 +924,7 @@ describe('PriorityQueueService', () => {
       const { state, log } = run(p0, teamOf(1, { 0: lethal }));
       expect(hp(state, 1, 0)).toBe(20);
       expect(log.find(s => s.characterId === p0.team[0].id)).toEqual(
-        { characterId: p0.team[0].id, skipped: true, effects: [], changes: [] });
+        { characterId: p0.team[0].id, skipped: true, unplayed: false, effects: [], changes: [] });
     });
 
     it('DEAD-3: an actor that dies during its own action stops it: the rest of its face does not apply', () => {
@@ -957,5 +957,64 @@ describe('PriorityQueueService', () => {
       expect(hp(state, 1, 1)).toBe(12);
       expect(hp(state, 1, 2)).toBe(20);
     });
+  });
+});
+
+describe('END-1, RES-2: the log lists every queue entry, the ones a decided match did not play included', () => {
+  const face = (effects: EffectEntry[]) =>
+    generateFullDie(Array(6).fill({ description: 'f', priority: 0, effects }) as unknown as BaseDieInstructions)[0];
+  const idle = face([]);
+  const kill = face([{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]);
+  const hitBack = face([{ targets: [enemyAbs(0)], parts: [{ part: EffectLabel.Damage, magnitude: 5 }] }]);
+  const mk = (name: string, speed: number, f: DieFace, pi: PlayerIndex, slot: SlotIndex) =>
+    ({ ...createCharacter({ catalogId: TEST_CATALOG_ID, name, maxHp: 20, baseSpeed: speed, baseDie: [f, f, f, f, f, f], position: { playerIndex: pi, slot } }), face: f });
+  const run = (p0: Player, p1: Player) => unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(createGameState(p0, p1)));
+  const unplayed = (characterId: string) => ({ characterId, skipped: true, unplayed: true, effects: [], changes: [] });
+
+  // Player 1 already lost a character: the kill of the 2nd action (speed 7) ends the match.
+  // Player 1's entries are queued slot 0 then slot 1; the sort puts the faster slot 1 first.
+  const opener = mk('opener', 9, idle, 0, 0);
+  const killer = mk('killer', 7, kill, 0, 1);
+  const victim = mk('victim', 1, hitBack, 1, 0);
+  const avenger = mk('avenger', 5, hitBack, 1, 1);
+  const p0 = createPlayer([opener, killer], 0);
+  const p1: Player = { ...createPlayer([victim, avenger], 1), fallen: [{ ...mk('gone', 1, idle, 1, 2), hp: 0 }] };
+
+  it('a match decided by the 2nd action of 4 gives 4 steps: the last 2 are unplayed, in the order of the sort', () => {
+    const { log } = run(p0, p1);
+
+    expect(log.map(s => s.characterId)).toEqual([opener.id, killer.id, avenger.id, victim.id]);
+    expect(log.slice(0, 2).map(s => s.unplayed)).toEqual([false, false]);
+    expect(log[2]).toEqual(unplayed(avenger.id));
+    expect(log[3]).toEqual(unplayed(victim.id));
+  });
+
+  it('the unplayed steps change nothing: the match ends as the deciding action left it', () => {
+    const { state } = run(p0, p1);
+
+    expect(state.winner).toBe(0);
+    expect(state.endReason).toBe('elimination');
+    expect(state.players[0].team.map(c => c.hp)).toEqual([20, 20]);
+    expect(state.players[1].team.map(c => c.hp)).toEqual([20]);
+    expect(state.priorityQueue).toEqual([]);
+  });
+
+  it('a round that does not end the match has every step played', () => {
+    const { log } = run(p0, { ...p1, fallen: [] });
+
+    expect(log).toHaveLength(4);
+    expect(log.every(s => s.unplayed === false)).toBe(true);
+  });
+
+  it('RES-1, STATE-4: a stunned actor and an actor dead before its turn are skipped, not unplayed', () => {
+    const stunned = { ...mk('stunned', 9, hitBack, 0, 0), states: { STUN: { value: 1, touchedRound: 0 } } };
+    const doomed = mk('doomed', 1, hitBack, 1, 1);
+    const executioner = mk('executioner', 7, face([{ targets: [enemyAbs(1)], parts: [{ part: EffectLabel.Damage, magnitude: 99 }] }]), 0, 1);
+
+    const { state, log } = run(createPlayer([stunned, executioner], 0), createPlayer([mk('dummy', 1, idle, 1, 0), doomed], 1));
+
+    expect(state.winner).toBeUndefined();
+    expect(log.find(s => s.characterId === stunned.id)).toEqual({ characterId: stunned.id, skipped: true, unplayed: false, effects: [], changes: [] });
+    expect(log.find(s => s.characterId === doomed.id)).toEqual({ characterId: doomed.id, skipped: true, unplayed: false, effects: [], changes: [] });
   });
 });

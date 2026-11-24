@@ -101,14 +101,20 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
     // sorted again, so only a SPEED change can reorder them; hp, shield and positions never do.
     const tieKeys = captureTieKeys(state, state.priorityQueue.map(([, id]) => id));
     const remaining = [...state.priorityQueue];
-    while (remaining.length > 0 && state.winner === undefined) {
+    while (remaining.length > 0) {
         const compare = compareActors(state, tieKeys);
         remaining.sort((a, b) => compare(entryActor(a), entryActor(b)));
         const [face, characterId] = remaining.shift()!;
+        // END-1: once the match is decided the rest of the round is not played, but the log still
+        // lists every entry, in the order of the last sort: the state no longer changes.
+        if (state.winner !== undefined) {
+            log.push({ characterId, skipped: true, unplayed: true, effects: [], changes: [] });
+            continue;
+        }
         const self = findCharacter(state, characterId);
         // A stun is read when the turn comes: one landing before the action cancels it, like death.
         if (self === undefined || stateValue(self, 'STUN') > 0) {
-            log.push({ characterId, skipped: true, effects: [], changes: [] });
+            log.push({ characterId, skipped: true, unplayed: false, effects: [], changes: [] });
             continue;
         }
 
@@ -135,7 +141,7 @@ export function unstackPriorityQueueWithLog(gameState: GameState): { state: Game
             .map(id => findOnBoardOrFallen(state, id) as Character)
             .map(c => ({ characterId: c.id, character: c }));
 
-        log.push({ characterId, skipped: false, effects, changes });
+        log.push({ characterId, skipped: false, unplayed: false, effects, changes });
     }
 
     return { state: resetPriorityQueue(state), log };

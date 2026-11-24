@@ -171,3 +171,9 @@ export function performResolve(gs: GameState): Result<{ state: GameState; log: R
         return { state: beginResultPhase(state), log };
     });
 }
+
+/** The log performResolve would give if every current face were final; the state is not changed. */
+export function previewRound(gs: GameState): Result<ResolveStep[], DomainError> {
+    return checkPhase(gs, GamePhase.KEEP)
+        .map(g => unstackPriorityQueueWithLog(addAllEffectsToPriorityQueue(g)).log);
+}

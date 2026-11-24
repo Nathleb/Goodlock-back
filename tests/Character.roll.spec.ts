@@ -32,3 +32,39 @@ describe('rollForTurn', () => {
         expect(rolled.face.description).toBe('face 5');
     });
 });
+
+describe('faceIndex: the index of the current face in the die, since a die can hold identical faces', () => {
+    const faces = generateFullDie(Array.from({ length: 6 }, (_, i) => ({ description: `face ${i}`, priority: 0, effects: [] })) as unknown as BaseDieInstructions);
+    const make = (die = faces) => createCharacter({ catalogId: TEST_CATALOG_ID, name: 'C', maxHp: 10, baseSpeed: 1, baseDie: die, position: { playerIndex: 0, slot: 0 } });
+
+    it('starts on face 0', () => {
+        const character = make();
+        expect(character.faceIndex).toBe(0);
+        expect(character.face).toBe(character.baseDie[0]);
+    });
+
+    it('is the index of the face the roll lands on', () => {
+        const rolled = rollDie(make(), new ScriptedDiceSource([4]));
+        expect(rolled.faceIndex).toBe(4);
+        expect(rolled.baseDie[rolled.faceIndex]).toBe(rolled.face);
+    });
+
+    it('a rolled face identical to an earlier one keeps its own index', () => {
+        const twin = faces[0];
+        const die = [twin, twin, faces[2], faces[3], faces[4], faces[5]] as typeof faces;
+        const rolled = rollDie(make(die), new ScriptedDiceSource([1]));
+        expect(rolled.faceIndex).toBe(1);
+        expect(rolled.face).toBe(twin);
+    });
+
+    it('rolls with a single draw', () => {
+        const dice = new ScriptedDiceSource([2]);
+        rollDie(make(), dice);
+        expect(dice.sizes).toEqual([6]);
+    });
+
+    it('a kept die keeps its index', () => {
+        const rolled = rollForTurn({ ...rollDie(make(), new ScriptedDiceSource([5])), isFaceLocked: true }, ScriptedDiceSource.always(0));
+        expect(rolled.faceIndex).toBe(5);
+    });
+});

@@ -15,6 +15,8 @@ export type CharacterDTO = {
     baseSpeed: number;
     baseDie: DieFaceDTO[];
     face: DieFaceDTO;
+    /** Index of `face` in `baseDie` (0..5): a die can hold identical faces, so the content alone does not tell which one came up. */
+    faceIndex: number;
     /**
      * Whether the die was kept at the last Roll (ROLL-2). In the state sent to one player only,
      * their own dice show instead what they last confirmed in the current Keep (GAME-9).
@@ -50,6 +52,7 @@ type ResolvedEffectDTO = {
 export type ResolveStepDTO = {
     characterId: string;
     skipped: boolean;
+    unplayed: boolean;  // the match ended before this action's turn: it was not played (END-1)
     effects: ResolvedEffectDTO[];
     changes: ResolveChangeDTO[];
 };
@@ -82,6 +85,11 @@ export type GameStateDTO = {
     players: [PlayerGameStateDTO, PlayerGameStateDTO];
     /** SELECTION only, per viewer: both revealed decks and the viewer's own pick (never the opponent's). */
     selection?: SelectionViewDTO;
+    /**
+     * KEEP only, in every state of the phase: the log the round would give if every current face were
+     * final (locks do not change it). All faces are public in KEEP (ROLL-2), so both players get the same one.
+     */
+    preview?: ResolveStepDTO[];
 };
 
 type SelectionViewDTO = {

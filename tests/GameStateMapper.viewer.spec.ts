@@ -24,7 +24,7 @@ const FACE: DieFace = { description: 'd', priority: 1, effects: [] };
 function char(id: string, playerIndex: PlayerIndex, slot: number, locked: boolean, keptAtLastRoll = false): Character {
     return {
         id: asCharacter(id), catalogId: TEST_CATALOG_ID, name: id, maxHp: 10, baseSpeed: 1, hp: 10, shield: 0, modifiers: [], states: {},
-        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, isFaceLocked: locked, keptAtLastRoll,
+        baseDie: [FACE, FACE, FACE, FACE, FACE, FACE], face: FACE, faceIndex: 0, isFaceLocked: locked, keptAtLastRoll,
         position: { playerIndex, slot: slot as SlotIndex },
     };
 }
@@ -186,6 +186,7 @@ describe('RES-2: resolveStepsToDTO', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
             characterId: asCharacter('x'),
             skipped: false,
+            unplayed: false,
             effects: [
                 { parts: [EffectLabel.Damage], targets: [{ playerIndex: 1, slot: 2 }] },
                 { parts: [EffectLabel.Heal], targets: [] },
@@ -195,6 +196,17 @@ describe('RES-2: resolveStepsToDTO', () => {
         expect(dto[0].effects).toEqual([
             { parts: ['Damage'], targets: [{ playerIndex: 1, slot: 2 }] },
             { parts: ['Heal'], targets: [] },
+        ]);
+    });
+
+    it('END-1: tells an action the decided match did not play from one that was played', () => {
+        const dto = GameStateMapper.resolveStepsToDTO([
+            { characterId: asCharacter('played'), skipped: false, unplayed: false, effects: [], changes: [] },
+            { characterId: asCharacter('stunned'), skipped: true, unplayed: false, effects: [], changes: [] },
+            { characterId: asCharacter('late'), skipped: true, unplayed: true, effects: [], changes: [] },
+        ]);
+        expect(dto.map(s => [s.characterId, s.skipped, s.unplayed])).toEqual([
+            ['played', false, false], ['stunned', true, false], ['late', true, true],
         ]);
     });
 });
@@ -212,6 +224,19 @@ describe('face DTO', () => {
         expect(dto.face.effects).toEqual([
             { targets: [{ side: 'ENEMY', mode: 'RELATIVE', n: [-1, 0, 1] }], parts: [{ part: 'Damage', magnitude: 3 }] },
         ]);
+    });
+
+    it('carries the index of the current face, which tells apart identical faces', () => {
+        const dto = GameStateMapper.characterToDTO({ ...char('a', 0, 0, false), faceIndex: 1 });
+        expect(dto.faceIndex).toBe(1);
+        expect(dto.baseDie[dto.faceIndex]).toEqual(dto.face);
+    });
+
+    it('carries the face index of both teams in the state sent to one player', () => {
+        const state = gs(GamePhase.RESOLVE, [false, false]);
+        const rolled = (p: Player): Player => ({ ...p, team: p.team.map((c, i) => ({ ...c, faceIndex: 2 + i })) });
+        const dto = GameStateMapper.toDTOForViewer({ ...state, players: [rolled(state.players[0]), rolled(state.players[1])] }, 0);
+        expect(dto.players.map(p => p.team.map(c => c.faceIndex))).toEqual([[2, 3], [2, 3]]);
     });
 });
 
@@ -253,7 +278,7 @@ describe('stats in the DTO', () => {
 
     it('shows up in the resolve-step changes too', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: asCharacter('a'), skipped: false, effects: [],
+            characterId: asCharacter('a'), skipped: false, unplayed: false, effects: [],
             changes: [{ characterId: asCharacter('a'), character: { ...char('a', 0, 0, false), modifiers: [power(3)] } }],
         }]);
         expect(dto[0].changes[0].after.stats).toEqual({ POWER: 3, ARMOR: 0 });
@@ -287,7 +312,7 @@ describe('states in the DTO', () => {
 
     it('shows up in the resolve-step changes too', () => {
         const dto = GameStateMapper.resolveStepsToDTO([{
-            characterId: asCharacter('a'), skipped: false, effects: [],
+            characterId: asCharacter('a'), skipped: false, unplayed: false, effects: [],
             changes: [{ characterId: asCharacter('a'), character: { ...char('a', 0, 0, false), states: { ROOT: { value: 2, touchedRound: 1 } } } }],
         }]);
         expect(dto[0].changes[0].after.states.ROOT).toBe(2);

@@ -6,6 +6,8 @@ import { Player } from '@domain/types/Player.type';
 import { ResolveStep } from '@domain/types/PriorityQueue.type';
 import { PlayerIndex } from '@domain/types/Position.type';
 import { isClockRunning } from '@domain/services/Clock.service';
+import { previewRound } from '@domain/services/GameLoop.service';
+import { invariant } from '@application/errors/invariant';
 import { GameStateDTO, PlayerClockDTO, PlayerGameStateDTO, CharacterDTO, ResolveStepDTO } from '@application/dtos/GameState.dto';
 import { DieFaceDTO } from '@application/dtos/DieFace.dto';
 import { netStat, stateValue } from '@domain/services/Character.service';
@@ -23,6 +25,9 @@ export class GameStateMapper {
             rollsLeft: gameState.rollsLeft,
             clocks: GameStateMapper.clocksToDTO(gameState),
             players: gameState.players.map(GameStateMapper.playerToDTO) as [PlayerGameStateDTO, PlayerGameStateDTO],
+            ...(gameState.phase === GamePhase.KEEP && {
+                preview: GameStateMapper.resolveStepsToDTO(invariant(previewRound(gameState))),
+            }),
         };
     }
 
@@ -100,6 +105,7 @@ export class GameStateMapper {
         return steps.map(step => ({
             characterId: step.characterId,
             skipped: step.skipped,
+            unplayed: step.unplayed,
             effects: step.effects.map(e => ({
                 parts: [...e.parts],
                 targets: e.targets.map(t => ({ playerIndex: t.playerIndex, slot: t.slot })),
@@ -130,6 +136,7 @@ export class GameStateMapper {
             baseSpeed: char.baseSpeed,
             baseDie: char.baseDie.map(GameStateMapper.faceToDTO),
             face: GameStateMapper.faceToDTO(char.face),
+            faceIndex: char.faceIndex,
             // Public: kept at the last Roll (ROLL-2). A choice in the current Keep stays with its owner (GAME-9).
             isFaceLocked: char.keptAtLastRoll,
             position: char.position,

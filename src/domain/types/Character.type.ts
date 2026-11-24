@@ -20,6 +20,8 @@ type Character = {
     readonly states: CharacterStates;
 
     readonly face: DieFace;
+    /** Index of `face` in `baseDie` (0..5): a die can hold identical faces, so the content alone does not tell which one came up. */
+    readonly faceIndex: number;
     /** The die is kept: the next Roll leaves it alone. Set when its owner confirms a Keep, cleared at the end of the round. */
     readonly isFaceLocked: boolean;
     /** Whether the die was kept at the last Roll (ROLL-2): what the opponent may see of it during a Keep (GAME-9). */
