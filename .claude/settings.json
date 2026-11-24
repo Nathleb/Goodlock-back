@@ -5,14 +5,5 @@
       "Edit(//home/lebih/projects/Goodlock/Goodlock-specs/**)",
       "Edit(//home/lebih/projects/Goodlock/Goodlock-acceptance/**)"
     ]
-  },
-  "sandbox": {
-    "enabled": true,
-    "failIfUnavailable": true,
-    "allowUnsandboxedCommands": false,
-    "excludedCommands": ["git push *", "gh pr *", "npm run db:*", "npm run dev:stack"],
-    "network": {
-      "allowedDomains": ["registry.npmjs.org", "binaries.prisma.sh"]
-    }
   }
 }
