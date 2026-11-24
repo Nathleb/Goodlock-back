@@ -6,6 +6,9 @@ import { hasLost, rollDiceForTurn } from "@domain/services/Player.service";
 import { loseHp } from "@domain/services/Character.service";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { Player } from "@domain/types/Player.type";
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 describe('PlayerService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -23,7 +26,7 @@ describe('PlayerService', () => {
   const player: Player = { playerIndex: 0, team: [character] };
 
   it('should roll dice for turn', () => {
-    const updatedPlayer = rollDiceForTurn(player);
+    const updatedPlayer = rollDiceForTurn(player, dice);
     expect(updatedPlayer.team[0].face).toBeDefined();
   });
 

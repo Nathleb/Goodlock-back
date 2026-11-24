@@ -1,23 +1,26 @@
 import Character from "../types/Character.type";
 import { StatName } from "../types/Modifier.type";
 import { STATE_AXES, StateAxis, StateCounter } from "../types/State.type";
-import { roll1D6 } from "../utils/Random.utils";
+import { DiceSource } from "../types/DiceSource.type";
 
 const updateCharacter = (character: Character, updates: Partial<Character>): Character => ({
     ...character,
     ...updates,
 });
 
-export function rollDie(character: Character): Character {
-    return updateCharacter(character, { face: character.baseDie[roll1D6()] });
+/** A die has six faces. */
+const DIE_SIZE = 6;
+
+export function rollDie(character: Character, dice: DiceSource): Character {
+    return updateCharacter(character, { face: character.baseDie[dice.roll(DIE_SIZE)] });
 }
 
 function canRollDie(character: Character): boolean {
     return !character.isFaceLocked;
 }
 
-export function rollForTurn(character: Character): Character {
-    const rolled = canRollDie(character) ? rollDie(character) : character;
+export function rollForTurn(character: Character, dice: DiceSource): Character {
+    const rolled = canRollDie(character) ? rollDie(character, dice) : character;
     return updateCharacter(rolled, { keptAtLastRoll: character.isFaceLocked });
 }
 

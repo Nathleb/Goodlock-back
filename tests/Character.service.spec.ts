@@ -4,6 +4,9 @@ import { enemyRel, allyRel } from "./helpers/targets";
 import { BaseDieInstructions } from "@domain/types/BaseDieInstructions.type";
 import { createCharacter, generateFullDie } from "@domain/services/CharacterGeneration.service";
 import { rollDie, gainShield, loseShield, loseHp, gainHp, dealDamage, isDead } from "@domain/services/Character.service";
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 describe('CharacterService', () => {
   const baseDieInstructions: BaseDieInstructions = [
@@ -19,7 +22,7 @@ describe('CharacterService', () => {
   const character = createCharacter({ catalogId: TEST_CATALOG_ID, name: "TestCharacter", maxHp: 100, baseSpeed: 5, baseDie: die, position: { playerIndex: 0, slot: 0 } });
 
   it('should roll a die for the character', () => {
-    const updatedCharacter = rollDie(character);
+    const updatedCharacter = rollDie(character, dice);
     expect(updatedCharacter.face).toBeDefined();
   });
 

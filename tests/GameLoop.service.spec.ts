@@ -15,6 +15,9 @@ import {
 import { Player } from "@domain/types/Player.type";
 import { unwrap, unwrapErr } from "./helpers/result";
 import GameState from "@domain/types/GameState.type";
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 
 const die = generateFullDie([
@@ -72,13 +75,11 @@ describe('confirmPlacement', () => {
 });
 
 describe('ROLL-1, ROLL-2: the first Roll rolls the dice that are not kept', () => {
-    afterEach(() => jest.restoreAllMocks());
-
     it('gives a new face to each die that is not kept, leaves a kept die alone, and remembers what was kept', () => {
-        jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last face of every die
+        const lastFace = ScriptedDiceSource.always('last'); // the last face of every die
         const inRoll = beginRollPhase(gs);
         const keepFirst = (p: Player): Player => ({ ...p, team: p.team.map((c, i) => i === 0 ? { ...c, isFaceLocked: true } : c) });
-        const rolled = unwrap(performRoll({ ...inRoll, players: [keepFirst(inRoll.players[0]), keepFirst(inRoll.players[1])] }));
+        const rolled = unwrap(performRoll({ ...inRoll, players: [keepFirst(inRoll.players[0]), keepFirst(inRoll.players[1])] }, lastFace));
 
         for (const player of rolled.players) {
             expect(player.team[0].face.description).toBe('A');
@@ -92,7 +93,7 @@ describe('ROLL-1, ROLL-2: the first Roll rolls the dice that are not kept', () =
 describe('performRoll', () => {
     it('transitions to KEEP and resets playersReady', () => {
         const inRoll = beginRollPhase(gs);
-        const result = unwrap(performRoll(inRoll));
+        const result = unwrap(performRoll(inRoll, dice));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.playersReady).toEqual([false, false]);
     });
@@ -100,19 +101,19 @@ describe('performRoll', () => {
 
     it('does not mutate the original state', () => {
         const inRoll = beginRollPhase(gs);
-        performRoll(inRoll);
+        performRoll(inRoll, dice);
         expect(inRoll.phase).toBe(GamePhase.ROLL);
     });
 
     it('returns a WRONG_PHASE error when called outside ROLL phase', () => {
-        expect(unwrapErr(performRoll(gs)).code).toBe('WRONG_PHASE');
+        expect(unwrapErr(performRoll(gs, dice)).code).toBe('WRONG_PHASE');
     });
 });
 
 describe('confirmKeep', () => {
     it('marks player ready but stays in KEEP', () => {
         const inKeep = beginKeepPhase(gs);
-        const result = unwrap(confirmKeep(inKeep, 0));
+        const result = unwrap(confirmKeep(inKeep, 0, dice));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.playersReady[0]).toBe(true);
         expect(result.playersReady[1]).toBe(false);
@@ -120,8 +121,8 @@ describe('confirmKeep', () => {
 
     it('rerolls and decrements rollsLeft when both confirm with rollsLeft > 0', () => {
         const inKeep = beginKeepPhase(gs); // rollsLeft: 2
-        const after0 = unwrap(confirmKeep(inKeep, 0));
-        const result = unwrap(confirmKeep(after0, 1));
+        const after0 = unwrap(confirmKeep(inKeep, 0, dice));
+        const result = unwrap(confirmKeep(after0, 1, dice));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.rollsLeft).toBe(1);
         expect(result.playersReady).toEqual([false, false]);
@@ -129,8 +130,8 @@ describe('confirmKeep', () => {
 
     it('ROLL-4: transitions straight to RESOLVE when the final reroll exhausts rollsLeft (no dead keep round)', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
-        const after0 = unwrap(confirmKeep(inKeep, 0));
-        const result = unwrap(confirmKeep(after0, 1));
+        const after0 = unwrap(confirmKeep(inKeep, 0, dice));
+        const result = unwrap(confirmKeep(after0, 1, dice));
         expect(result.phase).toBe(GamePhase.RESOLVE);
         expect(result.rollsLeft).toBe(0);
         expect(result.playersReady).toEqual([false, false]);
@@ -139,19 +140,19 @@ describe('confirmKeep', () => {
     it('ROLL-4: still rerolls when only one player has locked every die', () => {
         const kept = beginKeepPhase(gs);
         const p0Locked = { ...kept, players: [lockAllPlayers(kept).players[0], kept.players[1]] as typeof kept.players };
-        const result = unwrap(confirmKeep(unwrap(confirmKeep(p0Locked, 0)), 1));
+        const result = unwrap(confirmKeep(unwrap(confirmKeep(p0Locked, 0, dice)), 1, dice));
         expect(result.phase).toBe(GamePhase.KEEP);
         expect(result.rollsLeft).toBe(1);
     });
 
     it('GAME-5, ROLL-4: with every die kept, both Keeps still lead to another Roll, and Resolve only follows the third Roll', () => {
         const inKeep = lockAllPlayers(beginKeepPhase(gs)); // first Roll done, rollsLeft: 2, every die kept
-        const afterFirstKeep = unwrap(confirmKeep(unwrap(confirmKeep(inKeep, 0)), 1));
+        const afterFirstKeep = unwrap(confirmKeep(unwrap(confirmKeep(inKeep, 0, dice)), 1, dice));
         expect(afterFirstKeep.phase).toBe(GamePhase.KEEP);
         expect(afterFirstKeep.rollsLeft).toBe(1);
         expect(afterFirstKeep.players.map(p => p.team.map(c => c.face)))
             .toEqual(inKeep.players.map(p => p.team.map(c => c.face)));
-        const afterSecondKeep = unwrap(confirmKeep(unwrap(confirmKeep(afterFirstKeep, 0)), 1));
+        const afterSecondKeep = unwrap(confirmKeep(unwrap(confirmKeep(afterFirstKeep, 0, dice)), 1, dice));
         expect(afterSecondKeep.phase).toBe(GamePhase.RESOLVE);
     });
 
@@ -167,22 +168,21 @@ describe('confirmKeep', () => {
         };
         const lockedFace = withOneLock.players[0].team[0].face;
         // Every reroll lands on the last face, never the current one: a reroll of the locked die would show.
-        const random = jest.spyOn(Math, 'random').mockReturnValue(0.99);
-        const after0 = unwrap(confirmKeep(withOneLock, 0));
-        const result = unwrap(confirmKeep(after0, 1));
-        random.mockRestore();
+        const lastFace = ScriptedDiceSource.always('last');
+        const after0 = unwrap(confirmKeep(withOneLock, 0, lastFace));
+        const result = unwrap(confirmKeep(after0, 1, lastFace));
         expect(result.players[0].team[1].face).toBe(result.players[0].team[1].baseDie[5]);
         expect(result.players[0].team[0].face).toBe(lockedFace);
     });
 
     it('does not transition on first confirm alone', () => {
         const inKeep = { ...beginKeepPhase(gs), rollsLeft: 1 };
-        const result = unwrap(confirmKeep(inKeep, 0));
+        const result = unwrap(confirmKeep(inKeep, 0, dice));
         expect(result.phase).toBe(GamePhase.KEEP);
     });
 
     it('returns a WRONG_PHASE error when called outside KEEP phase', () => {
-        expect(unwrapErr(confirmKeep(gs, 0)).code).toBe('WRONG_PHASE');
+        expect(unwrapErr(confirmKeep(gs, 0, dice)).code).toBe('WRONG_PHASE');
     });
 });
 
@@ -226,7 +226,7 @@ describe('GAME-8: cancelPlacement', () => {
 describe('GAME-8: cancelKeep', () => {
     it('sets playersReady[i] to false when player was confirmed', () => {
         const inKeep = beginKeepPhase(gs);
-        const confirmed = unwrap(confirmKeep(inKeep, 0));
+        const confirmed = unwrap(confirmKeep(inKeep, 0, dice));
         expect(confirmed.playersReady[0]).toBe(true);
         const result = unwrap(cancelKeep(confirmed, 0));
         expect(result.playersReady[0]).toBe(false);
@@ -246,15 +246,13 @@ describe('GAME-8: cancelKeep', () => {
 
 
 describe('SEL-1, PRIO-3: initiative at game init', () => {
-    afterEach(() => jest.restoreAllMocks());
-
     it('gives the initiative to player 0 when the draw falls on the lower half', () => {
-        jest.spyOn(Math, 'random').mockReturnValue(0.2);
-        expect(createSelectionState([[], []], 0).initiativePlayerIndex).toBe(0);
+        const draw = new ScriptedDiceSource([0]);
+        expect(createSelectionState([[], []], 0, draw).initiativePlayerIndex).toBe(0);
+        expect(draw.sizes).toEqual([2]);
     });
 
     it('gives the initiative to player 1 when the draw falls on the upper half', () => {
-        jest.spyOn(Math, 'random').mockReturnValue(0.7);
-        expect(createSelectionState([[], []], 0).initiativePlayerIndex).toBe(1);
+        expect(createSelectionState([[], []], 0, new ScriptedDiceSource([1])).initiativePlayerIndex).toBe(1);
     });
 });

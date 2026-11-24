@@ -15,6 +15,9 @@ import { testTemplate } from './helpers/catalog';
 import { CatalogId } from '@shared/branded.types';
 import { SocketId, UserId } from '@shared/branded.types';
 import { unwrap } from './helpers/result';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 // Real managers and coordinators, mocked transport: AWAY-4 is a story that spans the session, the room
 // and the game, and only their combination shows what a missing player does to a phase.
@@ -30,7 +33,7 @@ const empty = () => createGameState(createPlayer([], 0), createPlayer([], 1));
 // and what shows that the phase has ended once both have.
 const PHASES = [
     {
-        name: 'Selection', start: () => createSelectionState([deck('a'), deck('b')], Date.now()),
+        name: 'Selection', start: () => createSelectionState([deck('a'), deck('b')], Date.now(), dice),
         confirm: (game: GameCoordinatorService, socket: SocketId, seat: 0 | 1) => game.confirmSelection(socket, PICKS[seat]),
         ended: (state: GameState) => state.phase === GamePhase.PLACEMENT,
     },
@@ -53,7 +56,7 @@ function setUp(start: GameState) {
     const timer: MatchTimerPort = { schedule: jest.fn(), cancel: jest.fn() };
     const lifecycle = new MatchLifecycleService(rooms, sessions, ws, timer);
     const sessionCoordinator = new SessionCoordinatorService(sessions, rooms, ws, lifecycle);
-    const game = new GameCoordinatorService(sessions, rooms, ws, { get: jest.fn() } as never, lifecycle);
+    const game = new GameCoordinatorService(sessions, rooms, ws, { get: jest.fn() } as never, dice, lifecycle);
 
     sessionCoordinator.handleConnect(FIRST_SOCKET, 'player' as UserId);
     sessionCoordinator.handleConnect(OPPONENT_SOCKET, 'opponent' as UserId);

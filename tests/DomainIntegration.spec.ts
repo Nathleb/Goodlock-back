@@ -16,6 +16,9 @@ import {
 } from "@domain/services/GameLoop.service";
 import { enemyAbs, allyAbs, enemyRel, allyRel } from "./helpers/targets";
 import { unwrap } from "./helpers/result";
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
+
+const dice = ScriptedDiceSource.always(0);
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,7 +59,7 @@ function advanceNextRoundToResolve(endOfRoundState: GameState): GameState {
 
 /** ROLL → KEEP → ... → RESOLVE: all dice kept after the first Roll, both Keeps confirmed until Resolve. */
 function rollToResolve(rolling: GameState): GameState {
-    let state = unwrap(performRoll(rolling));
+    let state = unwrap(performRoll(rolling, dice));
     state = {
         ...state,
         players: state.players.map(player => ({
@@ -65,8 +68,8 @@ function rollToResolve(rolling: GameState): GameState {
         })) as unknown as typeof state.players,
     };
     while (state.phase === GamePhase.KEEP) {
-        state = unwrap(confirmKeep(state, 0));
-        state = unwrap(confirmKeep(state, 1));
+        state = unwrap(confirmKeep(state, 0, dice));
+        state = unwrap(confirmKeep(state, 1, dice));
     }
     return state;
 }

@@ -8,3 +8,4 @@ export const CATALOG_PORT = Symbol('CatalogPort');
 export const CATALOG_DIR = Symbol('CatalogDir');
 export const COLLECTION_PORT = Symbol('CollectionPort');
 export const DECK_PORT = Symbol('DeckPort');
+export const DICE_SOURCE = Symbol('DiceSource');
