@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Backend of Goodlock, a tactical PvP dice game. **Rules reference: `../Goodlock-specs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference and tests"): it is the only source of the game rules, written in the language of the game, each rule with an ID. It lives in the specs space, isolated from the code: read it, never write there (permission denied). `docs/GLOSSARY.md` maps its terms to the code. Changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
+Backend of Goodlock, a tactical PvP dice game. **Rules reference: `../Goodlock-specs/GAME-DESIGN.md`** (see `~/.claude/CLAUDE.md`, "Rules reference" and "Tests and roles"): it is the only source of the game rules, written in the language of the game, each rule with an ID. It lives in the specs space, isolated from the code: read it, never write there (permission denied). **Acceptance tests: `../Goodlock-acceptance/back/`**, written there by the test-writer from the rules: read them, never write there (permission denied). The tests of `tests/` are unit tests. `docs/GLOSSARY.md` maps the terms of the rules to the code. Changes go to this repo and to the client `../Goodlock-app` only. When a change needs a new or different rule, stop and tell the user.
 
 ## Commands
 
@@ -72,12 +72,12 @@ Read only when relevant, they are not loaded automatically: `../Goodlock-specs/G
 
 ## Workflow (Goodlock specifics)
 
-The general workflow (plan, TDD, verify, git rules, conventional commits, trivial-task bypass) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. Also covered by the workflow: `prisma/schema.prisma` and migrations (always the full workflow) and `tmplt/*.json` edits (no plan, but `npm run test` must pass, since the catalog is validated at boot). `Dockerfile`, `docker-compose.yml` and `docs/` are trivial unless they change behavior. What follows is only what Goodlock adds.
+The general workflow (tests and roles, TDD, verify, git rules, conventional commits, trivial tasks) lives in `~/.claude/CLAUDE.md`. It applies to any change touching domain logic, application services, the WebSocket protocol, or the architectural layers. Also covered by the workflow: `prisma/schema.prisma` and migrations, and `tmplt/*.json` edits (`npm run test` must pass, since the catalog is validated at boot). `Dockerfile`, `docker-compose.yml` and `docs/` are trivial unless they change behavior. What follows is only what Goodlock adds.
 
-- **Plan**: also state new ports/adapters, new branded IDs and new effects/templates. Order steps bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with the tests to write first.
-- **Step size**: a step never spans more than one layer.
+- **Order of work**: bottom-up: domain types → domain services/strategies → application ports/coordinators/DTOs/mappers → infrastructure adapters/gateway events, each with its test first.
+- **Commit size**: a commit never spans more than one layer, so the review reads one small diff at a time.
 - **Verify**: `npm run test`, `npm run lint:check`, `npx tsc --noEmit` (typechecks src and tests together), and `npm run build` before a Docker build. Never use `npm run lint` (`--fix`) as a check: it rewrites files. Then every quality gate below (`npm run quality`, and `npm run test:mutation` on the code of the feature). GitHub Actions (`.github/workflows/ci.yml`) runs all of them on every push to `main` and every pull request.
-- **Review**: run by the user with `/review-feature` (the `reviewer` agent, one step commit at a time). `/code-review` is the lighter alternative.
+- **Review**: run by the user with `/review-feature` (the `reviewer` agent, one commit at a time). `/code-review` is the lighter alternative.
 - **Subagents**: besides search and the review, a protocol change can be mirrored in Goodlock-app by a subagent (no shared state).
 
 ## Quality gates
@@ -127,7 +127,7 @@ The block below is read by the tooling in `~/.claude/` (the `blockers-report` sk
 
 ## Recurring tasks
 
-**Add a part** (Damage, Heal…: one thing an effect does to its cells): add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first, written or validated by the user since it states a rule; one spec per strategy). A strategy applies its part to the cells it is given and buries no one: `applyEffect` settles the deaths once the whole effect has applied. Add its case to `effectFor` (`domain/strategies/effectFor.ts`: the exhaustive switch does not compile until it is there); check that `validateEffectTargets` accepts its target groups; use it in the `parts` of an effect in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
+**Add a part** (Damage, Heal…: one thing an effect does to its cells): add the label to `EffectLabel` (`domain/types/EffectLabels.type.ts`); write the strategy in `domain/strategies/` (red test first; one spec per strategy). A strategy applies its part to the cells it is given and buries no one: `applyEffect` settles the deaths once the whole effect has applied. Add its case to `effectFor` (`domain/strategies/effectFor.ts`: the exhaustive switch does not compile until it is there); check that `validateEffectTargets` accepts its target groups; use it in the `parts` of an effect in a `tmplt/*.json` template and run the catalog specs, since a bad catalog stops the app from booting.
 
 **Add a WebSocket event**: domain function first (red test); coordinator method in `application/services/` (a failed Result is reported as `error { code, message }`, see Conventions); handler in `session.gateway.ts` with the existing guards; payload class in `adapters/websocket/payloads/` and a DTO plus mapper if state is emitted. The gateway validates every `@MessageBody()` with a `ValidationPipe` (`whitelist` and `forbidNonWhitelisted`), so every property of a payload class needs a class-validator decorator, or every real client message is refused with "property X should not exist". `tests/SessionGateway.validation.spec.ts` mounts the gateway on a real socket: add a case there for the new payload. Anything emitted before ROLL goes through `GameStateMapper.toDTOForViewer`. Add the event and its payload type to `ServerEvents` (`application/dtos/Protocol.dto.ts`; `WebSocketPort` emits are typed against it) and run `npm run protocol:schema`. Then mirror the event in Goodlock-app (see Client contract).
 

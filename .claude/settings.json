@@ -1,8 +1,9 @@
 {
-  "model": "opusplan",
+  "model": "opus",
   "permissions": {
     "deny": [
-      "Edit(//home/lebih/projects/Goodlock/Goodlock-specs/**)"
+      "Edit(//home/lebih/projects/Goodlock/Goodlock-specs/**)",
+      "Edit(//home/lebih/projects/Goodlock/Goodlock-acceptance/**)"
     ]
   }
 }
