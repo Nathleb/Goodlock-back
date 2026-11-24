@@ -2,7 +2,7 @@ import { P0, P1, asRoom } from './helpers/ids';
 import { makeTestCatalog, TEST_CATALOG_ID } from './helpers/catalog';
 import { createGameState } from './helpers/gameState';
 import { Test } from '@nestjs/testing';
-import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT, MATCH_TIMER_PORT } from '@application/ports/tokens';
+import { SESSION_PORT, ROOM_PORT, WEBSOCKET_PORT, CATALOG_PORT, MATCH_TIMER_PORT, DICE_SOURCE } from '@application/ports/tokens';
 import { GameCoordinatorService } from '@application/services/GameCoordinator.service';
 import { MatchLifecycleService } from '@application/services/MatchLifecycle.service';
 import { GameStateMapper } from '@application/mappers/GameStateMapper';
@@ -21,6 +21,7 @@ import { Player } from '@domain/types/Player.type';
 import { SlotIndex } from '@domain/types/Position.type';
 import { Room } from '@domain/types/Room.type';
 import { SocketId, UserId } from '@shared/branded.types';
+import { ScriptedDiceSource } from '@infrastructure/adapters/dice/ScriptedDiceSource';
 
 const SOCKET_0 = 'socket-0' as SocketId;
 const SESSION_0: Session = { sessionId: P0, socketId: SOCKET_0, userId: 'user-0' as UserId, roomId: asRoom('room-1') };
@@ -45,7 +46,7 @@ const makeTeam = (pi: 0 | 1): Player =>
 const lastKeep: GameState = { ...beginKeepPhase(createGameState(makeTeam(0), makeTeam(1))), rollsLeft: 1, playersReady: [false, true] };
 const roomWith = (gameState: GameState): Room => ({ roomId: asRoom('room-1'), ownerId: P0, playersId: [P0, P1], isStarted: true, gameState });
 
-/** Each die after the last Roll: a kept one keeps its face, the others give their last face (Math.random at 0.99). */
+/** Each die after the last Roll: a kept one keeps its face, the others give their last face (the dice always land on the last face). */
 const afterLastRoll = (c: Character): Character => c.isFaceLocked
     ? { ...c, keptAtLastRoll: true }
     : { ...c, face: c.baseDie[5], faceIndex: 5, keptAtLastRoll: false };
@@ -85,6 +86,8 @@ beforeEach(async () => {
             { provide: WEBSOCKET_PORT, useValue: mockWs },
             { provide: CATALOG_PORT, useValue: makeTestCatalog(10) },
             { provide: MATCH_TIMER_PORT, useValue: mockTimer },
+            // The last Roll gives every free die its last face.
+            { provide: DICE_SOURCE, useValue: ScriptedDiceSource.always('last') },
         ],
     }).compile();
     coordinator = module.get(GameCoordinatorService);
@@ -97,7 +100,6 @@ afterEach(() => jest.restoreAllMocks());
 function confirmLastKeep(keep: GameState, kept: string[] = []): RoundResolvedDTO {
     mockRoom.getRoom.mockReturnValue(roomWith(keep));
     jest.spyOn(Date, 'now').mockReturnValue(keep.clockUpdatedAt);
-    jest.spyOn(Math, 'random').mockReturnValue(0.99); // the last Roll gives every free die its last face
     coordinator.confirmKeep(SOCKET_0, kept);
     return mockWs.emitToRoom.mock.calls.find(([, event]) => event === 'roundResolved')![2];
 }
